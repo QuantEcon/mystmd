@@ -56,14 +56,14 @@ export async function transformWidgetStaticAssetsToDisk(
           session.log.debug(`Cached asset found for '${attr}' (${attrPath})...`);
           fileName = existingName;
         } else {
-          session.log.debug(
-            `Fetching asset for '${attr}' (${attrPath})...\n  -> saving to: ${fileName}`,
-          );
           try {
             const { name } = await fetchRemoteAsset(session, attrPath, writeFolder, stem, {
               extension: ext,
             });
             fileName = name;
+            session.log.debug(
+              `Fetching asset for '${attr}' (${attrPath})...\n  -> saving to: ${fileName}`,
+            );
           } catch (error) {
             session.log.debug(`\n\n${(error as Error).stack}\n\n`);
             addWarningForFile(

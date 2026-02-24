@@ -418,7 +418,7 @@ export async function finalizeMdast(
     vfile,
   });
   if (!useExistingImages) {
-    transformWidgetStaticAssetsToDisk(
+    await transformWidgetStaticAssetsToDisk(
       session,
       mdast,
       file,
