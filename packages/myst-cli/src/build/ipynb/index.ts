@@ -56,11 +56,7 @@ export async function runIpynbExport(
   if ((exportOptions as any).images === 'attachment') {
     ipynbOpts.images = 'attachment';
     // Collect image data from the AST — read files and base64-encode
-    ipynbOpts.imageData = collectImageData(
-      session,
-      mdast,
-      article.file,
-    );
+    ipynbOpts.imageData = collectImageData(session, mdast, article.file);
   }
   const mdOut = writeIpynb(vfile, mdast as any, frontmatter, ipynbOpts);
   logMessagesFromVFile(session, mdOut);
@@ -93,7 +89,12 @@ function collectImageData(
 
   for (const img of imageNodes) {
     const url = img.url ?? img.urlSource;
-    if (!url || url.startsWith('http://') || url.startsWith('https://') || url.startsWith('data:')) {
+    if (
+      !url ||
+      url.startsWith('http://') ||
+      url.startsWith('https://') ||
+      url.startsWith('data:')
+    ) {
       continue;
     }
     if (imageData[url]) continue; // already processed

@@ -438,7 +438,7 @@ For usage information, see [](./documents-exports.md).
 * - `id`
   - a string - a local identifier that can be used to reference the export
 * - `format`
-  - one of `pdf` (built with $\LaTeX$ or Typst, depending on the template), `tex` (raw $\LaTeX$ files), `pdf+tex` (both PDF and raw $\LaTeX$ files) `typst` (raw Typst files and built PDF file), `docx`, `md`, `jats`, or `meca`
+  - one of `pdf` (built with $\LaTeX$ or Typst, depending on the template), `tex` (raw $\LaTeX$ files), `pdf+tex` (both PDF and raw $\LaTeX$ files) `typst` (raw Typst files and built PDF file), `docx`, `md`, `jats`, `meca`, or `ipynb`
 * - `template`
   - a string - name of an existing [MyST template](https://github.com/myst-templates) or a local path to a template folder. Templates are only available for `pdf`, `tex`, `typst`, and `docx` formats.
 * - `output`

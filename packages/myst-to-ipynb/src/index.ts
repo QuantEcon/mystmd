@@ -118,7 +118,8 @@ export function writeIpynb(
     });
 
   // Build notebook metadata from frontmatter kernelspec when available
-  const languageName = frontmatter?.kernelspec?.language ?? frontmatter?.kernelspec?.name ?? 'python';
+  const languageName =
+    frontmatter?.kernelspec?.language ?? frontmatter?.kernelspec?.name ?? 'python';
   const metadata: Record<string, any> = {
     language_info: {
       name: languageName,

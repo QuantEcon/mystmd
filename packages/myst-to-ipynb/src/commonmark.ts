@@ -99,9 +99,7 @@ function transformFigure(node: GenericNode): GenericNode {
   if (captionNode?.children?.length) {
     children.push({
       type: 'paragraph',
-      children: [
-        { type: 'emphasis', children: captionNode.children },
-      ],
+      children: [{ type: 'emphasis', children: captionNode.children }],
     });
   }
 
@@ -240,9 +238,7 @@ function transformTabSet(node: GenericNode): GenericNode {
       if (tabItem.title) {
         children.push({
           type: 'paragraph',
-          children: [
-            { type: 'strong', children: [{ type: 'text', value: tabItem.title }] },
-          ],
+          children: [{ type: 'strong', children: [{ type: 'text', value: tabItem.title }] }],
         });
       }
       // Add tab content
@@ -271,7 +267,10 @@ function transformCard(node: GenericNode): GenericNode {
     children.push({
       type: 'paragraph',
       children: [
-        { type: 'strong', children: titleNode.children ?? [{ type: 'text', value: toText(titleNode) }] },
+        {
+          type: 'strong',
+          children: titleNode.children ?? [{ type: 'text', value: toText(titleNode) }],
+        },
       ],
     });
   }
@@ -293,8 +292,7 @@ function transformGrid(node: GenericNode): GenericNode {
  */
 function transformDetails(node: GenericNode): GenericNode {
   const summaryNode = node.children?.find((c: GenericNode) => c.type === 'summary');
-  const contentChildren =
-    node.children?.filter((c: GenericNode) => c.type !== 'summary') ?? [];
+  const contentChildren = node.children?.filter((c: GenericNode) => c.type !== 'summary') ?? [];
 
   const titleText = summaryNode ? toText(summaryNode) : 'Details';
 
@@ -394,18 +392,13 @@ export interface CommonMarkOptions {
  * This modifies the tree in-place by replacing children arrays.
  * Returns the (possibly replaced) root node.
  */
-export function transformToCommonMark(
-  tree: GenericNode,
-  opts?: CommonMarkOptions,
-): GenericNode {
+export function transformToCommonMark(tree: GenericNode, opts?: CommonMarkOptions): GenericNode {
   const dropSolutions = opts?.dropSolutions ?? false;
 
   // Process children recursively (bottom-up so nested directives are handled first)
   if (tree.children) {
     // First, recurse into children
-    tree.children = tree.children.map((child: GenericNode) =>
-      transformToCommonMark(child, opts),
-    );
+    tree.children = tree.children.map((child: GenericNode) => transformToCommonMark(child, opts));
 
     // Then, transform this node's children — replacing nodes that need conversion
     const newChildren: GenericNode[] = [];
@@ -442,10 +435,7 @@ export function transformToCommonMark(
  * Returns the node unchanged if no transformation is needed.
  * Returns null if the node should be removed.
  */
-function transformNode(
-  node: GenericNode,
-  dropSolutions: boolean,
-): GenericNode | null {
+function transformNode(node: GenericNode, dropSolutions: boolean): GenericNode | null {
   switch (node.type) {
     case 'admonition':
       return transformAdmonition(node);

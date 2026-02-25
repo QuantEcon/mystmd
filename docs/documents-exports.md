@@ -1,6 +1,6 @@
 ---
 title: Exporting overview
-description: Create an export for PDF, LaTeX, Typst, Docx, JATS, or CITATION.cff in your page or project frontmatter, and use `myst build` to build the export.
+description: Create an export for PDF, LaTeX, Typst, Docx, JATS, Jupyter Notebook (ipynb), or CITATION.cff in your page or project frontmatter, and use `myst build` to build the export.
 ---
 
 You can export MyST content into one or more static documents, and optionally bundle them with a MyST website. This section gives an overview of the Exporting process and major configuration options.
@@ -29,6 +29,8 @@ Below are supported export types and links to documentation for further reading:
   * [](./creating-citation-cff.md)
 - * `MyST Markdown`
   * [](#export:myst)
+- * `Jupyter Notebook`
+  * [](./creating-notebooks.md)
 ```
 
 ## Where to configure options for exports
@@ -126,6 +128,9 @@ You can configure the CLI command in a number of ways:
 
 `myst build --pdf --docx`
 : Build `pdf` (LaTeX or Typst) exports and `docx` in the project
+
+`myst build --ipynb`
+: Build `ipynb` (Jupyter Notebook) exports in the project
 
 `myst build my-paper.md`
 : Build all exports in a specific page
