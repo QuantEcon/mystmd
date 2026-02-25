@@ -7,6 +7,7 @@ import { writeMd } from 'myst-to-md';
 import { select } from 'unist-util-select';
 import { transformToCommonMark } from './commonmark.js';
 import type { CommonMarkOptions } from './commonmark.js';
+import { embedImagesAsAttachments } from './attachments.js';
 
 function sourceToStringList(src: string): string[] {
   const lines = src.split('\n').map((s) => `${s}\n`);
@@ -22,11 +23,37 @@ function stripBlockMarkers(md: string): string {
   return md.replace(/^\+\+\+[^\n]*\n/gm, '');
 }
 
+/** Image data for embedding as cell attachments */
+export interface ImageData {
+  /** MIME type (e.g. 'image/png') */
+  mime: string;
+  /** Base64-encoded image data */
+  data: string;
+}
+
 export interface IpynbOptions {
   /** Markdown format: 'myst' preserves MyST syntax, 'commonmark' converts to plain CommonMark */
   markdown?: 'myst' | 'commonmark';
   /** Options for CommonMark conversion */
   commonmark?: CommonMarkOptions;
+  /**
+   * How to handle images: 'reference' keeps URL references (default),
+   * 'attachment' embeds as base64 cell attachments for self-contained notebooks.
+   *
+   * When 'attachment', image data is read from disk by `collectImageData()`
+   * in myst-cli (Phase 1), then post-serialization regex rewriting in
+   * `embedImagesAsAttachments()` converts `![alt](url)` → `![alt](attachment:name)`
+   * and adds the `attachments` field to each cell (Phase 2).
+   */
+  images?: 'reference' | 'attachment';
+  /**
+   * Map of image URL → { mime, data } for attachment embedding.
+   * Only used when `images` is 'attachment'. Populated by `collectImageData()`
+   * in myst-cli which walks AST image nodes and reads files from disk.
+   * Keys must match the image URLs as they appear in the serialized markdown
+   * (e.g. '/_static/img/foo.png').
+   */
+  imageData?: Record<string, ImageData>;
 }
 
 export function writeIpynb(
@@ -59,6 +86,22 @@ export function writeIpynb(
       }
       const md = writeMd(file, blockTree).result as string;
       const cleanMd = stripBlockMarkers(md);
+      // Embed images as cell attachments if requested
+      if (options?.images === 'attachment' && options?.imageData) {
+        const { md: attachedMd, attachments } = embedImagesAsAttachments(
+          cleanMd,
+          options.imageData,
+        );
+        const cell: Record<string, any> = {
+          cell_type: 'markdown' as const,
+          metadata: {},
+          source: sourceToStringList(attachedMd),
+        };
+        if (attachments) {
+          cell.attachments = attachments;
+        }
+        return cell;
+      }
       return {
         cell_type: 'markdown' as const,
         metadata: {},
@@ -116,3 +159,4 @@ const plugin: Plugin<[PageFrontmatter?, IpynbOptions?], Root, VFile> = function 
 
 export default plugin;
 export type { CommonMarkOptions } from './commonmark.js';
+export { embedImagesAsAttachments } from './attachments.js';
