@@ -81,7 +81,6 @@ project:
         - file: asides.md
         - file: dropdowns-cards-and-tabs.md
         - file: glossaries-and-terms.md
-        - file: anywidgets.md
         - file: writing-in-latex.md
         - file: inline-options.md
     - title: Executable Content
@@ -128,6 +127,7 @@ project:
         - file: javascript-plugins.md
         - file: plugins-distribute.md
         - file: executable-plugins.md
+        - file: anywidgets.md
         - file: plugins-debug.md
         - title: Use cases
           children:
