@@ -91,7 +91,7 @@ export function embedImagesAsAttachments(
     });
   }
 
-  // Apply replacements (iterate in reverse order to preserve positions)
+  // Apply replacements sequentially using simple string replacement
   for (const { original, replacement } of replacements) {
     updatedMd = updatedMd.replace(original, replacement);
   }

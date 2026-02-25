@@ -100,7 +100,8 @@ function collectImageData(
     if (imageData[url]) continue; // already processed
 
     const sourceFolder = getSourceFolder(url, sourceFile, sourcePath);
-    const filePath = path.join(sourceFolder, url);
+    const relativeUrl = url.replace(/^[\/\\]+/, '');
+    const filePath = path.join(sourceFolder, relativeUrl);
 
     try {
       if (!fs.existsSync(filePath)) {
