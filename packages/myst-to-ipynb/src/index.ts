@@ -8,6 +8,8 @@ import { select } from 'unist-util-select';
 import { transformToCommonMark } from './commonmark.js';
 import type { CommonMarkOptions } from './commonmark.js';
 import { embedImagesAsAttachments } from './attachments.js';
+export type { ImageData } from './types.js';
+import type { ImageData } from './types.js';
 
 function sourceToStringList(src: string): string[] {
   const lines = src.split('\n').map((s) => `${s}\n`);
@@ -21,14 +23,6 @@ function sourceToStringList(src: string): string[] {
  */
 function stripBlockMarkers(md: string): string {
   return md.replace(/^\+\+\+[^\n]*\n/gm, '');
-}
-
-/** Image data for embedding as cell attachments */
-export interface ImageData {
-  /** MIME type (e.g. 'image/png') */
-  mime: string;
-  /** Base64-encoded image data */
-  data: string;
 }
 
 export interface IpynbOptions {

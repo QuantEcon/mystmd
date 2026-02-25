@@ -29,7 +29,7 @@
  *   (filesystem-aware).
  */
 
-import type { ImageData } from './index.js';
+import type { ImageData } from './types.js';
 
 /**
  * Extract the basename (filename) from a URL or path.
