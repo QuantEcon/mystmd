@@ -3,7 +3,7 @@
   "version": "1.0.15",
   "description": "Export from MyST mdast to ipynb",
   "author": "Rowan Cockett <rowan@curvenote.com>",
-  "homepage": "https://github.com/jupyter-book/mystmd/tree/main/packages/myst-to-md",
+  "homepage": "https://github.com/jupyter-book/mystmd/tree/main/packages/myst-to-ipynb",
   "license": "MIT",
   "type": "module",
   "exports": "./dist/index.js",

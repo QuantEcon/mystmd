@@ -45,7 +45,7 @@ export async function runIpynbExport(
   vfile.path = output;
   const mdOut = writeIpynb(vfile, mdast as any, frontmatter);
   logMessagesFromVFile(session, mdOut);
-  session.log.info(toc(`📑 Exported MD in %s, copying to ${output}`));
+  session.log.info(toc(`📓 Exported IPYNB in %s, copying to ${output}`));
   writeFileToFolder(output, mdOut.result as string);
   return { tempFolders: [] };
 }

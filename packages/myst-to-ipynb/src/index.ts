@@ -12,6 +12,14 @@ function sourceToStringList(src: string): string[] {
   return lines;
 }
 
+/**
+ * Strip leading `+++` cell break markers from markdown content.
+ * These are MyST-specific block separators that have no meaning in notebooks.
+ */
+function stripBlockMarkers(md: string): string {
+  return md.replace(/^\+\+\+[^\n]*\n/, '');
+}
+
 export function writeIpynb(file: VFile, node: Root, frontmatter?: PageFrontmatter) {
   const cells = (node.children as Block[]).map((block: Block) => {
     if (block.type === 'block' && block.kind === 'notebook-code') {
@@ -25,20 +33,32 @@ export function writeIpynb(file: VFile, node: Root, frontmatter?: PageFrontmatte
       };
     }
     const md = writeMd(file, { type: 'root', children: [block] }).result as string;
+    const cleanMd = stripBlockMarkers(md);
     return {
       cell_type: 'markdown',
       metadata: {},
-      source: sourceToStringList(md),
+      source: sourceToStringList(cleanMd),
     };
   });
 
+  // Build notebook metadata from frontmatter kernelspec when available
+  const languageName = frontmatter?.kernelspec?.language ?? frontmatter?.kernelspec?.name ?? 'python';
+  const metadata: Record<string, any> = {
+    language_info: {
+      name: languageName,
+    },
+  };
+  if (frontmatter?.kernelspec) {
+    metadata.kernelspec = {
+      name: frontmatter.kernelspec.name,
+      display_name: frontmatter.kernelspec.display_name,
+      language: languageName,
+    };
+  }
+
   const ipynb = {
     cells,
-    metadata: {
-      language_info: {
-        name: 'python',
-      },
-    },
+    metadata,
     nbformat: 4,
     nbformat_minor: 2,
   };
