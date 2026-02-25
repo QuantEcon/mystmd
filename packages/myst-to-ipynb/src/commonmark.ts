@@ -345,6 +345,20 @@ function transformCodeBlock(node: GenericNode): GenericNode {
 }
 
 /**
+ * Convert an image node to a plain markdown image by stripping
+ * directive-specific properties (class, width, align) that cause
+ * myst-to-md to render it as a ```{image} directive.
+ */
+function transformImage(node: GenericNode): GenericNode {
+  return {
+    type: 'image',
+    url: node.url ?? node.urlSource ?? '',
+    alt: node.alt ?? '',
+    title: node.title,
+  };
+}
+
+/**
  * Convert a mystDirective node to plain content or remove it.
  */
 function transformMystDirective(node: GenericNode): GenericNode | null {
@@ -478,6 +492,10 @@ function transformNode(
       // Strip extra MyST attributes (class, emphasize-lines, etc.) so myst-to-md
       // renders this as a plain fenced code block instead of a ```{code-block} directive
       return transformCodeBlock(node);
+    case 'image':
+      // Strip directive-specific properties (class, width, align) so myst-to-md
+      // renders this as ![alt](url) instead of a ```{image} directive
+      return transformImage(node);
     default:
       return node;
   }
