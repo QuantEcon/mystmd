@@ -4,11 +4,15 @@ import path from 'node:path';
 import yaml from 'js-yaml';
 import { unified } from 'unified';
 import writeIpynb from '../src';
+import type { PageFrontmatter } from 'myst-frontmatter';
+import type { IpynbOptions } from '../src';
 
 type TestCase = {
   title: string;
   ipynb: Record<string, any>;
   mdast: Record<string, any>;
+  frontmatter?: PageFrontmatter;
+  options?: IpynbOptions;
 };
 
 type TestCases = {
@@ -28,43 +32,12 @@ casesList.forEach(({ title, cases }) => {
   describe(title, () => {
     test.each(cases.map((c): [string, TestCase] => [c.title, c]))(
       '%s',
-      (_, { ipynb, mdast }) => {
-        const pipe = unified().use(writeIpynb);
+      (_, { ipynb, mdast, frontmatter, options }) => {
+        const pipe = unified().use(writeIpynb, frontmatter, options);
         pipe.runSync(mdast as any);
         const file = pipe.stringify(mdast as any);
         expect(JSON.parse(file.result)).toEqual(ipynb);
       },
-    );
-  });
-});
-
-describe('myst-to-ipynb frontmatter', () => {
-  test('empty frontmatter passes', () => {
-    const pipe = unified().use(writeIpynb, {});
-    const mdast = {
-      type: 'root',
-      children: [{ type: 'paragraph', children: [{ type: 'text', value: 'Hello world!' }] }],
-    };
-    pipe.runSync(mdast as any);
-    const file = pipe.stringify(mdast as any);
-    expect(file.result).toEqual(`{
-  "cells": [
-    {
-      "cell_type": "markdown",
-      "metadata": {},
-      "source": [
-        "Hello world!"
-      ]
-    }
-  ],
-  "metadata": {
-    "language_info": {
-      "name": "python"
-    }
-  },
-  "nbformat": 4,
-  "nbformat_minor": 2
-}`
     );
   });
 });

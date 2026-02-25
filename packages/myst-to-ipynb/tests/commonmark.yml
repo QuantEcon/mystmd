@@ -1,0 +1,376 @@
+title: myst-to-ipynb CommonMark mode
+cases:
+  - title: inline math converted to dollar signs
+    options:
+      markdown: commonmark
+    mdast:
+      type: root
+      children:
+        - type: paragraph
+          children:
+            - type: text
+              value: 'The value '
+            - type: inlineMath
+              value: 'E = mc^2'
+            - type: text
+              value: ' is famous.'
+    ipynb:
+      cells:
+        - cell_type: markdown
+          metadata: {}
+          source:
+            - "The value $E = mc^2$ is famous."
+      metadata:
+        language_info:
+          name: python
+      nbformat: 4
+      nbformat_minor: 2
+
+  - title: math block converted to dollar-dollar
+    options:
+      markdown: commonmark
+    mdast:
+      type: root
+      children:
+        - type: math
+          value: "\\int_0^\\infty e^{-x^2} dx"
+          label: eq-gauss
+    ipynb:
+      cells:
+        - cell_type: markdown
+          metadata: {}
+          source:
+            - "$$\n"
+            - "\\int_0^\\infty e^{-x^2} dx\n"
+            - "$$ (eq-gauss)"
+      metadata:
+        language_info:
+          name: python
+      nbformat: 4
+      nbformat_minor: 2
+
+  - title: math block without label
+    options:
+      markdown: commonmark
+    mdast:
+      type: root
+      children:
+        - type: math
+          value: 'a^2 + b^2 = c^2'
+    ipynb:
+      cells:
+        - cell_type: markdown
+          metadata: {}
+          source:
+            - "$$\n"
+            - "a^2 + b^2 = c^2\n"
+            - "$$"
+      metadata:
+        language_info:
+          name: python
+      nbformat: 4
+      nbformat_minor: 2
+
+  - title: admonition converted to blockquote
+    options:
+      markdown: commonmark
+    mdast:
+      type: root
+      children:
+        - type: admonition
+          kind: note
+          children:
+            - type: admonitionTitle
+              children:
+                - type: text
+                  value: Important
+            - type: paragraph
+              children:
+                - type: text
+                  value: This is a note.
+    ipynb:
+      cells:
+        - cell_type: markdown
+          metadata: {}
+          source:
+            - "> **Important**\n"
+            - ">\n"
+            - "> This is a note."
+      metadata:
+        language_info:
+          name: python
+      nbformat: 4
+      nbformat_minor: 2
+
+  - title: admonition preserved in myst mode
+    mdast:
+      type: root
+      children:
+        - type: admonition
+          kind: note
+          children:
+            - type: admonitionTitle
+              children:
+                - type: text
+                  value: Important
+            - type: paragraph
+              children:
+                - type: text
+                  value: This is a note.
+    ipynb:
+      cells:
+        - cell_type: markdown
+          metadata: {}
+          source:
+            - ":::{note} Important\n"
+            - "This is a note.\n"
+            - ":::"
+      metadata:
+        language_info:
+          name: python
+      nbformat: 4
+      nbformat_minor: 2
+
+  - title: exercise with enumerator
+    options:
+      markdown: commonmark
+    mdast:
+      type: root
+      children:
+        - type: exercise
+          enumerator: '1'
+          children:
+            - type: admonitionTitle
+              children:
+                - type: text
+                  value: Exercise
+            - type: paragraph
+              children:
+                - type: text
+                  value: 'Solve '
+                - type: inlineMath
+                  value: 'x^2 = 1'
+    ipynb:
+      cells:
+        - cell_type: markdown
+          metadata: {}
+          source:
+            - "**Exercise 1**\n"
+            - "\n"
+            - "Solve $x^2 = 1$"
+      metadata:
+        language_info:
+          name: python
+      nbformat: 4
+      nbformat_minor: 2
+
+  - title: theorem with title
+    options:
+      markdown: commonmark
+    mdast:
+      type: root
+      children:
+        - type: proof
+          kind: theorem
+          enumerator: '1'
+          children:
+            - type: admonitionTitle
+              children:
+                - type: text
+                  value: Pythagorean
+            - type: paragraph
+              children:
+                - type: inlineMath
+                  value: 'a^2 + b^2 = c^2'
+    ipynb:
+      cells:
+        - cell_type: markdown
+          metadata: {}
+          source:
+            - "**Theorem 1 (Pythagorean)**\n"
+            - "\n"
+            - "$a^2 + b^2 = c^2$"
+      metadata:
+        language_info:
+          name: python
+      nbformat: 4
+      nbformat_minor: 2
+
+  - title: tabSet flattened to bold titles
+    options:
+      markdown: commonmark
+    mdast:
+      type: root
+      children:
+        - type: tabSet
+          children:
+            - type: tabItem
+              title: Python
+              children:
+                - type: code
+                  lang: python
+                  value: 'print("hi")'
+            - type: tabItem
+              title: Julia
+              children:
+                - type: code
+                  lang: julia
+                  value: 'println("hi")'
+    ipynb:
+      cells:
+        - cell_type: markdown
+          metadata: {}
+          source:
+            - "**Python**\n"
+            - "\n"
+            - "```python\n"
+            - "print(\"hi\")\n"
+            - "```\n"
+            - "\n"
+            - "**Julia**\n"
+            - "\n"
+            - "```julia\n"
+            - "println(\"hi\")\n"
+            - "```"
+      metadata:
+        language_info:
+          name: python
+      nbformat: 4
+      nbformat_minor: 2
+
+  - title: solution dropped when configured
+    options:
+      markdown: commonmark
+      commonmark:
+        dropSolutions: true
+    mdast:
+      type: root
+      children:
+        - type: solution
+          children:
+            - type: admonitionTitle
+              children:
+                - type: text
+                  value: Solution
+            - type: paragraph
+              children:
+                - type: text
+                  value: The answer is 42.
+    ipynb:
+      cells:
+        - cell_type: markdown
+          metadata: {}
+          source:
+            - ""
+      metadata:
+        language_info:
+          name: python
+      nbformat: 4
+      nbformat_minor: 2
+
+  - title: solution kept by default in commonmark mode
+    options:
+      markdown: commonmark
+    mdast:
+      type: root
+      children:
+        - type: solution
+          children:
+            - type: admonitionTitle
+              children:
+                - type: text
+                  value: Solution to Exercise 1
+            - type: paragraph
+              children:
+                - type: text
+                  value: The answer is 42.
+    ipynb:
+      cells:
+        - cell_type: markdown
+          metadata: {}
+          source:
+            - "**Solution to Exercise 1**\n"
+            - "\n"
+            - "The answer is 42."
+      metadata:
+        language_info:
+          name: python
+      nbformat: 4
+      nbformat_minor: 2
+
+  - title: inline math with underscores not escaped
+    options:
+      markdown: commonmark
+    mdast:
+      type: root
+      children:
+        - type: paragraph
+          children:
+            - type: inlineMath
+              value: 'x_1 + x_2'
+    ipynb:
+      cells:
+        - cell_type: markdown
+          metadata: {}
+          source:
+            - "$x_1 + x_2$"
+      metadata:
+        language_info:
+          name: python
+      nbformat: 4
+      nbformat_minor: 2
+
+  - title: math block with underscores not escaped
+    options:
+      markdown: commonmark
+    mdast:
+      type: root
+      children:
+        - type: math
+          value: "\\int_0^\\infty e^{-x^2} dx = \\frac{\\sqrt{\\pi}}{2}"
+    ipynb:
+      cells:
+        - cell_type: markdown
+          metadata: {}
+          source:
+            - "$$\n"
+            - "\\int_0^\\infty e^{-x^2} dx = \\frac{\\sqrt{\\pi}}{2}\n"
+            - "$$"
+      metadata:
+        language_info:
+          name: python
+      nbformat: 4
+      nbformat_minor: 2
+
+  - title: CommonMark with frontmatter kernelspec
+    frontmatter:
+      kernelspec:
+        name: python3
+        display_name: Python 3
+        language: python
+    options:
+      markdown: commonmark
+    mdast:
+      type: root
+      children:
+        - type: paragraph
+          children:
+            - type: text
+              value: 'Value: '
+            - type: inlineMath
+              value: 'x = 1'
+    ipynb:
+      cells:
+        - cell_type: markdown
+          metadata: {}
+          source:
+            - "Value: $x = 1$"
+      metadata:
+        language_info:
+          name: python
+        kernelspec:
+          name: python3
+          display_name: Python 3
+          language: python
+      nbformat: 4
+      nbformat_minor: 2
