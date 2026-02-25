@@ -2,6 +2,7 @@ import path from 'node:path';
 import { tic, writeFileToFolder } from 'myst-cli-utils';
 import { FRONTMATTER_ALIASES, PAGE_FRONTMATTER_KEYS } from 'myst-frontmatter';
 import { writeIpynb } from 'myst-to-ipynb';
+import type { IpynbOptions } from 'myst-to-ipynb';
 import { filterKeys } from 'simple-validators';
 import { VFile } from 'vfile';
 import { finalizeMdast } from '../../process/mdast.js';
@@ -43,7 +44,12 @@ export async function runIpynbExport(
   });
   const vfile = new VFile();
   vfile.path = output;
-  const mdOut = writeIpynb(vfile, mdast as any, frontmatter);
+  // Pass markdown format option from export config (e.g. `markdown: commonmark` in myst.yml)
+  const ipynbOpts: IpynbOptions | undefined =
+    (exportOptions as any).markdown === 'commonmark'
+      ? { markdown: 'commonmark' }
+      : undefined;
+  const mdOut = writeIpynb(vfile, mdast as any, frontmatter, ipynbOpts);
   logMessagesFromVFile(session, mdOut);
   session.log.info(toc(`📓 Exported IPYNB in %s, copying to ${output}`));
   writeFileToFolder(output, mdOut.result as string);

@@ -5,6 +5,8 @@ import type { VFile } from 'vfile';
 import type { PageFrontmatter } from 'myst-frontmatter';
 import { writeMd } from 'myst-to-md';
 import { select } from 'unist-util-select';
+import { transformToCommonMark } from './commonmark.js';
+import type { CommonMarkOptions } from './commonmark.js';
 
 function sourceToStringList(src: string): string[] {
   const lines = src.split('\n').map((s) => `${s}\n`);
@@ -20,7 +22,21 @@ function stripBlockMarkers(md: string): string {
   return md.replace(/^\+\+\+[^\n]*\n/, '');
 }
 
-export function writeIpynb(file: VFile, node: Root, frontmatter?: PageFrontmatter) {
+export interface IpynbOptions {
+  /** Markdown format: 'myst' preserves MyST syntax, 'commonmark' converts to plain CommonMark */
+  markdown?: 'myst' | 'commonmark';
+  /** Options for CommonMark conversion */
+  commonmark?: CommonMarkOptions;
+}
+
+export function writeIpynb(
+  file: VFile,
+  node: Root,
+  frontmatter?: PageFrontmatter,
+  options?: IpynbOptions,
+) {
+  const markdownFormat = options?.markdown ?? 'myst';
+
   const cells = (node.children as Block[]).map((block: Block) => {
     if (block.type === 'block' && block.kind === 'notebook-code') {
       const code = select('code', block) as Code;
@@ -32,7 +48,15 @@ export function writeIpynb(file: VFile, node: Root, frontmatter?: PageFrontmatte
         source: sourceToStringList(code.value),
       };
     }
-    const md = writeMd(file, { type: 'root', children: [block] }).result as string;
+    // Build the sub-tree for this markdown cell
+    let blockTree: any = { type: 'root', children: [block] };
+    if (markdownFormat === 'commonmark') {
+      blockTree = transformToCommonMark(
+        JSON.parse(JSON.stringify(blockTree)),
+        options?.commonmark,
+      );
+    }
+    const md = writeMd(file, blockTree).result as string;
     const cleanMd = stripBlockMarkers(md);
     return {
       cell_type: 'markdown',
@@ -67,9 +91,12 @@ export function writeIpynb(file: VFile, node: Root, frontmatter?: PageFrontmatte
   return file;
 }
 
-const plugin: Plugin<[PageFrontmatter?], Root, VFile> = function (frontmatter?) {
+const plugin: Plugin<[PageFrontmatter?, IpynbOptions?], Root, VFile> = function (
+  frontmatter?,
+  options?,
+) {
   this.Compiler = (node, file) => {
-    return writeIpynb(file, node, frontmatter);
+    return writeIpynb(file, node, frontmatter, options);
   };
 
   return (node: Root) => {
@@ -79,3 +106,4 @@ const plugin: Plugin<[PageFrontmatter?], Root, VFile> = function (frontmatter?) 
 };
 
 export default plugin;
+export type { CommonMarkOptions } from './commonmark.js';
