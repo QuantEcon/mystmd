@@ -409,6 +409,15 @@ export function transformToCommonMark(
       }
     }
     tree.children = newChildren;
+
+    // Strip identifier/label from all transformed children to prevent
+    // myst-to-md's labelWrapper from adding `(identifier)=\n` prefixes
+    // to headings, paragraphs, blockquotes, lists, etc.
+    // This runs AFTER transformNode so transforms can still use label/identifier.
+    for (const child of tree.children) {
+      delete child.identifier;
+      delete child.label;
+    }
   }
 
   return tree;
@@ -459,6 +468,16 @@ function transformNode(
       return transformMystDirective(node);
     case 'mystRole':
       return transformMystRole(node);
+    case 'mystTarget':
+      // Drop MyST target labels — they have no CommonMark equivalent
+      return null;
+    case 'comment':
+      // Drop MyST comments (% comment syntax) — not valid in CommonMark
+      return null;
+    case 'code':
+      // Strip extra MyST attributes (class, emphasize-lines, etc.) so myst-to-md
+      // renders this as a plain fenced code block instead of a ```{code-block} directive
+      return transformCodeBlock(node);
     default:
       return node;
   }

@@ -257,11 +257,7 @@ cases:
                 - type: text
                   value: The answer is 42.
     ipynb:
-      cells:
-        - cell_type: markdown
-          metadata: {}
-          source:
-            - ""
+      cells: []
       metadata:
         language_info:
           name: python
@@ -372,5 +368,133 @@ cases:
           name: python3
           display_name: Python 3
           language: python
+      nbformat: 4
+      nbformat_minor: 2
+
+  - title: heading identifier stripped in commonmark mode
+    options:
+      markdown: commonmark
+    mdast:
+      type: root
+      children:
+        - type: heading
+          depth: 2
+          identifier: my-section
+          label: my-section
+          children:
+            - type: text
+              value: My Section
+    ipynb:
+      cells:
+        - cell_type: markdown
+          metadata: {}
+          source:
+            - "## My Section"
+      metadata:
+        language_info:
+          name: python
+      nbformat: 4
+      nbformat_minor: 2
+
+  - title: paragraph identifier stripped in commonmark mode
+    options:
+      markdown: commonmark
+    mdast:
+      type: root
+      children:
+        - type: paragraph
+          identifier: labeled-para
+          children:
+            - type: text
+              value: A labeled paragraph.
+    ipynb:
+      cells:
+        - cell_type: markdown
+          metadata: {}
+          source:
+            - "A labeled paragraph."
+      metadata:
+        language_info:
+          name: python
+      nbformat: 4
+      nbformat_minor: 2
+
+  - title: mystTarget nodes dropped in commonmark mode
+    options:
+      markdown: commonmark
+    mdast:
+      type: root
+      children:
+        - type: mystTarget
+          label: my-target
+        - type: paragraph
+          children:
+            - type: text
+              value: After target.
+    ipynb:
+      cells:
+        - cell_type: markdown
+          metadata: {}
+          source:
+            - "After target."
+      metadata:
+        language_info:
+          name: python
+      nbformat: 4
+      nbformat_minor: 2
+
+  - title: comment nodes dropped in commonmark mode
+    options:
+      markdown: commonmark
+    mdast:
+      type: root
+      children:
+        - type: paragraph
+          children:
+            - type: text
+              value: Before comment.
+        - type: comment
+          value: This is a MyST comment
+        - type: paragraph
+          children:
+            - type: text
+              value: After comment.
+    ipynb:
+      cells:
+        - cell_type: markdown
+          metadata: {}
+          source:
+            - "Before comment."
+        - cell_type: markdown
+          metadata: {}
+          source:
+            - "After comment."
+      metadata:
+        language_info:
+          name: python
+      nbformat: 4
+      nbformat_minor: 2
+
+  - title: code block with extra attributes stripped in commonmark mode
+    options:
+      markdown: commonmark
+    mdast:
+      type: root
+      children:
+        - type: code
+          lang: python
+          class: no-execute
+          value: "print('hello')"
+    ipynb:
+      cells:
+        - cell_type: markdown
+          metadata: {}
+          source:
+            - "```python\n"
+            - "print('hello')\n"
+            - "```"
+      metadata:
+        language_info:
+          name: python
       nbformat: 4
       nbformat_minor: 2

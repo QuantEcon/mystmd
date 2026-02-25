@@ -19,7 +19,7 @@ function sourceToStringList(src: string): string[] {
  * These are MyST-specific block separators that have no meaning in notebooks.
  */
 function stripBlockMarkers(md: string): string {
-  return md.replace(/^\+\+\+[^\n]*\n/, '');
+  return md.replace(/^\+\+\+[^\n]*\n/gm, '');
 }
 
 export interface IpynbOptions {
@@ -37,33 +37,42 @@ export function writeIpynb(
 ) {
   const markdownFormat = options?.markdown ?? 'myst';
 
-  const cells = (node.children as Block[]).map((block: Block) => {
-    if (block.type === 'block' && block.kind === 'notebook-code') {
-      const code = select('code', block) as Code;
+  const cells = (node.children as Block[])
+    .map((block: Block) => {
+      if (block.type === 'block' && block.kind === 'notebook-code') {
+        const code = select('code', block) as Code;
+        return {
+          cell_type: 'code' as const,
+          execution_count: null,
+          metadata: {},
+          outputs: [],
+          source: sourceToStringList(code.value),
+        };
+      }
+      // Build the sub-tree for this markdown cell
+      let blockTree: any = { type: 'root', children: [block] };
+      if (markdownFormat === 'commonmark') {
+        blockTree = transformToCommonMark(
+          JSON.parse(JSON.stringify(blockTree)),
+          options?.commonmark,
+        );
+      }
+      const md = writeMd(file, blockTree).result as string;
+      const cleanMd = stripBlockMarkers(md);
       return {
-        cell_type: 'code',
-        execution_count: null,
+        cell_type: 'markdown' as const,
         metadata: {},
-        outputs: [],
-        source: sourceToStringList(code.value),
+        source: sourceToStringList(cleanMd),
       };
-    }
-    // Build the sub-tree for this markdown cell
-    let blockTree: any = { type: 'root', children: [block] };
-    if (markdownFormat === 'commonmark') {
-      blockTree = transformToCommonMark(
-        JSON.parse(JSON.stringify(blockTree)),
-        options?.commonmark,
-      );
-    }
-    const md = writeMd(file, blockTree).result as string;
-    const cleanMd = stripBlockMarkers(md);
-    return {
-      cell_type: 'markdown',
-      metadata: {},
-      source: sourceToStringList(cleanMd),
-    };
-  });
+    })
+    .filter((cell) => {
+      // Remove empty markdown cells (e.g., from dropped mystTarget/comment nodes)
+      if (cell.cell_type === 'markdown') {
+        const content = cell.source.join('').trim();
+        return content.length > 0;
+      }
+      return true;
+    });
 
   // Build notebook metadata from frontmatter kernelspec when available
   const languageName = frontmatter?.kernelspec?.language ?? frontmatter?.kernelspec?.name ?? 'python';
