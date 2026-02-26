@@ -294,6 +294,214 @@ cases:
       nbformat: 4
       nbformat_minor: 2
 
+  - title: gated solution with code cell lifted to top level
+    options:
+      markdown: commonmark
+    mdast:
+      type: root
+      children:
+        - type: block
+          children:
+            - type: solution
+              children:
+                - type: admonitionTitle
+                  children:
+                    - type: text
+                      value: Solution to Exercise 1
+                - type: paragraph
+                  children:
+                    - type: text
+                      value: "Here's one solution:"
+                - type: block
+                  kind: notebook-code
+                  children:
+                    - type: code
+                      lang: python3
+                      executable: true
+                      value: "def factorial(n):\n    k = 1\n    for i in range(n):\n        k = k * (i + 1)\n    return k\n\nfactorial(4)"
+                    - type: outputs
+                      children: []
+    ipynb:
+      cells:
+        - cell_type: markdown
+          metadata: {}
+          source:
+            - "**Solution to Exercise 1**\n"
+            - "\n"
+            - "Here's one solution:"
+        - cell_type: code
+          execution_count: null
+          metadata: {}
+          outputs: []
+          source:
+            - "def factorial(n):\n"
+            - "    k = 1\n"
+            - "    for i in range(n):\n"
+            - "        k = k * (i + 1)\n"
+            - "    return k\n"
+            - "\n"
+            - "factorial(4)"
+      metadata:
+        language_info:
+          name: python
+      nbformat: 4
+      nbformat_minor: 2
+
+  - title: gated solution with multiple code cells interleaved with markdown
+    options:
+      markdown: commonmark
+    mdast:
+      type: root
+      children:
+        - type: block
+          children:
+            - type: solution
+              children:
+                - type: admonitionTitle
+                  children:
+                    - type: text
+                      value: Solution
+                - type: paragraph
+                  children:
+                    - type: text
+                      value: First approach
+                - type: block
+                  kind: notebook-code
+                  children:
+                    - type: code
+                      lang: python3
+                      executable: true
+                      value: "x = 1"
+                    - type: outputs
+                      children: []
+                - type: paragraph
+                  children:
+                    - type: text
+                      value: Second approach
+                - type: block
+                  kind: notebook-code
+                  children:
+                    - type: code
+                      lang: python3
+                      executable: true
+                      value: "x = 2"
+                    - type: outputs
+                      children: []
+    ipynb:
+      cells:
+        - cell_type: markdown
+          metadata: {}
+          source:
+            - "**Solution**\n"
+            - "\n"
+            - "First approach"
+        - cell_type: code
+          execution_count: null
+          metadata: {}
+          outputs: []
+          source:
+            - "x = 1"
+        - cell_type: markdown
+          metadata: {}
+          source:
+            - "Second approach"
+        - cell_type: code
+          execution_count: null
+          metadata: {}
+          outputs: []
+          source:
+            - "x = 2"
+      metadata:
+        language_info:
+          name: python
+      nbformat: 4
+      nbformat_minor: 2
+
+  - title: gated exercise with code cell
+    options:
+      markdown: commonmark
+    mdast:
+      type: root
+      children:
+        - type: block
+          children:
+            - type: exercise
+              enumerator: '1'
+              children:
+                - type: admonitionTitle
+                  children:
+                    - type: text
+                      value: Exercise
+                - type: paragraph
+                  children:
+                    - type: text
+                      value: Write a factorial function.
+                - type: block
+                  kind: notebook-code
+                  children:
+                    - type: code
+                      lang: python3
+                      executable: true
+                      value: "# your code here"
+                    - type: outputs
+                      children: []
+    ipynb:
+      cells:
+        - cell_type: markdown
+          metadata: {}
+          source:
+            - "**Exercise 1**\n"
+            - "\n"
+            - "Write a factorial function."
+        - cell_type: code
+          execution_count: null
+          metadata: {}
+          outputs: []
+          source:
+            - "# your code here"
+      metadata:
+        language_info:
+          name: python
+      nbformat: 4
+      nbformat_minor: 2
+
+  - title: gated solution dropped when configured
+    options:
+      markdown: commonmark
+      commonmark:
+        dropSolutions: true
+    mdast:
+      type: root
+      children:
+        - type: block
+          children:
+            - type: solution
+              children:
+                - type: admonitionTitle
+                  children:
+                    - type: text
+                      value: Solution
+                - type: paragraph
+                  children:
+                    - type: text
+                      value: "Here's the answer:"
+                - type: block
+                  kind: notebook-code
+                  children:
+                    - type: code
+                      lang: python3
+                      executable: true
+                      value: "x = 42"
+                    - type: outputs
+                      children: []
+    ipynb:
+      cells: []
+      metadata:
+        language_info:
+          name: python
+      nbformat: 4
+      nbformat_minor: 2
+
   - title: inline math with underscores not escaped
     options:
       markdown: commonmark
