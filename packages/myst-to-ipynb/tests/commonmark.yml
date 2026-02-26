@@ -502,6 +502,138 @@ cases:
       nbformat: 4
       nbformat_minor: 2
 
+  - title: gated exercise and solution sharing a block with other content
+    options:
+      markdown: commonmark
+    mdast:
+      type: root
+      children:
+        - type: block
+          children:
+            - type: paragraph
+              children:
+                - type: text
+                  value: Text before exercise.
+            - type: exercise
+              enumerator: '1'
+              children:
+                - type: admonitionTitle
+                  children:
+                    - type: text
+                      value: Exercise
+                - type: paragraph
+                  children:
+                    - type: text
+                      value: Write a factorial function.
+            - type: solution
+              children:
+                - type: admonitionTitle
+                  children:
+                    - type: text
+                      value: Solution to Exercise 1
+                - type: paragraph
+                  children:
+                    - type: text
+                      value: "Here's one solution:"
+                - type: block
+                  kind: notebook-code
+                  children:
+                    - type: code
+                      lang: python3
+                      executable: true
+                      value: "factorial(4)"
+                    - type: outputs
+                      children: []
+            - type: paragraph
+              children:
+                - type: text
+                  value: Text after solution.
+    ipynb:
+      cells:
+        - cell_type: markdown
+          metadata: {}
+          source:
+            - "Text before exercise.\n"
+            - "\n"
+            - "**Exercise 1**\n"
+            - "\n"
+            - "Write a factorial function."
+        - cell_type: markdown
+          metadata: {}
+          source:
+            - "**Solution to Exercise 1**\n"
+            - "\n"
+            - "Here's one solution:"
+        - cell_type: code
+          execution_count: null
+          metadata: {}
+          outputs: []
+          source:
+            - "factorial(4)"
+        - cell_type: markdown
+          metadata: {}
+          source:
+            - "Text after solution."
+      metadata:
+        language_info:
+          name: python
+      nbformat: 4
+      nbformat_minor: 2
+
+  - title: gated solution dropped from shared block when configured
+    options:
+      markdown: commonmark
+      commonmark:
+        dropSolutions: true
+    mdast:
+      type: root
+      children:
+        - type: block
+          children:
+            - type: exercise
+              enumerator: '1'
+              children:
+                - type: admonitionTitle
+                  children:
+                    - type: text
+                      value: Exercise
+                - type: paragraph
+                  children:
+                    - type: text
+                      value: Solve this problem.
+            - type: solution
+              children:
+                - type: admonitionTitle
+                  children:
+                    - type: text
+                      value: Solution
+                - type: paragraph
+                  children:
+                    - type: text
+                      value: "The answer:"
+                - type: block
+                  kind: notebook-code
+                  children:
+                    - type: code
+                      lang: python3
+                      executable: true
+                      value: "x = 42"
+                    - type: outputs
+                      children: []
+    ipynb:
+      cells:
+        - cell_type: markdown
+          metadata: {}
+          source:
+            - "**Exercise 1**\n"
+            - "\n"
+            - "Solve this problem."
+      metadata:
+        language_info:
+          name: python
+      nbformat: 4
+      nbformat_minor: 2
+
   - title: inline math with underscores not escaped
     options:
       markdown: commonmark

@@ -60,20 +60,35 @@ function isCodeCellBlock(node: GenericNode): boolean {
 }
 
 /**
+ * Check whether a node is an exercise or solution that contains code-cell blocks.
+ */
+function isGatedNodeWithCodeCells(node: GenericNode, opts?: CommonMarkOptions): boolean {
+  if (node.type !== 'exercise' && node.type !== 'solution') return false;
+  // Skip solutions that should be dropped — leave intact for transformToCommonMark
+  if (node.type === 'solution' && opts?.dropSolutions) return false;
+  return node.children?.some(isCodeCellBlock) ?? false;
+}
+
+/**
  * Lift code-cell blocks out of exercise/solution nodes that used gated syntax.
  *
  * When gated syntax (`{exercise-start}`/`{exercise-end}`) is used, the
  * `joinGatesTransform` nests all content between the gates — including
- * `{code-cell}` blocks — as children of the exercise/solution node. This
- * means those code-cell blocks never appear as top-level notebook cells;
- * they are absorbed into a single markdown cell and silently dropped.
+ * `{code-cell}` blocks — as children of the exercise/solution node. Then
+ * `blockNestingTransform` groups the exercise/solution with neighboring
+ * non-block siblings into a single wrapper block. The real AST structure is:
  *
- * This function walks the root's children and, for any exercise/solution
- * node that contains code-cell blocks, splits them into alternating
- * markdown cells and code cells at the top level:
+ *   root > block { para, exercise { para, block{code} }, solution { ... }, para }
  *
- *   BEFORE: block { solution { title, para, block{code}, para } }
- *   AFTER:  block { solution { title, para } }
+ * This means code-cell blocks inside exercise/solution never appear as
+ * top-level notebook cells; they are absorbed into a single markdown cell.
+ *
+ * This function walks each block's children, finds exercise/solution nodes
+ * that contain code-cell blocks, and splits the block so code cells are
+ * emitted as top-level notebook code cells:
+ *
+ *   BEFORE: block { para, solution { title, para, block{code}, para } }
+ *   AFTER:  block { para, solution { title, para } }
  *           block{code}
  *           block { para }
  *
@@ -85,87 +100,115 @@ function liftCodeCellsFromGatedNodes(root: Root, opts?: CommonMarkOptions): Root
   let modified = false;
 
   for (const child of root.children) {
-    // Determine if this child is (or wraps) an exercise/solution with code cells.
-    // After blockNestingTransform, the structure is:
-    //   block > exercise/solution > [content..., block{notebook-code}, ...]
-    // In tests, exercise/solution may appear directly as root children.
-    let targetNode: GenericNode | null = null;
-    let isWrappedInBlock = false;
-
     const c = child as GenericNode;
-    if (c.type === 'exercise' || c.type === 'solution') {
-      targetNode = c;
-    } else if (
-      c.type === 'block' &&
-      c.children?.length === 1 &&
-      (c.children[0].type === 'exercise' || c.children[0].type === 'solution')
-    ) {
-      targetNode = c.children[0];
-      isWrappedInBlock = true;
-    }
 
-    // If not a gated node, no code cells inside, or a solution that should
-    // be dropped (leave it intact for transformToCommonMark to handle), skip.
-    if (
-      !targetNode ||
-      !targetNode.children?.some(isCodeCellBlock) ||
-      (targetNode.type === 'solution' && opts?.dropSolutions)
-    ) {
-      newChildren.push(child);
+    // Case 1: exercise/solution directly as root child (e.g. in tests)
+    if (isGatedNodeWithCodeCells(c, opts)) {
+      modified = true;
+      liftFromExerciseSolution(c, newChildren, false);
       continue;
     }
 
-    modified = true;
-
-    // Split exercise/solution children into groups separated by code-cell blocks.
-    // The first markdown group retains the exercise/solution wrapper (for title
-    // rendering). Subsequent markdown groups are plain content blocks.
-    const mdContent: GenericNode[] = [];
-    let isFirstGroup = true;
-
-    const flushMarkdown = () => {
-      if (mdContent.length === 0) return;
-      const content = [...mdContent];
-      mdContent.length = 0;
-
-      if (isFirstGroup) {
-        // Wrap in exercise/solution node to preserve type, title, enumerator, etc.
-        const node: GenericNode = { ...targetNode!, children: content };
-        if (isWrappedInBlock) {
-          newChildren.push({ type: 'block', children: [node] } as unknown as Node);
-        } else {
-          newChildren.push(node as unknown as Node);
-        }
-        isFirstGroup = false;
-      } else {
-        // Continuation content — wrap in a plain block
-        if (isWrappedInBlock) {
-          newChildren.push({ type: 'block', children: content } as unknown as Node);
-        } else {
-          // When not block-wrapped (test scenarios), push content directly
-          for (const n of content) {
-            newChildren.push(n as unknown as Node);
-          }
-        }
-      }
-    };
-
-    for (const gatedChild of targetNode.children ?? []) {
-      if (isCodeCellBlock(gatedChild)) {
-        flushMarkdown();
-        // Lift code cell to top level
-        newChildren.push(gatedChild as unknown as Node);
-      } else {
-        mdContent.push(gatedChild);
-      }
+    // Case 2: block containing exercise/solution among its children
+    if (c.type === 'block' && c.children?.some((ch: GenericNode) => isGatedNodeWithCodeCells(ch, opts))) {
+      modified = true;
+      splitBlockWithGatedNodes(c, newChildren, opts);
+      continue;
     }
 
-    // Flush any remaining markdown content
-    flushMarkdown();
+    // No gated nodes — keep as-is
+    newChildren.push(child);
   }
 
   if (!modified) return root;
   return { ...root, children: newChildren } as Root;
+}
+
+/**
+ * Split a single exercise/solution node's children into alternating
+ * markdown content and top-level code cells.
+ *
+ * The first group of markdown content retains the exercise/solution wrapper
+ * (for title/enumerator rendering). Subsequent groups become plain content.
+ *
+ * @param wrapInBlock If true, wraps output groups in block nodes.
+ */
+function liftFromExerciseSolution(
+  node: GenericNode,
+  output: Node[],
+  wrapInBlock: boolean,
+): void {
+  const mdContent: GenericNode[] = [];
+  let isFirstGroup = true;
+
+  const flushMarkdown = () => {
+    if (mdContent.length === 0) return;
+    const content = [...mdContent];
+    mdContent.length = 0;
+
+    if (isFirstGroup) {
+      // Preserve the exercise/solution wrapper for title rendering
+      const wrapper: GenericNode = { ...node, children: content };
+      if (wrapInBlock) {
+        output.push({ type: 'block', children: [wrapper] } as unknown as Node);
+      } else {
+        output.push(wrapper as unknown as Node);
+      }
+      isFirstGroup = false;
+    } else {
+      if (wrapInBlock) {
+        output.push({ type: 'block', children: content } as unknown as Node);
+      } else {
+        for (const n of content) {
+          output.push(n as unknown as Node);
+        }
+      }
+    }
+  };
+
+  for (const gatedChild of node.children ?? []) {
+    if (isCodeCellBlock(gatedChild)) {
+      flushMarkdown();
+      output.push(gatedChild as unknown as Node);
+    } else {
+      mdContent.push(gatedChild);
+    }
+  }
+  flushMarkdown();
+}
+
+/**
+ * Process a block that contains one or more exercise/solution nodes with
+ * embedded code cells, along with other child nodes. Splits the block into
+ * multiple top-level blocks and code cells as needed.
+ *
+ * For non-exercise/solution children, they accumulate in a markdown block.
+ * When an exercise/solution with code cells is encountered, the accumulated
+ * block is flushed, then the exercise/solution is expanded via
+ * liftFromExerciseSolution.
+ */
+function splitBlockWithGatedNodes(
+  block: GenericNode,
+  output: Node[],
+  opts?: CommonMarkOptions,
+): void {
+  const pending: GenericNode[] = [];
+
+  const flushPending = () => {
+    if (pending.length === 0) return;
+    output.push({ type: 'block', children: [...pending] } as unknown as Node);
+    pending.length = 0;
+  };
+
+  for (const child of block.children ?? []) {
+    if (isGatedNodeWithCodeCells(child, opts)) {
+      flushPending();
+      liftFromExerciseSolution(child, output, true);
+    } else {
+      pending.push(child);
+    }
+  }
+  flushPending();
 }
 
 export function writeIpynb(
