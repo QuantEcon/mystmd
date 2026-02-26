@@ -468,6 +468,14 @@ function transformNode(node: GenericNode, dropSolutions: boolean): GenericNode |
       return transformDetails(node);
     case 'aside':
       return transformAside(node);
+    case 'include':
+      // Include directives are resolved during transformMdast — their children
+      // contain the fully-parsed content from the included file.  Unwrap them
+      // so the resolved content is emitted instead of the directive syntax.
+      if (node.children?.length) {
+        return { type: 'root', children: node.children };
+      }
+      return null;
     case 'mystDirective':
       return transformMystDirective(node);
     case 'mystRole':
