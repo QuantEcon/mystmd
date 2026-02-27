@@ -100,7 +100,7 @@ function collectImageData(
     if (imageData[url]) continue; // already processed
 
     const sourceFolder = getSourceFolder(url, sourceFile, sourcePath);
-    const relativeUrl = url.replace(/^[\/\\]+/, '');
+    const relativeUrl = url.replace(/^[/\\]+/, '');
     const filePath = path.join(sourceFolder, relativeUrl);
 
     try {

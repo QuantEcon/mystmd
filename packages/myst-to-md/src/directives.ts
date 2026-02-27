@@ -205,7 +205,6 @@ function container(node: any, _: Parent, state: NestedState, info: Info): string
   const children = [...(captionNode?.children || []), ...(legendNode?.children || [])];
   if (node.kind === 'quote') {
     const blockquoteNode: GenericNode | null = select('blockquote', node);
-    const captionNode: GenericNode | null = select('caption', node);
     if (!blockquoteNode) return '';
     // Serialize the blockquote content using the default blockquote handler
     let result = defaultHandlers.blockquote(blockquoteNode as any, _ as any, state, info);
