@@ -110,7 +110,10 @@ function liftCodeCellsFromGatedNodes(root: Root, opts?: CommonMarkOptions): Root
     }
 
     // Case 2: block containing exercise/solution among its children
-    if (c.type === 'block' && c.children?.some((ch: GenericNode) => isGatedNodeWithCodeCells(ch, opts))) {
+    if (
+      c.type === 'block' &&
+      c.children?.some((ch: GenericNode) => isGatedNodeWithCodeCells(ch, opts))
+    ) {
       modified = true;
       splitBlockWithGatedNodes(c, newChildren, opts);
       continue;
@@ -133,11 +136,7 @@ function liftCodeCellsFromGatedNodes(root: Root, opts?: CommonMarkOptions): Root
  *
  * @param wrapInBlock If true, wraps output groups in block nodes.
  */
-function liftFromExerciseSolution(
-  node: GenericNode,
-  output: Node[],
-  wrapInBlock: boolean,
-): void {
+function liftFromExerciseSolution(node: GenericNode, output: Node[], wrapInBlock: boolean): void {
   const mdContent: GenericNode[] = [];
   let isFirstGroup = true;
 

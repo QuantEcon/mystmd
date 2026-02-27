@@ -14,7 +14,7 @@ function crossReference(node: any, _: Parent, state: NestedState, info: Info): s
   const { urlSource, label, identifier, url, html_id } = node;
   const resolvedUrl =
     urlSource ??
-    (label ? `#${label}` : identifier ? `#${identifier}` : html_id ? `#${html_id}` : url ?? '');
+    (label ? `#${label}` : identifier ? `#${identifier}` : html_id ? `#${html_id}` : (url ?? ''));
   const nodeCopy = {
     ...node,
     url: resolvedUrl,
