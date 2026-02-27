@@ -67,7 +67,7 @@ export function embedImagesAsAttachments(
   const updatedMd = md.replace(imgRegex, (fullMatch, alt, url) => {
     // Unescape markdown characters that mdast-util-to-markdown might have added
     const unescapedUrl = url.replace(/\\([()[\]])/g, '$1');
-    
+
     const data = imageData[unescapedUrl];
     if (!data) return fullMatch;
 
