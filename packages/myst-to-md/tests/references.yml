@@ -181,3 +181,14 @@ cases:
                   value: markdown
     markdown: |-
       [Some % *markdown*](#example)
+  - title: crossReference - url fallback for remote refs
+    mdast:
+      type: root
+      children:
+        - type: crossReference
+          url: /other-page#section
+          children:
+            - type: text
+              value: Section 7
+    markdown: |-
+      [Section 7](/other-page#section)
