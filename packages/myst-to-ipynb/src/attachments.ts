@@ -57,20 +57,22 @@ export function embedImagesAsAttachments(
 
   const attachments: Record<string, Record<string, string>> = {};
   const usedNames = new Set<string>();
-  let updatedMd = md;
 
   // Match markdown image syntax: ![alt](url) and ![alt](url "title")
-  const imgRegex = /!\[([^\]]*)\]\(([^)\s]+)(?:\s+"[^"]*")?\)/g;
-  const replacements: Array<{ original: string; replacement: string }> = [];
+  // Handles escaped brackets in alt text and escaped parentheses in URLs.
+  // The escaped sequences (\] and \)) must appear BEFORE the single-char
+  // alternatives so the regex engine matches them as pairs first.
+  const imgRegex = /!\[((?:\\\]|[^\]])*)\]\(((?:\\\)|[^)\s])+)(?:\s+"[^"]*")?\)/g;
 
-  let match;
-  while ((match = imgRegex.exec(md)) !== null) {
-    const [fullMatch, alt, url] = match;
-    const data = imageData[url];
-    if (!data) continue;
+  const updatedMd = md.replace(imgRegex, (fullMatch, alt, url) => {
+    // Unescape markdown characters that mdast-util-to-markdown might have added
+    const unescapedUrl = url.replace(/\\([()[\]])/g, '$1');
+    
+    const data = imageData[unescapedUrl];
+    if (!data) return fullMatch;
 
     // Generate a unique attachment name from the basename
-    const base = basename(url);
+    const base = basename(unescapedUrl);
     let name = base;
     let counter = 1;
     while (usedNames.has(name)) {
@@ -85,16 +87,8 @@ export function embedImagesAsAttachments(
     usedNames.add(name);
 
     attachments[name] = { [data.mime]: data.data };
-    replacements.push({
-      original: fullMatch,
-      replacement: `![${alt}](attachment:${name})`,
-    });
-  }
-
-  // Apply replacements sequentially using simple string replacement
-  for (const { original, replacement } of replacements) {
-    updatedMd = updatedMd.replace(original, replacement);
-  }
+    return `![${alt}](attachment:${name})`;
+  });
 
   if (Object.keys(attachments).length > 0) {
     return { md: updatedMd, attachments };

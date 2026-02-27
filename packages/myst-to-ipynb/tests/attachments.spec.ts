@@ -82,4 +82,28 @@ describe('embedImagesAsAttachments', () => {
       'chart.png': { 'image/png': 'DATA' },
     });
   });
+
+  test('handles escaped parentheses in URL', () => {
+    const md = '![Chart](/_static/img\\(1\\).png)';
+    const imageData = {
+      '/_static/img(1).png': { mime: 'image/png', data: 'base64data' },
+    };
+    const result = embedImagesAsAttachments(md, imageData);
+    expect(result.md).toBe('![Chart](attachment:img(1).png)');
+    expect(result.attachments).toEqual({
+      'img(1).png': { 'image/png': 'base64data' },
+    });
+  });
+
+  test('handles escaped brackets in alt text', () => {
+    const md = '![alt \\[text\\]](/_static/chart.png)';
+    const imageData = {
+      '/_static/chart.png': { mime: 'image/png', data: 'DATA' },
+    };
+    const result = embedImagesAsAttachments(md, imageData);
+    expect(result.md).toBe('![alt \\[text\\]](attachment:chart.png)');
+    expect(result.attachments).toEqual({
+      'chart.png': { 'image/png': 'DATA' },
+    });
+  });
 });
