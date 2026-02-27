@@ -122,6 +122,7 @@ project:
         - file: creating-word-documents.md
         - file: creating-jats-xml.md
         - file: creating-citation-cff.md
+        - file: creating-notebooks.md
     - file: plugins.md
       children:
         - file: javascript-plugins.md

@@ -181,3 +181,41 @@ cases:
                   value: markdown
     markdown: |-
       [Some % *markdown*](#example)
+  - title: crossReference - url fallback for remote refs
+    mdast:
+      type: root
+      children:
+        - type: crossReference
+          url: /other-page#section
+          children:
+            - type: text
+              value: Section 7
+    markdown: |-
+      [Section 7](/other-page#section)
+  - title: crossReference - html_id fallback for resolved refs
+    mdast:
+      type: root
+      children:
+        - type: crossReference
+          kind: heading
+          resolved: true
+          html_id: oop-solow-growth
+          children:
+            - type: text
+              value: the next section
+    markdown: |-
+      [the next section](#oop-solow-growth)
+  - title: crossReference - html_id fallback for equation
+    mdast:
+      type: root
+      children:
+        - type: crossReference
+          kind: equation
+          resolved: true
+          html_id: solow-lom
+          enumerator: '1'
+          children:
+            - type: text
+              value: (1)
+    markdown: |-
+      [(1)](#solow-lom)
