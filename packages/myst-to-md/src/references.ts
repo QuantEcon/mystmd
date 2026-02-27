@@ -11,9 +11,10 @@ function labelWrapper(handler: Handle) {
 }
 
 function crossReference(node: any, _: Parent, state: NestedState, info: Info): string {
-  const { urlSource, label, identifier, url } = node;
+  const { urlSource, label, identifier, url, html_id } = node;
   const resolvedUrl =
-    urlSource ?? (label ? `#${label}` : identifier ? `#${identifier}` : url ?? '');
+    urlSource ??
+    (label ? `#${label}` : identifier ? `#${identifier}` : html_id ? `#${html_id}` : url ?? '');
   if (!resolvedUrl && process.env.MYST_DEBUG_XREF) {
     const childText = node.children
       ?.map((c: any) => c.value ?? '')
@@ -25,10 +26,10 @@ function crossReference(node: any, _: Parent, state: NestedState, info: Info): s
         `  label      : ${JSON.stringify(node.label)}\n` +
         `  urlSource  : ${JSON.stringify(node.urlSource)}\n` +
         `  url        : ${JSON.stringify(node.url)}\n` +
+        `  html_id    : ${JSON.stringify(node.html_id)}\n` +
         `  kind       : ${JSON.stringify(node.kind)}\n` +
         `  resolved   : ${JSON.stringify(node.resolved)}\n` +
         `  remote     : ${JSON.stringify(node.remote)}\n` +
-        `  html_id    : ${JSON.stringify(node.html_id)}\n` +
         `  childText  : ${JSON.stringify(childText)}\n` +
         `  full node  : ${JSON.stringify(node, null, 2)}`,
     );
