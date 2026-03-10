@@ -960,3 +960,59 @@ cases:
       :::{topic}
       Topic content
       :::
+  - title: epigraph blockquote
+    mdast:
+      type: root
+      children:
+        - type: container
+          kind: quote
+          class: epigraph
+          children:
+            - type: blockquote
+              children:
+                - type: paragraph
+                  children:
+                    - type: text
+                      value: 'Python has gotten sufficiently weapons grade that we don''t descend into R anymore.'
+    markdown: |-
+      > Python has gotten sufficiently weapons grade that we don't descend into R anymore.
+  - title: epigraph blockquote with attribution
+    mdast:
+      type: root
+      children:
+        - type: container
+          kind: quote
+          class: epigraph
+          children:
+            - type: blockquote
+              children:
+                - type: paragraph
+                  children:
+                    - type: text
+                      value: 'Debugging is twice as hard as writing the code in the first place.'
+            - type: caption
+              children:
+                - type: paragraph
+                  children:
+                    - type: text
+                      value: Brian Kernighan
+    markdown: |-
+      > Debugging is twice as hard as writing the code in the first place.
+      >
+      > — Brian Kernighan
+  - title: pull-quote blockquote
+    mdast:
+      type: root
+      children:
+        - type: container
+          kind: quote
+          class: pull-quote
+          children:
+            - type: blockquote
+              children:
+                - type: paragraph
+                  children:
+                    - type: text
+                      value: An important quote.
+    markdown: |-
+      > An important quote.
