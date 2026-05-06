@@ -57,8 +57,8 @@ if [[ -n "$(git status --porcelain)" ]]; then
   exit 1
 fi
 
-# Read feature branches (strip comments and blank lines)
-mapfile -t FEATURES < <(grep -v '^\s*#' "$FEATURES_FILE" | grep -v '^\s*$' | awk '{print $1}')
+# Read feature branches (strip comments and blank lines, extract first token)
+mapfile -t FEATURES < <(awk '/^[[:space:]]*#/{next} /^[[:space:]]*$/{next} {print $1}' "$FEATURES_FILE")
 
 if [[ ${#FEATURES[@]} -eq 0 ]]; then
   echo "No feature branches listed in $FEATURES_FILE. Nothing to do."
@@ -74,14 +74,18 @@ done
 # Ensure local main is up to date
 # ---------------------------------------------------------------------------
 echo ""
+echo "==> Fetching origin..."
+git fetch origin
+
+echo ""
 echo "==> Switching to $BASE_BRANCH and fast-forwarding from origin..."
 git checkout "$BASE_BRANCH"
 # main should be a pure upstream mirror — ff-only guards against accidental commits
-git merge --ff-only origin/"$BASE_BRANCH" 2>/dev/null || {
-  echo "WARN: could not fast-forward $BASE_BRANCH from origin/$BASE_BRANCH." \
-       "Proceeding with local state."
-}
-}
+if ! git merge --ff-only origin/"$BASE_BRANCH"; then
+  echo "ERROR: could not fast-forward $BASE_BRANCH from origin/$BASE_BRANCH." \
+       "Sync main with upstream first (git merge upstream/main && git push origin main)." >&2
+  exit 1
+fi
 
 BASE_SHA=$(git rev-parse "$BASE_BRANCH")
 echo "    Base commit: $BASE_SHA"
@@ -95,7 +99,9 @@ for branch in "${FEATURES[@]}"; do
   if git rev-parse --verify "$branch" > /dev/null 2>&1; then
     echo "    $branch (local)"
   elif git rev-parse --verify "origin/$branch" > /dev/null 2>&1; then
-    echo "    $branch (origin)"
+    # Create a local tracking branch so 'git merge <branch>' works
+    git branch --track "$branch" "origin/$branch" 2>/dev/null || git branch -f "$branch" "origin/$branch"
+    echo "    $branch (fetched from origin)"
   else
     echo "ERROR: branch '$branch' not found locally or on origin." >&2
     exit 1
@@ -145,18 +151,24 @@ done
 # ---------------------------------------------------------------------------
 # Patch version string with -qe suffix
 # ---------------------------------------------------------------------------
-VERSION_FILE="packages/mystmd/src/version.ts"
+# version.ts is generated/gitignored — patch packages/mystmd/package.json instead.
+# The copy:version build step will propagate the version to version.ts at build time.
+PACKAGE_JSON="packages/mystmd/package.json"
 echo ""
-echo "==> Patching version in $VERSION_FILE with '-qe' suffix..."
+echo "==> Patching version in $PACKAGE_JSON with '-qe' suffix..."
 
-CURRENT_VERSION=$(node -p "require('./packages/mystmd/package.json').version")
+CURRENT_VERSION=$(node -p "require('./$PACKAGE_JSON').version")
 QE_VERSION="${CURRENT_VERSION}-qe"
 
-# Replace the version string in version.ts (matches: const version = 'X.Y.Z';)
-sed -i.bak "s/const version = '[^']*'/const version = '${QE_VERSION}'/" "$VERSION_FILE"
-rm -f "${VERSION_FILE}.bak"
+# Use node to patch the JSON safely (avoids sed quoting issues with JSON)
+node -e "
+  const fs = require('fs');
+  const pkg = JSON.parse(fs.readFileSync('$PACKAGE_JSON', 'utf8'));
+  pkg.version = '$QE_VERSION';
+  fs.writeFileSync('$PACKAGE_JSON', JSON.stringify(pkg, null, 2) + '\n');
+"
 
-git add "$VERSION_FILE"
+git add "$PACKAGE_JSON"
 git commit -m "chore: set version to ${QE_VERSION} for QuantEcon build"
 echo "    Version set to ${QE_VERSION}"
 

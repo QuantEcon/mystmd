@@ -85,7 +85,7 @@ The script:
 1. Syncs local `main` from `origin/main`
 2. Resets `quantecon` to `main` (discarding any previous build)
 3. Merges each branch listed in `features.txt` in order (merge commits, not squash)
-4. Patches `packages/mystmd/src/version.ts` to append `-qe` to the version (e.g. `1.9.0-qe`), so `myst --version` identifies the QuantEcon build
+4. Patches `packages/mystmd/package.json` version to append `-qe` (e.g. `1.9.0-qe`). The `copy:version` build step propagates this to `version.ts` at build time, so `myst --version` identifies the QuantEcon build.
 5. Optionally pushes to `origin/quantecon`
 
 Run this after every upstream sync, after updating any feature branch, or after adding/removing a feature branch from `features.txt`.
