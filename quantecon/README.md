@@ -33,9 +33,11 @@ Do this for `Release` and `Publish GitHub Release`.
 ```bash
 git fetch upstream
 git checkout main
-git merge --ff-only upstream/main
+git merge upstream/main   # not --ff-only: main has fork-specific commits
 git push origin main
 ```
+
+> **Conflict notes:** `main` carries fork-specific files (`quantecon/`, README banner, disabled workflow `on:` blocks) that upstream will never have. Conflicts are rare but can occur if upstream edits the workflow files. When they do, keep your version of the `on:` block and take upstream's version of the rest.
 
 Then rebuild the integration branch — see below.
 
@@ -104,7 +106,7 @@ git push --force-with-lease origin feature/<name-b>
 
 ```bash
 git fetch upstream
-git checkout main && git merge --ff-only upstream/main && git push origin main
+git checkout main && git merge upstream/main && git push origin main
 # edit features.txt to remove the merged branch
 git branch -d feature/<name> && git push origin --delete feature/<name>
 ./quantecon/build.sh --push

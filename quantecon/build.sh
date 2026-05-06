@@ -74,10 +74,13 @@ done
 # Ensure local main is up to date
 # ---------------------------------------------------------------------------
 echo ""
-echo "==> Switching to $BASE_BRANCH and fast-forwarding..."
+echo "==> Switching to $BASE_BRANCH and syncing with origin..."
 git checkout "$BASE_BRANCH"
-git merge --ff-only origin/"$BASE_BRANCH" 2>/dev/null || {
-  echo "WARN: could not fast-forward $BASE_BRANCH from origin/$BASE_BRANCH." \
+# NOTE: main has fork-specific commits (quantecon/ folder, workflow overrides)
+# so --ff-only is not used. Use 'git merge upstream/main' manually to sync
+# with upstream; resolve conflicts in the on: blocks of disabled workflows.
+git merge --no-edit origin/"$BASE_BRANCH" 2>/dev/null || {
+  echo "WARN: could not merge $BASE_BRANCH from origin/$BASE_BRANCH." \
        "Proceeding with local state."
 }
 
