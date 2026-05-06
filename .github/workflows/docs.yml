@@ -1,6 +1,7 @@
 name: Deploy Docs
+# QuantEcon fork: manual dispatch disabled. Only triggers from release.yml
+# which is itself disabled on this fork.
 on:
-  workflow_dispatch:
   workflow_run:
     workflows: ["Release"]
     types:

@@ -1,15 +1,11 @@
 name: Publish GitHub Release
 
+# QuantEcon fork: manual dispatch disabled. Only callable from release.yml
+# which is itself disabled on this fork.
 on:
   workflow_call:
     inputs:
       tag_name:
-        required: true
-        type: string
-  workflow_dispatch:
-    inputs:
-      tag_name:
-        description: 'Tag name for the release (e.g. v1.2.3)'
         required: true
         type: string
 
