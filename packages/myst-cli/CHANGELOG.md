@@ -1,5 +1,46 @@
 # myst-cli
 
+## 1.9.0
+
+### Minor Changes
+
+- e8803fc: Redirect /foo/index.html to canonical URL (/foo/) to fix hydration.
+
+### Patch Changes
+
+- e8803fc: Don't check links with strict mode.
+- e8803fc: Await signals to terminate processes
+- 85ea2a0: Expose content server, websocket and sendJson helper
+- daa7c4e: Fix type of stop function
+- Updated dependencies [e8803fc]
+- Updated dependencies [e8803fc]
+- Updated dependencies [e8803fc]
+  - myst-transforms@1.3.49
+  - myst-cli-utils@2.0.14
+  - myst-parser@1.7.2
+  - myst-migrate@1.9.0
+
+## 1.8.3
+
+### Patch Changes
+
+- 1c44f36: Defer config-level part resolution until plugins are all loaded
+- 33aa6ea: Upgrade windows should have the correct path
+- b7d8eef: Add emojis to strict-mode error report at end of build. Distinguishes between errors and
+  warnings for views without support for color.
+- Updated dependencies [2b2177f]
+- Updated dependencies [6cc5e3e]
+- Updated dependencies [0b6ea12]
+- Updated dependencies [0ddb337]
+  - tex-to-myst@1.0.46
+  - myst-ext-grid@1.1.0
+  - myst-to-typst@0.0.37
+  - myst-execute@0.3.4
+  - myst-to-tex@1.0.46
+  - myst-parser@1.7.1
+  - myst-migrate@1.8.3
+  - myst-transforms@1.3.48
+
 ## 1.8.2
 
 ### Patch Changes

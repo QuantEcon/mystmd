@@ -1,5 +1,19 @@
 # myst-transforms
 
+## 1.3.49
+
+### Patch Changes
+
+- e8803fc: Recognize `anywidget` as valid figure container content so figures wrapping the `{anywidget}` directive no longer error during transforms and exports such as MECA. Fixes #2809
+  .
+  - myst-to-html@1.7.2
+
+## 1.3.48
+
+### Patch Changes
+
+- myst-to-html@1.7.1
+
 ## 1.3.47
 
 ### Patch Changes
