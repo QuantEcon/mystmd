@@ -1,12 +1,17 @@
 name: Release
 
-# QuantEcon fork: auto-release disabled. This workflow is intentionally
-# restricted to a branch that does not exist on this fork. Sync with
-# upstream (jupyter-book/mystmd) will restore the original trigger on main.
 on:
   push:
     branches:
-      - _upstream-release-only
+      - main
+  workflow_dispatch:
+    inputs:
+      forcePublishPyPI:
+        description: |
+          Force publish to PyPI, even if the NPM release has already occurred.
+        type: boolean
+        default: false
+        required: false
 concurrency: ${{ github.workflow }}-${{ github.ref }}
 permissions:
   contents: write

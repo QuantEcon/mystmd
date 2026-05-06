@@ -1,7 +1,3 @@
-> [!WARNING]
-> **This is the [QuantEcon](https://quantecon.org) fork of `mystmd`**, maintained for testing and development of features pending upstream review.
-> It is **not** intended for general use. For the official project, see [jupyter-book/mystmd](https://github.com/jupyter-book/mystmd).
-
 # MyST Markdown Command Line Interface, `mystmd`
 
 [![MIT License](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/jupyter-book/mystmd/blob/main/LICENSE)
