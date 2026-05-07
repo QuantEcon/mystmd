@@ -170,6 +170,33 @@ git branch -d feature/<name> && git push origin --delete feature/<name>
 ./quantecon/build.sh --push
 ```
 
+## Installing the QuantEcon build in GitHub Actions
+
+The `quantecon` branch is a standard monorepo — it must be cloned, built from source, and the `mystmd` package installed globally. There is no published npm package.
+
+```yaml
+- uses: actions/setup-node@v4
+  with:
+    node-version: '20'
+
+- uses: oven-sh/setup-bun@v2
+
+- name: Install mystmd (QuantEcon fork)
+  run: |
+    git clone --branch quantecon --depth 1 \
+      https://github.com/QuantEcon/mystmd.git /tmp/qe-mystmd
+    cd /tmp/qe-mystmd
+    bun install
+    bun run build
+    npm install -g /tmp/qe-mystmd/packages/mystmd
+
+- name: Verify
+  run: myst --version
+  # should print e.g. 1.9.0-qe
+```
+
+This installs the `myst` CLI globally. The `-qe` version suffix confirms you are running the QuantEcon build.
+
 ## Active patches
 
 See [features.txt](features.txt) for the current list of carry-patches and links to their upstream PRs.
