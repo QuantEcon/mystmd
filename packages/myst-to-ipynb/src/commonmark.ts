@@ -12,7 +12,7 @@
 
 import type { GenericNode } from 'myst-common';
 import { toText } from 'myst-common';
-import { selectAll, select } from 'unist-util-select';
+import { select } from 'unist-util-select';
 
 /**
  * Capitalize the first letter of a string.
