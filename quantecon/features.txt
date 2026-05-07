@@ -1,0 +1,12 @@
+# Active QuantEcon feature branches
+# One branch name per line. Lines starting with # are ignored.
+# Order matters: branches are merged in sequence.
+# If two branches conflict with each other, rebase the later one on top
+# of the earlier one and update both entries accordingly.
+#
+# Format:
+#   <branch-name>   [# optional description / upstream PR link]
+#
+# Example:
+#   feature/xref-improvements   # https://github.com/jupyter-book/mystmd/pull/1
+
