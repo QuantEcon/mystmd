@@ -10,3 +10,5 @@
 # Example:
 #   feature/xref-improvements   # https://github.com/jupyter-book/mystmd/pull/1
 
+feature/myst-to-ipynb   # CommonMark ipynb export + image attachment embedding (QuantEcon/mystmd#1)
+
