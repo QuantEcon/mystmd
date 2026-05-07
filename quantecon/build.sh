@@ -28,7 +28,7 @@
 
 set -euo pipefail
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
 FEATURES_FILE="$SCRIPT_DIR/features.txt"
 INTEGRATION_BRANCH="quantecon"
 BASE_BRANCH="main"
@@ -58,7 +58,11 @@ if [[ -n "$(git status --porcelain)" ]]; then
 fi
 
 # Read feature branches (strip comments and blank lines, extract first token)
-mapfile -t FEATURES < <(awk '/^[[:space:]]*#/{next} /^[[:space:]]*$/{next} {print $1}' "$FEATURES_FILE")
+# (mapfile/readarray is bash 4+ only; this while-read loop works on bash 3.2 and zsh)
+FEATURES=()
+while IFS= read -r _branch; do
+  FEATURES+=("$_branch")
+done < <(awk '/^[[:space:]]*#/{next} /^[[:space:]]*$/{next} {print $1}' "$FEATURES_FILE")
 
 if [[ ${#FEATURES[@]} -eq 0 ]]; then
   echo "No feature branches listed in $FEATURES_FILE. Nothing to do."
