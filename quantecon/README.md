@@ -5,31 +5,30 @@ This fork lets QuantEcon develop and use new `mystmd` features before they have 
 ## How it works — the key idea
 
 ```
-jupyter-book/mystmd:main
-        │  (sync periodically)
-        ▼
-QuantEcon/mystmd:main          ← pure mirror, never commit here directly
-        │
-        ├── feature/foo        ← your work; PR open against main (upstream)
-        ├── feature/bar        ← another patch; PR open against main (upstream)
-        │
-        ▼  (built by build.sh)
+jupyter-book/mystmd:main  ─────┐
+        │  (sync periodically) │  (feature branches start here)
+        ▼                      │
+QuantEcon/mystmd:main          │  ← mirror + quantecon/ tooling
+        │                      │
+        │   feature/foo  ◄─────┤  ← branched from upstream/main; PR target = upstream main
+        │   feature/bar  ◄─────┘  ← branched from upstream/main; PR target = upstream main
+        ▼  (built by build.sh, which merges feature branches into quantecon)
 QuantEcon/mystmd:quantecon     ← combined build: main + all feature branches
 ```
 
 **Feature branches serve two purposes simultaneously:**
 
-1. They are the source of upstream PRs — targeting `main`, showing only the diff for that one feature. GitHub doesn't know or care that `build.sh` also merges them elsewhere.
-2. They are consumed by `build.sh`, which merges all of them onto a throwaway `quantecon` branch that QuantEcon actually builds from.
+1. They are the source of upstream PRs — targeting `jupyter-book/mystmd:main`, showing only the diff for that one feature. They are branched from `upstream/main` so they don't carry the `quantecon/` folder.
+2. They are consumed by `build.sh`, which merges them onto the throwaway `quantecon` branch (which inherits the `quantecon/` folder from `main`).
 
-This means **you never need to choose** between "make it easy to upstream" and "make it available to use now". The feature branch does both. When you update a feature branch (rebase on latest `main`, address reviewer feedback), the upstream PR updates automatically and re-running `build.sh` gives you an updated `quantecon` build.
+This means **you never need to choose** between "make it easy to upstream" and "make it available to use now". The feature branch does both.
 
 ## Branching model
 
 | Branch | Purpose |
 |---|---|
 | `main` | Mirrors `jupyter-book/mystmd:main` exactly. Synced via the GitHub "Sync fork" button or `git merge upstream/main`. **No direct commits.** |
-| `feature/<name>` | One branch per logical patch. Branched from `main`, kept rebased on `main`. This is the branch you open the upstream PR from. |
+| `feature/<name>` | One branch per logical patch. **Branched from `upstream/main`** (not `main`), kept rebased on `upstream/main`. This is the branch you open the upstream PR from. |
 | `quantecon` | Throwaway combined build. Rebuilt by `build.sh` as `main` + all active feature branches. **Never commit here directly — it is always discarded and regenerated.** |
 
 ## One-time setup
@@ -62,17 +61,34 @@ After syncing, rebuild the `quantecon` branch (see below) so it includes the lat
 
 ### Develop a new feature
 
+> **Important:** branch from `upstream/main`, **not** from `main`. This keeps the `quantecon/` folder out of your feature branch, so the upstream PR diff shows only your actual changes.
+
 ```bash
-git checkout main
-git checkout -b feature/<name>
+git fetch upstream
+git checkout -b feature/<name> upstream/main
 # make your changes and commit them
 git push origin feature/<name>
 ```
 
 Then:
-1. Add the branch name to `quantecon/features.txt`
+1. Add the branch name to `quantecon/features.txt` (on `main`, then commit and push)
 2. Open a PR on GitHub: **base: `jupyter-book/mystmd:main`**, **compare: `QuantEcon/mystmd:feature/<name>`**
 3. Rebuild the `quantecon` branch so the feature is available immediately
+
+> **Why this works:** `build.sh` runs from `main` (which has the `quantecon/` folder), checks out the `quantecon` branch, and merges your feature branch into it. Because git merges *changes* (not full trees), the feature branch doesn't need to contain `quantecon/` — the folder comes from `main`, and your feature's changes are layered on top.
+
+### Migrating an existing feature branch to use upstream/main as base
+
+If you already have a feature branch that was created from `main` (and therefore includes the `quantecon/` folder commits), rebase it onto `upstream/main`:
+
+```bash
+git fetch upstream
+git checkout feature/<name>
+git rebase --onto upstream/main main
+git push --force-with-lease origin feature/<name>
+```
+
+This replays only your feature's commits on top of `upstream/main`, dropping the `quantecon/` folder commits from the branch's history. The upstream PR diff will then show only your actual changes.
 
 ### Rebuild the `quantecon` branch
 
@@ -102,11 +118,12 @@ git push --force-with-lease origin feature/<name>
 
 ### Keep a feature branch current with upstream
 
-If `main` has moved since you branched:
+If `upstream/main` has moved since you branched:
 
 ```bash
+git fetch upstream
 git checkout feature/<name>
-git rebase main
+git rebase upstream/main
 git push --force-with-lease origin feature/<name>
 ./quantecon/build.sh --push
 ```
@@ -117,10 +134,11 @@ Conflicts are **always fixed on the feature branch**, never on `quantecon` (whic
 
 `build.sh` will abort cleanly and tell you which branch caused the conflict.
 
-**Feature conflicts with `main`** (upstream changed code the feature touches):
+**Feature conflicts with upstream** (upstream changed code the feature touches):
 ```bash
+git fetch upstream
 git checkout feature/<name>
-git rebase main        # resolve conflicts here, then: git add . && git rebase --continue
+git rebase upstream/main   # resolve conflicts here, then: git add . && git rebase --continue
 git push --force-with-lease origin feature/<name>
 ./quantecon/build.sh --push
 ```
