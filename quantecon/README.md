@@ -59,6 +59,8 @@ git push origin main
 
 > **Do not use the GitHub "Sync fork" button.** It expects a fast-forward and, when it can't, will offer to *discard* the diverging commits — which would delete this `quantecon/` folder. Always sync from the command line.
 
+> **If `main` is branch-protected and the sync has to go through a PR**, when merging that PR on GitHub choose **"Create a merge commit"** — *never* "Squash and merge". Squash-merge rewrites the upstream commit to a new SHA, so it stops being an ancestor of `main`. GitHub's "X commits behind" counter then stays stuck reporting the upstream commit as missing (the *content* is there, but the *ancestry* isn't), and every subsequent `git merge upstream/main` produces a noisy near-empty merge commit. A real merge commit preserves the ancestry.
+
 After syncing, rebuild the `quantecon` branch (see below) so it includes the latest upstream changes.
 
 ### Develop a new feature
