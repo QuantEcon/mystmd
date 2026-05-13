@@ -27,7 +27,7 @@ This means **you never need to choose** between "make it easy to upstream" and "
 
 | Branch | Purpose |
 |---|---|
-| `main` | Mirrors `jupyter-book/mystmd:main` exactly. Synced via the GitHub "Sync fork" button or `git merge upstream/main`. **No direct commits.** |
+| `main` | `upstream/main` **plus** the `quantecon/` tooling folder (this directory). Synced via `git merge upstream/main` — see note below. **The only commits permitted on `main` are changes to `quantecon/`.** |
 | `feature/<name>` | One branch per logical patch. **Branched from `upstream/main`** (not `main`), kept rebased on `upstream/main`. This is the branch you open the upstream PR from. |
 | `quantecon` | Throwaway combined build. Rebuilt by `build.sh` as `main` + all active feature branches. **Never commit here directly — it is always discarded and regenerated.** |
 
@@ -48,14 +48,16 @@ upstream  https://github.com/jupyter-book/mystmd.git  (fetch/push)
 
 ### Sync `main` with upstream
 
-Either use the **"Sync fork"** button on the GitHub web UI (simplest), or locally:
+Because `main` carries the `quantecon/` tooling, it is permanently a few commits ahead of `upstream/main`. Syncing is therefore a **merge**, not a fast-forward:
 
 ```bash
 git fetch upstream
 git checkout main
-git merge upstream/main
+git merge upstream/main      # produces a merge commit
 git push origin main
 ```
+
+> **Do not use the GitHub "Sync fork" button.** It expects a fast-forward and, when it can't, will offer to *discard* the diverging commits — which would delete this `quantecon/` folder. Always sync from the command line.
 
 After syncing, rebuild the `quantecon` branch (see below) so it includes the latest upstream changes.
 
