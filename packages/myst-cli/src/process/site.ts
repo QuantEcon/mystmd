@@ -28,7 +28,8 @@ import { writeRemoteDOIBibtex } from '../build/utils/bibtex.js';
 import { MYST_DOI_BIB_FILE } from '../cli/options.js';
 import { filterPages, loadProjectFromDisk } from '../project/load.js';
 import { DEFAULT_INDEX_FILENAMES } from '../project/fromTOC.js';
-import type { LocalProject, LocalProjectPage } from '../project/types.js';
+import type { LocalProject, LocalProjectFolder, LocalProjectPage } from '../project/types.js';
+import type { BookSection } from 'myst-toc';
 import { castSession } from '../session/cache.js';
 import type { ISession } from '../session/types.js';
 import { selectors } from '../store/index.js';
@@ -384,6 +385,43 @@ export function selectPageReferenceStates(
   return pageReferenceStates;
 }
 
+/**
+ * Walk a TOC-ordered page list and assign each file a `section` (inherited
+ * from its enclosing subtree's `section:` field) plus a `firstInSection`
+ * flag for the first page of each contiguous run. The flag is what
+ * `injectBookSectionDefaults` uses to reset the heading_1 counter at
+ * section transitions (so the first appendix renders "A" rather than
+ * continuing the chapter sequence).
+ */
+function computeSectionMetadata(
+  pages: (LocalProjectPage | LocalProjectFolder | { file: string })[],
+): Map<string, { section?: BookSection; firstInSection: boolean }> {
+  const out = new Map<string, { section?: BookSection; firstInSection: boolean }>();
+  let lastSection: BookSection | undefined;
+  const sawAnyInSection = new Set<BookSection>();
+  for (const page of pages) {
+    const file = (page as { file?: string }).file;
+    if (!file) {
+      // A folder entry (no file). Folders don't reset state; the section
+      // is propagated by descendants instead.
+      continue;
+    }
+    const section = (page as LocalProjectPage).section;
+    let firstInSection = false;
+    if (section) {
+      if (section !== lastSection && !sawAnyInSection.has(section)) {
+        firstInSection = true;
+        sawAnyInSection.add(section);
+      }
+      lastSection = section;
+    } else {
+      lastSection = undefined;
+    }
+    out.set(file, { section, firstInSection });
+  }
+  return out;
+}
+
 async function resolvePageSource(session: ISession, file: string) {
   const fileHash = hashAndCopyStaticFile(session, file, session.publicPath(), (m: string) => {
     addWarningForFile(session, file, m, 'error', {
@@ -462,9 +500,12 @@ export async function fastProcessFile(
   const state = session.store.getState();
   const fileParts = selectors.selectFileParts(state, file);
   const projectParts = selectors.selectProjectParts(state, projectPath);
+  const sectionMeta = computeSectionMetadata(pages);
   await Promise.all(
     [file, ...fileParts].map(async (f) => {
-      const level = pages.find((page) => page.file === file)?.level;
+      const page = pages.find((p) => p.file === file);
+      const level = page?.level;
+      const meta = sectionMeta.get(file);
       return transformMdast(session, {
         file: f,
         imageExtensions: imageExtensions ?? WEB_IMAGE_EXTENSIONS,
@@ -476,6 +517,8 @@ export async function fastProcessFile(
         index: project.index,
         execute,
         offset: level ? level - 1 : undefined,
+        section: meta?.section,
+        firstInSection: meta?.firstInSection,
       });
     }),
   );
@@ -578,11 +621,13 @@ export async function processProject(
     ...pages,
     ...projectParts,
   ];
+  const sectionMeta = computeSectionMetadata(pages);
   const usedImageExtensions = imageExtensions ?? WEB_IMAGE_EXTENSIONS;
   // Transform all pages
   await Promise.all(
-    pagesToTransform.map((page) =>
-      transformMdast(session, {
+    pagesToTransform.map((page) => {
+      const meta = sectionMeta.get(page.file);
+      return transformMdast(session, {
         file: page.file,
         projectPath: project.path,
         projectSlug: siteProject.slug,
@@ -593,8 +638,10 @@ export async function processProject(
         extraTransforms,
         index: project.index,
         offset: page.level ? page.level - 1 : undefined,
-      }),
-    ),
+        section: meta?.section,
+        firstInSection: meta?.firstInSection,
+      });
+    }),
   );
 
   const pageReferenceStates = selectPageReferenceStates(session, pagesToTransform);

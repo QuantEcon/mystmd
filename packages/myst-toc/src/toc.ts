@@ -23,8 +23,9 @@ import {
   validateChoice,
 } from 'simple-validators';
 
-const COMMON_ENTRY_KEYS = ['title', 'hidden'];
-// const COMMON_ENTRY_KEYS = ['title', 'hidden', 'numbering', 'id', 'class'];
+const BOOK_SECTION_CHOICES = ['frontmatter', 'chapters', 'appendices', 'backmatter'];
+const COMMON_ENTRY_KEYS = ['title', 'hidden', 'section'];
+// const COMMON_ENTRY_KEYS = ['title', 'hidden', 'section', 'numbering', 'id', 'class'];
 
 function validateCommonEntry(entry: Record<string, any>, opts: ValidationOptions): CommonEntry {
   const output: CommonEntry = {};
@@ -34,6 +35,16 @@ function validateCommonEntry(entry: Record<string, any>, opts: ValidationOptions
 
   if (defined(entry.hidden)) {
     output.hidden = validateBoolean(entry.hidden, incrementOptions('hidden', opts));
+  }
+
+  if (defined(entry.section)) {
+    const section = validateChoice(entry.section, {
+      ...incrementOptions('section', opts),
+      choices: BOOK_SECTION_CHOICES,
+    });
+    if (section !== undefined) {
+      output.section = section as CommonEntry['section'];
+    }
   }
 
   // if (defined(entry.numbering)) {

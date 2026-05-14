@@ -75,6 +75,8 @@ export {
   resolveReferencesPlugin,
   ReferenceState,
   MultiPageReferenceResolver,
+  formatCounter,
+  formatHeadingEnumerator,
 } from './enumerate.js';
 
 // Composite plugins

@@ -1,13 +1,63 @@
 import { describe, expect, test } from 'vitest';
 import {
+  addChildrenFromTargetNode,
+  MultiPageReferenceResolver,
   ReferenceState,
   enumerateTargetsTransform,
+  formatCounter,
   formatHeadingEnumerator,
   incrementHeadingCounts,
   initializeTargetCounts,
 } from './enumerate';
 import { u } from 'unist-builder';
 import { VFile } from 'vfile';
+import { toText } from 'myst-common';
+
+describe('formatCounter', () => {
+  test.each([
+    [1, undefined, '1'],
+    [1, 'arabic', '1'],
+    [27, 'arabic', '27'],
+    [1, 'alph', 'a'],
+    [26, 'alph', 'z'],
+    [27, 'alph', 'aa'],
+    [28, 'alph', 'ab'],
+    [52, 'alph', 'az'],
+    [53, 'alph', 'ba'],
+    [1, 'Alph', 'A'],
+    [27, 'Alph', 'AA'],
+    [1, 'roman', 'i'],
+    [4, 'roman', 'iv'],
+    [9, 'roman', 'ix'],
+    [40, 'roman', 'xl'],
+    [90, 'roman', 'xc'],
+    [400, 'roman', 'cd'],
+    [900, 'roman', 'cm'],
+    [1994, 'roman', 'mcmxciv'],
+    [1, 'Roman', 'I'],
+    [4, 'Roman', 'IV'],
+    [1994, 'Roman', 'MCMXCIV'],
+    [0, 'Alph', '0'], // non-positive passes through
+    [-1, 'Roman', '-1'],
+  ] as const)('formatCounter(%s, %s) → %s', (n, fmt, expected) => {
+    expect(formatCounter(n as number, fmt as any)).toBe(expected);
+  });
+});
+
+describe('formatHeadingEnumerator with formats', () => {
+  test('Alph at depth 1 renders as letter', () => {
+    expect(formatHeadingEnumerator([1, 0, 0, 0, 0, 0], undefined, ['Alph'])).toBe('A');
+  });
+  test('Alph chapter prefix on a sub-heading', () => {
+    expect(formatHeadingEnumerator([2, 3, 0, 0, 0, 0], undefined, ['Alph'])).toBe('B.3');
+  });
+  test('Roman at depth 1, arabic sub-headings', () => {
+    expect(formatHeadingEnumerator([3, 2, 1, 0, 0, 0], undefined, ['Roman'])).toBe('III.2.1');
+  });
+  test("no formats array preserves today's arabic behaviour", () => {
+    expect(formatHeadingEnumerator([1, 2, 0, 0, 0, 0])).toBe('1.2');
+  });
+});
 
 describe('Heading counts and formatting', () => {
   test.each([
@@ -125,6 +175,459 @@ describe('enumeration', () => {
     expect(state.getTarget('fig:2')?.node.enumerator).toBe('A.2');
   });
 });
+describe('Book-mode auto-prefix (§3.4(6,7))', () => {
+  test('figure picks up chapter prefix when book mode is on', () => {
+    const tree = u('root', [
+      u('container', { kind: 'figure', identifier: 'fig1' }),
+      u('container', { kind: 'figure', identifier: 'fig2' }),
+    ]);
+    const state = new ReferenceState('ch1.md', {
+      frontmatter: {
+        numbering: {
+          book: { enabled: true },
+          title: { enabled: true },
+          heading_1: { enabled: true, label: 'Chapter %s' },
+        },
+      },
+      vfile: new VFile(),
+    });
+    enumerateTargetsTransform(tree, { state });
+    expect(state.enumerator).toBe('1');
+    expect(state.getTarget('fig1')?.node.enumerator).toBe('1.1');
+    expect(state.getTarget('fig2')?.node.enumerator).toBe('1.2');
+  });
+
+  test('appendix Alph prefix flows to figures', () => {
+    const tree = u('root', [u('container', { kind: 'figure', identifier: 'fa' })]);
+    const state = new ReferenceState('app-a.md', {
+      frontmatter: {
+        numbering: {
+          book: { enabled: true },
+          title: { enabled: true },
+          heading_1: { enabled: true, format: 'Alph', label: 'Appendix %s' },
+        },
+      },
+      vfile: new VFile(),
+    });
+    enumerateTargetsTransform(tree, { state });
+    expect(state.enumerator).toBe('A');
+    expect(state.getTarget('fa')?.node.enumerator).toBe('A.1');
+  });
+
+  test('continue: true opts out of prefix and keeps counter flat', () => {
+    const tree = u('root', [u('container', { kind: 'figure', identifier: 'figc' })]);
+    const state = new ReferenceState('ch1.md', {
+      frontmatter: {
+        numbering: {
+          book: { enabled: true },
+          title: { enabled: true },
+          heading_1: { enabled: true },
+          figure: { continue: true },
+        },
+      },
+      vfile: new VFile(),
+    });
+    enumerateTargetsTransform(tree, { state });
+    expect(state.getTarget('figc')?.node.enumerator).toBe('1');
+  });
+
+  test('no auto-prefix when book mode is off', () => {
+    const tree = u('root', [u('container', { kind: 'figure', identifier: 'fx' })]);
+    const state = new ReferenceState('p.md', {
+      frontmatter: {
+        numbering: {
+          // book flag not set → today's behaviour preserved
+          title: { enabled: true },
+          heading_1: { enabled: true },
+        },
+      },
+      vfile: new VFile(),
+    });
+    enumerateTargetsTransform(tree, { state });
+    expect(state.getTarget('fx')?.node.enumerator).toBe('1');
+  });
+
+  test('unnumbered page (no enumerator) → no prefix even in book mode', () => {
+    // mimics a frontmatter/backmatter page where heading_1.enabled is false
+    const tree = u('root', [u('container', { kind: 'figure', identifier: 'fz' })]);
+    const state = new ReferenceState('preface.md', {
+      frontmatter: {
+        numbering: {
+          book: { enabled: true },
+          title: { enabled: true },
+          heading_1: { enabled: false },
+        },
+      },
+      vfile: new VFile(),
+    });
+    enumerateTargetsTransform(tree, { state });
+    expect(state.enumerator).toBeUndefined();
+    expect(state.getTarget('fz')?.node.enumerator).toBe('1');
+  });
+
+  test('equation and table also pick up the prefix', () => {
+    const tree = u('root', [
+      u('math', { identifier: 'eq1' }),
+      u('container', { kind: 'table', identifier: 't1' }),
+    ]);
+    const state = new ReferenceState('ch1.md', {
+      frontmatter: {
+        numbering: {
+          book: { enabled: true },
+          title: { enabled: true },
+          heading_1: { enabled: true },
+        },
+      },
+      vfile: new VFile(),
+    });
+    enumerateTargetsTransform(tree, { state });
+    expect(state.getTarget('eq1')?.node.enumerator).toBe('1.1');
+    expect(state.getTarget('t1')?.node.enumerator).toBe('1.1');
+  });
+
+  test('proof:* and exercise pick up the chapter prefix', () => {
+    // §3.5(6): the auto-prefix matcher uses a `proof:` prefix test so any
+    // proof-family kind (theorem/lemma/proposition/…) and exercise pick up
+    // the chapter prefix without each kind needing to be enumerated.
+    const tree = u('root', [
+      u('proof', { kind: 'theorem', identifier: 'thm:1' }),
+      u('proof', { kind: 'lemma', identifier: 'lem:1' }),
+      u('exercise', { identifier: 'ex:1', enumerated: true }),
+    ]);
+    const state = new ReferenceState('ch3.md', {
+      frontmatter: {
+        numbering: {
+          book: { enabled: true },
+          all: { enabled: true }, // enable every kind incl. proof:*/exercise
+          title: { enabled: true },
+          heading_1: { enabled: true, start: 3 },
+        },
+      },
+      vfile: new VFile(),
+    });
+    enumerateTargetsTransform(tree, { state });
+    expect(state.enumerator).toBe('3');
+    expect(state.getTarget('thm:1')?.node.enumerator).toBe('3.1');
+    expect(state.getTarget('lem:1')?.node.enumerator).toBe('3.1');
+    // Each proof-family kind keeps its own counter — theorem and lemma both
+    // start at 3.1 in the same chapter; only the chapter prefix is shared.
+    expect(state.getTarget('ex:1')?.node.enumerator).toBe('3.1');
+  });
+
+  test('page-level format override is render-only (§3.4(9))', () => {
+    // A chapter page sets `format: Roman` in its frontmatter. Only that
+    // page's rendered enumerator changes; the underlying counter
+    // sequence stays 1, 2, 3, 4 so siblings render arithmetic-naturally.
+    // Modelled here via the `previousCounts` chain across three pages.
+    const ch1 = new ReferenceState('ch1.md', {
+      frontmatter: {
+        numbering: {
+          book: { enabled: true },
+          title: { enabled: true },
+          heading_1: { enabled: true, label: 'Chapter %s' },
+        },
+      },
+      vfile: new VFile(),
+    });
+    expect(ch1.enumerator).toBe('1');
+
+    const ch2 = new ReferenceState('ch2.md', {
+      frontmatter: {
+        numbering: {
+          book: { enabled: true },
+          title: { enabled: true },
+          // page-level override flips this chapter's rendering only
+          heading_1: { enabled: true, label: 'Chapter %s', format: 'Roman' },
+        },
+      },
+      previousCounts: ch1.targetCounts,
+      vfile: new VFile(),
+    });
+    expect(ch2.enumerator).toBe('II'); // rendered as Roman
+    // The underlying count is still 2 (not converted) — confirm by reading
+    // targetCounts.heading[0] directly. The Roman is purely a render
+    // detail at formatHeadingEnumerator time.
+    expect(ch2.targetCounts.heading[0]).toBe(2);
+
+    const ch3 = new ReferenceState('ch3.md', {
+      frontmatter: {
+        numbering: {
+          book: { enabled: true },
+          title: { enabled: true },
+          heading_1: { enabled: true, label: 'Chapter %s' },
+        },
+      },
+      previousCounts: ch2.targetCounts,
+      vfile: new VFile(),
+    });
+    // ch3 picks up where ch2 left off arithmetically — "3", not "4" — so
+    // the page-level Roman override did not disturb the sequence.
+    expect(ch3.enumerator).toBe('3');
+  });
+
+  test('subfigures inherit the chapter-prefixed parent enumerator', () => {
+    const tree = u('root', [
+      u('container', { kind: 'figure', identifier: 'fig-p' }, [
+        u('container', { kind: 'figure', subcontainer: true, identifier: 'fig-p-a' }),
+        u('container', { kind: 'figure', subcontainer: true, identifier: 'fig-p-b' }),
+      ]),
+    ]);
+    const state = new ReferenceState('ch2.md', {
+      frontmatter: {
+        numbering: {
+          book: { enabled: true },
+          title: { enabled: true },
+          heading_1: { enabled: true, start: 2 },
+        },
+      },
+      vfile: new VFile(),
+    });
+    enumerateTargetsTransform(tree, { state });
+    expect(state.enumerator).toBe('2');
+    expect(state.getTarget('fig-p')?.node.enumerator).toBe('2.1');
+    expect(state.getTarget('fig-p-a')?.node.parentEnumerator).toBe('2.1');
+  });
+});
+
+describe('Heading cross-ref rendering (§3.2(h))', () => {
+  test('label takes precedence over template for numbered heading', () => {
+    const heading = u(
+      'heading',
+      {
+        identifier: 'ch1',
+        depth: 1,
+        enumerator: '1',
+      },
+      [u('text', 'Introduction')],
+    );
+    const ref: any = { type: 'crossReference', identifier: 'ch1' };
+    addChildrenFromTargetNode(
+      ref,
+      heading as any,
+      {
+        title: { enabled: true },
+        heading_1: { enabled: true, template: 'Section %s', label: 'Chapter %s' },
+      },
+      new VFile(),
+    );
+    expect(toText(ref.children)).toBe('Chapter 1');
+  });
+
+  test('falls back to template when label is absent', () => {
+    const heading = u(
+      'heading',
+      {
+        identifier: 'h1',
+        depth: 1,
+        enumerator: '1',
+      },
+      [u('text', 'Introduction')],
+    );
+    const ref: any = { type: 'crossReference', identifier: 'h1' };
+    addChildrenFromTargetNode(
+      ref,
+      heading as any,
+      {
+        title: { enabled: true },
+        heading_1: { enabled: true, template: 'Section %s' },
+      },
+      new VFile(),
+    );
+    expect(toText(ref.children)).toBe('Section 1');
+  });
+
+  test('unnumbered heading falls back to title (#12 fix)', () => {
+    // Heading has no enumerator — even though numbering.heading_1 has a
+    // template, the cross-ref must render the heading text, not
+    // "Chapter ??".
+    const heading = u('heading', { identifier: 'preface', depth: 1 }, [u('text', 'Preface')]);
+    const ref: any = { type: 'crossReference', identifier: 'preface' };
+    addChildrenFromTargetNode(
+      ref,
+      heading as any,
+      {
+        title: { enabled: true },
+        heading_1: { enabled: true, template: 'Chapter %s', label: 'Chapter %s' },
+      },
+      new VFile(),
+    );
+    expect(toText(ref.children)).toBe('Preface');
+  });
+
+  test('explicit link text wins', () => {
+    const heading = u(
+      'heading',
+      {
+        identifier: 'ch1',
+        depth: 1,
+        enumerator: '1',
+      },
+      [u('text', 'Introduction')],
+    );
+    const ref: any = {
+      type: 'crossReference',
+      identifier: 'ch1',
+      children: [u('text', 'the intro')],
+    };
+    addChildrenFromTargetNode(
+      ref,
+      heading as any,
+      {
+        title: { enabled: true },
+        heading_1: { enabled: true, label: 'Chapter %s' },
+      },
+      new VFile(),
+    );
+    expect(toText(ref.children)).toBe('the intro');
+  });
+
+  test('label with Alph-formatted enumerator (appendix-style)', () => {
+    const heading = u(
+      'heading',
+      {
+        identifier: 'app-a',
+        depth: 1,
+        enumerator: 'A',
+      },
+      [u('text', 'Proofs')],
+    );
+    const ref: any = { type: 'crossReference', identifier: 'app-a' };
+    addChildrenFromTargetNode(
+      ref,
+      heading as any,
+      {
+        title: { enabled: true },
+        heading_1: { enabled: true, label: 'Appendix %s' },
+      },
+      new VFile(),
+    );
+    expect(toText(ref.children)).toBe('Appendix A');
+  });
+
+  test('file-target on nested page uses heading_${offset+1}, not heading_1', () => {
+    // Copilot review #1: a nested TOC page has offset>0; its title
+    // enumerator was generated at heading_${offset+1}. The file-target
+    // label rendering must read the same depth, otherwise a sub-section
+    // under a book chapter renders as "Chapter 1.1" (using heading_1's
+    // book label) instead of "Section 1.1".
+    const filePage = new ReferenceState('nested.md', {
+      frontmatter: {
+        numbering: {
+          book: { enabled: true },
+          title: { enabled: true, offset: 1 },
+          heading_1: { enabled: true, label: 'Chapter %s' },
+          heading_2: { enabled: true, label: 'Section %s' },
+        },
+      },
+      identifiers: ['nested-page'],
+      vfile: new VFile(),
+    });
+    filePage.url = '/nested';
+    // Force a deterministic enumerator (mimicking previousCounts having
+    // already filled heading_1 = 1 from the parent chapter, so the
+    // sub-page becomes heading_2 == 1 → "1.1").
+    filePage.enumerator = '1.1';
+    const resolver = new MultiPageReferenceResolver([filePage], 'caller.md');
+    const ref: any = { type: 'crossReference', identifier: 'nested-page' };
+    resolver.resolveReferenceContent(ref);
+    expect(toText(ref.children)).toBe('Section 1.1');
+  });
+});
+
+describe('Book-mode auto-prefix for figures and equations (§3.2(e))', () => {
+  function pageState(opts: { enumerator?: string; book?: boolean; figureContinue?: boolean }) {
+    return new ReferenceState('p.md', {
+      frontmatter: {
+        numbering: {
+          ...(opts.book ? { book: { enabled: true } } : {}),
+          title: { enabled: true },
+          heading_1: { enabled: true },
+          figure: {
+            enabled: true,
+            ...(opts.figureContinue ? { continue: true } : {}),
+          },
+        },
+        // Force the constructor to NOT auto-enumerate the title, so we can
+        // set this.enumerator explicitly for the test.
+        content_includes_title: true,
+      } as any,
+      vfile: new VFile(),
+    });
+  }
+
+  test('book mode prefixes figure with page enumerator', () => {
+    const state = pageState({ book: true });
+    (state as any).enumerator = '3';
+    const tree = u('root', [
+      u('container', { kind: 'figure', identifier: 'f1' }),
+      u('container', { kind: 'figure', identifier: 'f2' }),
+    ]);
+    enumerateTargetsTransform(tree, { state });
+    expect(state.getTarget('f1')?.node.enumerator).toBe('3.1');
+    expect(state.getTarget('f2')?.node.enumerator).toBe('3.2');
+  });
+
+  test('appendix-style Alph enumerator prefixes correctly', () => {
+    const state = pageState({ book: true });
+    (state as any).enumerator = 'A';
+    const tree = u('root', [
+      u('container', { kind: 'figure', identifier: 'fA1' }),
+      u('container', { kind: 'figure', identifier: 'fA2' }),
+    ]);
+    enumerateTargetsTransform(tree, { state });
+    expect(state.getTarget('fA1')?.node.enumerator).toBe('A.1');
+    expect(state.getTarget('fA2')?.node.enumerator).toBe('A.2');
+  });
+
+  test("no book mode → no prefix (today's behavior preserved)", () => {
+    const state = pageState({ book: false });
+    (state as any).enumerator = '3';
+    const tree = u('root', [u('container', { kind: 'figure', identifier: 'f1' })]);
+    enumerateTargetsTransform(tree, { state });
+    expect(state.getTarget('f1')?.node.enumerator).toBe('1');
+  });
+
+  test('figure.continue: true opts out of prefix (flat counter)', () => {
+    const state = pageState({ book: true, figureContinue: true });
+    (state as any).enumerator = '3';
+    const tree = u('root', [u('container', { kind: 'figure', identifier: 'f1' })]);
+    enumerateTargetsTransform(tree, { state });
+    expect(state.getTarget('f1')?.node.enumerator).toBe('1');
+  });
+
+  test('frontmatter page (no enumerator) keeps flat global counter', () => {
+    const state = pageState({ book: true });
+    // no this.enumerator set
+    const tree = u('root', [u('container', { kind: 'figure', identifier: 'f1' })]);
+    enumerateTargetsTransform(tree, { state });
+    expect(state.getTarget('f1')?.node.enumerator).toBe('1');
+  });
+
+  test('book mode prefixes proof:theorem and exercise', () => {
+    const state = new ReferenceState('p.md', {
+      frontmatter: {
+        numbering: {
+          book: { enabled: true },
+          title: { enabled: true },
+          heading_1: { enabled: true },
+          'proof:theorem': { enabled: true },
+          exercise: { enabled: true },
+        },
+        content_includes_title: true,
+      } as any,
+      vfile: new VFile(),
+    });
+    (state as any).enumerator = '6';
+    const tree = u('root', [
+      u('proof', { kind: 'theorem', identifier: 'thm1' }),
+      u('exercise', { identifier: 'ex1' }),
+    ]);
+    enumerateTargetsTransform(tree, { state });
+    expect(state.getTarget('thm1')?.node.enumerator).toBe('6.1');
+    expect(state.getTarget('ex1')?.node.enumerator).toBe('6.1');
+  });
+});
+
 describe('initializeTargetCounts', () => {
   test('no inputs initializes heading', () => {
     expect(initializeTargetCounts({})).toEqual({ heading: [0, 0, 0, 0, 0, 0] });

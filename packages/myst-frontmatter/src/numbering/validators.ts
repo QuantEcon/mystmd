@@ -9,22 +9,36 @@ import {
   validateString,
   validationWarning,
 } from 'simple-validators';
-import type { Numbering, NumberingItem } from './types.js';
+import type { CounterFormat, Numbering, NumberingItem } from './types.js';
 
 export const NUMBERING_OPTIONS = ['enumerator', 'all', 'headings', 'title'];
 
 const HEADING_KEYS = ['heading_1', 'heading_2', 'heading_3', 'heading_4', 'heading_5', 'heading_6'];
+const BOOK_SECTION_KEYS = ['parts', 'chapters', 'appendices'];
 export const NUMBERING_KEYS = [
+  'book',
   'figure',
   'subfigure',
   'equation',
   'subequation',
   'table',
   'code',
+  ...BOOK_SECTION_KEYS,
   ...HEADING_KEYS,
 ];
 
-const NUMBERING_ITEM_KEYS = ['enabled', 'start', 'enumerator', 'template', 'continue'];
+const NUMBERING_ITEM_KEYS = [
+  'enabled',
+  'start',
+  'enumerator',
+  'template',
+  'continue',
+  'format',
+  'label',
+  'reset_on_part',
+];
+
+const COUNTER_FORMATS: CounterFormat[] = ['arabic', 'alph', 'Alph', 'roman', 'Roman'];
 
 const CONTINUE_STRINGS = ['continue', 'next'];
 
@@ -123,6 +137,38 @@ export function validateNumberingItem(
     const cont = validateBoolean(value.continue, incrementOptions('continue', opts));
     if (defined(cont)) {
       output.continue = cont;
+      output.enabled = output.enabled ?? true;
+    }
+  }
+  if (defined(value.format)) {
+    const formatOpts = incrementOptions('format', opts);
+    const formatStr = validateString(value.format, formatOpts);
+    if (defined(formatStr)) {
+      if ((COUNTER_FORMATS as string[]).includes(formatStr)) {
+        output.format = formatStr as CounterFormat;
+        output.enabled = output.enabled ?? true;
+      } else {
+        validationWarning(
+          `must be one of: ${COUNTER_FORMATS.join(', ')} (got "${formatStr}")`,
+          formatOpts,
+        );
+      }
+    }
+  }
+  if (defined(value.label)) {
+    const label = validateString(value.label, incrementOptions('label', opts));
+    if (defined(label)) {
+      output.label = label;
+      output.enabled = output.enabled ?? true;
+    }
+  }
+  if (defined(value.reset_on_part)) {
+    const resetOnPart = validateBoolean(
+      value.reset_on_part,
+      incrementOptions('reset_on_part', opts),
+    );
+    if (defined(resetOnPart)) {
+      output.reset_on_part = resetOnPart;
       output.enabled = output.enabled ?? true;
     }
   }

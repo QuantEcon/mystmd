@@ -283,3 +283,78 @@ cases:
         figure:
           enumerator: '{number}'
           enabled: true
+  - title: format validates
+    raw:
+      numbering:
+        chapters:
+          format: arabic
+        appendices:
+          format: Alph
+        parts:
+          format: Roman
+    normalized:
+      numbering:
+        chapters:
+          enabled: true
+          format: arabic
+        appendices:
+          enabled: true
+          format: Alph
+        parts:
+          enabled: true
+          format: Roman
+  - title: invalid format warns
+    raw:
+      numbering:
+        chapters:
+          format: bogus
+    normalized: {}
+    warnings: 1
+  - title: label validates
+    raw:
+      numbering:
+        chapters:
+          label: Chapter %s
+        appendices:
+          label: Appendix %s
+    normalized:
+      numbering:
+        chapters:
+          enabled: true
+          label: Chapter %s
+        appendices:
+          enabled: true
+          label: Appendix %s
+  - title: reset_on_part validates
+    raw:
+      numbering:
+        chapters:
+          reset_on_part: true
+    normalized:
+      numbering:
+        chapters:
+          enabled: true
+          reset_on_part: true
+  - title: book flag coerces from boolean
+    raw:
+      numbering:
+        book: true
+    normalized:
+      numbering:
+        book:
+          enabled: true
+  - title: book flag composes with chapter config
+    raw:
+      numbering:
+        book: true
+        chapters:
+          label: Chapter %s
+          format: arabic
+    normalized:
+      numbering:
+        book:
+          enabled: true
+        chapters:
+          enabled: true
+          label: Chapter %s
+          format: arabic

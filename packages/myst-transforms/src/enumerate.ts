@@ -1,7 +1,15 @@
 import type { Plugin } from 'unified';
 import { VFile } from 'vfile';
 import type { CrossReference, Paragraph } from 'myst-spec';
-import type { Cite, Container, Heading, Math, MathGroup, Link, IndexEntry } from 'myst-spec-ext';
+import type {
+  Cite,
+  Container,
+  Heading,
+  Math as MathNode,
+  MathGroup,
+  Link,
+  IndexEntry,
+} from 'myst-spec-ext';
 import type { PhrasingContent } from 'mdast';
 import { visit } from 'unist-util-visit';
 import { select, selectAll } from 'unist-util-select';
@@ -23,9 +31,44 @@ import {
 import type { LinkTransformer } from './links/types.js';
 import { updateLinkTextIfEmpty } from './links/utils.js';
 import { fillNumbering } from 'myst-frontmatter';
-import type { PageFrontmatter, Numbering } from 'myst-frontmatter';
+import type { CounterFormat, PageFrontmatter, Numbering } from 'myst-frontmatter';
 
 const TRANSFORM_NAME = 'myst-transforms:enumerate';
+
+/**
+ * Kinds that get the chapter/appendix enumerator prepended when the page is
+ * inside a book section (§3.4(6)). Each kind keeps its own counter; only the
+ * leading prefix changes per-page. Authors opt out per-kind via
+ * `numbering.<kind>.continue: true` (§3.4(7)), which both keeps the counter
+ * flat across pages and drops the prefix.
+ *
+ * Proof family kinds (`proof:theorem`, `proof:lemma`, …) are matched by
+ * prefix so adding a new proof kind upstream doesn't require touching this
+ * list.
+ */
+const AUTO_PREFIX_KINDS = new Set<string>([
+  'figure',
+  'subfigure',
+  'equation',
+  'subequation',
+  'table',
+  'exercise',
+]);
+
+/**
+ * Pure kind matcher — does this kind belong to the family that gets the
+ * chapter/appendix prefix when book mode is on? The caller also checks
+ * `numbering.book.enabled`, `numbering[kind].continue`, and the
+ * page-side enumerator before applying the prefix.
+ */
+function shouldAutoPrefix(kind: string): boolean {
+  if (AUTO_PREFIX_KINDS.has(kind)) return true;
+  // Cover both the `proof` directive (`type: proof`) and the legacy
+  // `prf:*` naming so future renames don't break book mode.
+  if (kind.startsWith('proof:') || kind.startsWith('prf:')) return true;
+  if (kind === 'proof') return true;
+  return false;
+}
 
 const DEFAULT_NUMBERING: Numbering = {
   equation: { enabled: true, template: '(%s)' },
@@ -90,9 +133,12 @@ function getReferenceTemplate(
   let template: string | undefined;
   if (numbered) {
     if (kind === TargetKind.heading && node.type === 'heading') {
-      template =
-        numbering[`heading_${node.depth - (numbering?.title?.enabled ? 0 : 1) + (offset ?? 0)}`]
-          ?.template;
+      // §3.2(h): for heading-type targets, `label` takes precedence over
+      // `template`. This is what makes `[](#ch1)` render "Chapter 1" rather
+      // than "Section 1" when a project sets `numbering.heading_1.label`.
+      const item =
+        numbering[`heading_${node.depth - (numbering?.title?.enabled ? 0 : 1) + (offset ?? 0)}`];
+      template = item?.label ?? item?.template;
     } else if (node.subcontainer) {
       template = numbering.subfigure?.template;
     } else {
@@ -109,7 +155,7 @@ export enum ReferenceKind {
   eq = 'eq',
 }
 
-type TargetNodes = (Container | Math | MathGroup | Heading) & {
+type TargetNodes = (Container | MathNode | MathGroup | Heading) & {
   html_id: string;
   subcontainer?: boolean;
   parentEnumerator?: string;
@@ -248,20 +294,85 @@ export function incrementHeadingCounts(
 }
 
 /**
+ * Format a positive integer counter as arabic / alph / Alph / roman / Roman.
+ *
+ * - `arabic` (default): 1, 2, 3, …
+ * - `alph`  / `Alph`:   a, b, c, … z, aa, ab, … (excel-style overflow)
+ * - `roman` / `Roman`:  i, ii, iii, iv, v, … (zero is empty)
+ *
+ * Non-positive values are returned as `String(value)` unchanged so callers
+ * can pass 0 / negative sentinels without surprise.
+ */
+export function formatCounter(value: number, format?: CounterFormat): string {
+  if (!format || format === 'arabic') return String(value);
+  if (value <= 0) return String(value);
+  if (format === 'alph' || format === 'Alph') {
+    let n = value;
+    let out = '';
+    while (n > 0) {
+      const rem = (n - 1) % 26;
+      out = String.fromCharCode('a'.charCodeAt(0) + rem) + out;
+      n = Math.floor((n - 1) / 26);
+    }
+    return format === 'Alph' ? out.toUpperCase() : out;
+  }
+  // roman / Roman
+  const romans: [number, string][] = [
+    [1000, 'm'],
+    [900, 'cm'],
+    [500, 'd'],
+    [400, 'cd'],
+    [100, 'c'],
+    [90, 'xc'],
+    [50, 'l'],
+    [40, 'xl'],
+    [10, 'x'],
+    [9, 'ix'],
+    [5, 'v'],
+    [4, 'iv'],
+    [1, 'i'],
+  ];
+  let n = value;
+  let out = '';
+  for (const [num, sym] of romans) {
+    while (n >= num) {
+      out += sym;
+      n -= num;
+    }
+  }
+  return format === 'Roman' ? out.toUpperCase() : out;
+}
+
+/**
  * Return dot-delimited header numbering based on heading counts
  *
  * counts is a list of 6 counts, corresponding to 6 heading depths
  *
  * Leading zeros are kept, trailing zeros are removed, nulls are ignored.
+ *
+ * Optional `formats` is a parallel list of per-depth counter formats; when
+ * provided, each depth's count is rendered via `formatCounter`. Heading
+ * depths without a format default to arabic, matching today's behaviour.
  */
-export function formatHeadingEnumerator(counts: (number | null)[], prefix?: string): string {
-  counts = counts.filter((d) => d !== null);
-  while (counts && counts[counts.length - 1] === 0) {
-    counts.pop();
+export function formatHeadingEnumerator(
+  counts: (number | null)[],
+  prefix?: string,
+  formats?: (CounterFormat | undefined)[],
+): string {
+  const pairs = counts.map((c, i) => [c, formats?.[i]] as const).filter(([c]) => c !== null) as [
+    number,
+    CounterFormat | undefined,
+  ][];
+  while (pairs.length && pairs[pairs.length - 1][0] === 0) {
+    pairs.pop();
   }
-  const enumerator = counts.join('.');
+  const enumerator = pairs.map(([c, fmt]) => formatCounter(c, fmt)).join('.');
   const out = prefix ? prefix.replace(/%s/g, String(enumerator)) : String(enumerator);
   return out;
+}
+
+function headingFormats(numbering: Numbering): (CounterFormat | undefined)[] {
+  return [1, 2, 3, 4, 5, 6].map((d) => numbering[`heading_${d}`]?.format);
 }
 
 export function initializeTargetCounts(
@@ -366,6 +477,7 @@ export class ReferenceState implements IReferenceStateResolver {
       this.enumerator = formatHeadingEnumerator(
         this.targetCounts.heading,
         this.numbering.title?.enumerator ?? this.numbering.enumerator?.enumerator,
+        headingFormats(this.numbering),
       );
     }
     this.identifiers = opts?.identifiers ?? [];
@@ -434,6 +546,7 @@ export class ReferenceState implements IReferenceStateResolver {
         this.numbering[
           `heading_${node.depth - (this.numbering?.title?.enabled ? 0 : 1) + this.offset}`
         ]?.enumerator ?? this.numbering.enumerator?.enumerator,
+        headingFormats(this.numbering),
       );
       node.enumerator = enumerator;
       return enumerator;
@@ -441,6 +554,21 @@ export class ReferenceState implements IReferenceStateResolver {
     const countKind = kind === TargetKind.subequation ? TargetKind.equation : kind;
     // Ensure target kind is instantiated
     this.targetCounts[countKind] ??= { main: 0, sub: 0 };
+    const kindFormat = this.numbering[countKind]?.format;
+    // §3.2(e) auto-prefix: in book mode, prepend the active chapter or
+    // appendix enumerator (this.enumerator — the page's H1 number / letter)
+    // so figures render "3.1", "A.2", etc. Pages in front/back matter have
+    // no this.enumerator, so the flat global counter is used automatically.
+    // Per-kind `continue: true` (§3.4(6)) opts out and keeps the counter
+    // flat across pages.
+    const continueKind = this.numbering[countKind]?.continue || this.numbering.all?.continue;
+    const autoPrefix =
+      this.enumerator &&
+      this.numbering.book?.enabled &&
+      !continueKind &&
+      shouldAutoPrefix(countKind)
+        ? `${this.enumerator}.`
+        : '';
     if (node.subcontainer || kind === TargetKind.subequation) {
       this.targetCounts[countKind].sub += 1;
       // Will restart counting if there are more than 26 subequations/figures
@@ -449,13 +577,13 @@ export class ReferenceState implements IReferenceStateResolver {
       );
       if (node.subcontainer) {
         node.parentEnumerator = this.resolveEnumerator(
-          this.targetCounts[countKind].main,
+          autoPrefix + formatCounter(this.targetCounts[countKind].main, kindFormat),
           this.numbering[countKind]?.enumerator,
         );
         enumerator = letter;
       } else {
         enumerator = this.resolveEnumerator(
-          this.targetCounts[countKind].main + letter,
+          autoPrefix + formatCounter(this.targetCounts[countKind].main, kindFormat) + letter,
           this.numbering[countKind]?.enumerator,
         );
       }
@@ -463,7 +591,7 @@ export class ReferenceState implements IReferenceStateResolver {
       this.targetCounts[kind].main += 1;
       this.targetCounts[kind].sub = 0;
       enumerator = this.resolveEnumerator(
-        this.targetCounts[kind].main,
+        autoPrefix + formatCounter(this.targetCounts[kind].main, kindFormat),
         this.numbering[kind]?.enumerator,
       );
     }
@@ -497,14 +625,28 @@ export class ReferenceState implements IReferenceStateResolver {
   resolveReferenceContent(node: ResolvableCrossReference) {
     const fileTarget = this.getFileTarget(node.identifier);
     if (fileTarget) {
-      const { url, title, dataUrl } = fileTarget;
+      const { url, title, dataUrl, enumerator } = fileTarget;
       if (url) {
         const nodeAsLink = node as unknown as Link;
         nodeAsLink.type = 'link';
         nodeAsLink.url = url;
         nodeAsLink.internal = true;
         if (dataUrl) nodeAsLink.dataUrl = dataUrl;
-        updateLinkTextIfEmpty(nodeAsLink, title ?? url);
+        // §3.2(h): file-targets are the page's title heading, so apply the
+        // same label > template > title fallback used for inline headings.
+        // Use the page's offset to pick the same heading numbering item that
+        // was used when its enumerator was generated — a nested TOC page
+        // with offset=1 should read `heading_2`, not `heading_1`. Otherwise
+        // a sub-section under a book chapter would render as e.g.
+        // "Chapter 1.1" instead of "Section 1.1".
+        let text: string | undefined;
+        if (enumerator) {
+          const depth = (fileTarget.offset ?? 0) + 1;
+          const item = fileTarget.numbering?.[`heading_${depth}`];
+          const template = item?.label ?? item?.template;
+          if (template) text = template.replace(/%s/g, enumerator);
+        }
+        updateLinkTextIfEmpty(nodeAsLink, text ?? title ?? url);
       }
       return;
     }
@@ -530,7 +672,14 @@ export function addChildrenFromTargetNode(
   const kind = kindFromNode(targetNode);
   const noNodeChildren = !node.children?.length;
   if (kind === TargetKind.heading) {
-    const numberHeading = shouldEnumerateNode(targetNode, TargetKind.heading, numbering);
+    // §3.4(8) / #12 fix: a heading that nominally has numbering enabled but
+    // never received an enumerator (e.g. on a page with page-level
+    // `numbering: false`, or under frontmatter:/backmatter: in book mode)
+    // must fall through to the title-only template. Otherwise `%s` in the
+    // heading template substitutes against UNKNOWN_REFERENCE_ENUMERATOR and
+    // renders "Chapter ??".
+    const numberHeading =
+      shouldEnumerateNode(targetNode, TargetKind.heading, numbering) && !!targetNode.enumerator;
     const template = getReferenceTemplate(
       { node: targetNode, kind },
       numbering,
