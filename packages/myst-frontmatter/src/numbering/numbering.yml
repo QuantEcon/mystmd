@@ -358,3 +358,40 @@ cases:
           enabled: true
           label: Chapter %s
           format: arabic
+  - title: scope normalizes section/chapter/subsection aliases
+    raw:
+      numbering:
+        proof:
+          scope: section
+        figure:
+          scope: chapter
+        equation:
+          scope: subsection
+    normalized:
+      numbering:
+        proof:
+          enabled: true
+          scope: heading_2
+        figure:
+          enabled: true
+          scope: heading_1
+        equation:
+          enabled: true
+          scope: heading_3
+  - title: scope accepts heading_N directly
+    raw:
+      numbering:
+        proof:
+          scope: heading_2
+    normalized:
+      numbering:
+        proof:
+          enabled: true
+          scope: heading_2
+  - title: invalid scope warns
+    raw:
+      numbering:
+        proof:
+          scope: bogus
+    normalized: {}
+    warnings: 1
