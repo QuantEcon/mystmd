@@ -567,14 +567,24 @@ export class ReferenceState implements IReferenceStateResolver {
   resolveReferenceContent(node: ResolvableCrossReference) {
     const fileTarget = this.getFileTarget(node.identifier);
     if (fileTarget) {
-      const { url, title, dataUrl } = fileTarget;
+      const { url, title, dataUrl, enumerator } = fileTarget;
       if (url) {
         const nodeAsLink = node as unknown as Link;
         nodeAsLink.type = 'link';
         nodeAsLink.url = url;
         nodeAsLink.internal = true;
         if (dataUrl) nodeAsLink.dataUrl = dataUrl;
-        updateLinkTextIfEmpty(nodeAsLink, title ?? url);
+        // §3.2(h): file-targets are the page's H1 (the title heading), so
+        // apply the same label > template > title fallback used for inline
+        // headings. The page's `heading_1` numbering item carries the book
+        // mode's "Chapter %s" / "Appendix %s" label.
+        let text: string | undefined;
+        if (enumerator) {
+          const item = fileTarget.numbering?.heading_1;
+          const template = item?.label ?? item?.template;
+          if (template) text = template.replace(/%s/g, enumerator);
+        }
+        updateLinkTextIfEmpty(nodeAsLink, text ?? title ?? url);
       }
       return;
     }
