@@ -1,0 +1,7 @@
+# quantecon/ is a local scratch space for QuantEcon development:
+# planning docs, demo books, experiments. Only README.md is tracked.
+#
+# To track something new here intentionally, add it to the allow-list below.
+*
+!.gitignore
+!README.md
