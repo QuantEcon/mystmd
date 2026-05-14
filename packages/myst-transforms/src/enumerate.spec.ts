@@ -286,6 +286,86 @@ describe('Book-mode auto-prefix (§3.4(6,7))', () => {
     expect(state.getTarget('t1')?.node.enumerator).toBe('1.1');
   });
 
+  test('proof:* and exercise pick up the chapter prefix', () => {
+    // §3.5(6): the auto-prefix matcher uses a `proof:` prefix test so any
+    // proof-family kind (theorem/lemma/proposition/…) and exercise pick up
+    // the chapter prefix without each kind needing to be enumerated.
+    const tree = u('root', [
+      u('proof', { kind: 'theorem', identifier: 'thm:1' }),
+      u('proof', { kind: 'lemma', identifier: 'lem:1' }),
+      u('exercise', { identifier: 'ex:1', enumerated: true }),
+    ]);
+    const state = new ReferenceState('ch3.md', {
+      frontmatter: {
+        numbering: {
+          book: { enabled: true },
+          all: { enabled: true }, // enable every kind incl. proof:*/exercise
+          title: { enabled: true },
+          heading_1: { enabled: true, start: 3 },
+        },
+      },
+      vfile: new VFile(),
+    });
+    enumerateTargetsTransform(tree, { state });
+    expect(state.enumerator).toBe('3');
+    expect(state.getTarget('thm:1')?.node.enumerator).toBe('3.1');
+    expect(state.getTarget('lem:1')?.node.enumerator).toBe('3.1');
+    // Each proof-family kind keeps its own counter — theorem and lemma both
+    // start at 3.1 in the same chapter; only the chapter prefix is shared.
+    expect(state.getTarget('ex:1')?.node.enumerator).toBe('3.1');
+  });
+
+  test('page-level format override is render-only (§3.4(9))', () => {
+    // A chapter page sets `format: Roman` in its frontmatter. Only that
+    // page's rendered enumerator changes; the underlying counter
+    // sequence stays 1, 2, 3, 4 so siblings render arithmetic-naturally.
+    // Modelled here via the `previousCounts` chain across three pages.
+    const ch1 = new ReferenceState('ch1.md', {
+      frontmatter: {
+        numbering: {
+          book: { enabled: true },
+          title: { enabled: true },
+          heading_1: { enabled: true, label: 'Chapter %s' },
+        },
+      },
+      vfile: new VFile(),
+    });
+    expect(ch1.enumerator).toBe('1');
+
+    const ch2 = new ReferenceState('ch2.md', {
+      frontmatter: {
+        numbering: {
+          book: { enabled: true },
+          title: { enabled: true },
+          // page-level override flips this chapter's rendering only
+          heading_1: { enabled: true, label: 'Chapter %s', format: 'Roman' },
+        },
+      },
+      previousCounts: ch1.targetCounts,
+      vfile: new VFile(),
+    });
+    expect(ch2.enumerator).toBe('II'); // rendered as Roman
+    // The underlying count is still 2 (not converted) — confirm by reading
+    // targetCounts.heading[0] directly. The Roman is purely a render
+    // detail at formatHeadingEnumerator time.
+    expect(ch2.targetCounts.heading[0]).toBe(2);
+
+    const ch3 = new ReferenceState('ch3.md', {
+      frontmatter: {
+        numbering: {
+          book: { enabled: true },
+          title: { enabled: true },
+          heading_1: { enabled: true, label: 'Chapter %s' },
+        },
+      },
+      previousCounts: ch2.targetCounts,
+      vfile: new VFile(),
+    });
+    // ch3 picks up where ch2 left off arithmetically — "3", not "4" — so
+    // the page-level Roman override did not disturb the sequence.
+    expect(ch3.enumerator).toBe('3');
+  });
+
   test('subfigures inherit the chapter-prefixed parent enumerator', () => {
     const tree = u('root', [
       u('container', { kind: 'figure', identifier: 'fig-p' }, [
