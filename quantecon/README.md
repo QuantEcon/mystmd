@@ -2,6 +2,8 @@
 
 This fork lets QuantEcon develop and use new `mystmd` features before they land in `jupyter-book/mystmd`. Features are developed on feature branches, squash-merged into this fork's `main`, and the same feature branches are kept alive so they can be opened as upstream PRs whenever the upstream team is ready to review them.
 
+> **About this folder.** `quantecon/` doubles as a local scratch space for planning docs, demo books, and experiments. Everything except this `README.md` is gitignored — feel free to drop PLAN docs, demo `myst.yml` projects, etc. here without worrying about accidental commits. To track something new intentionally, add it to the allow-list in [.gitignore](.gitignore).
+
 ## How it works — the key idea
 
 ```
