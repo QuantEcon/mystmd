@@ -174,6 +174,142 @@ describe('enumeration', () => {
     expect(state.getTarget('fig:2')?.node.enumerator).toBe('A.2');
   });
 });
+describe('Book-mode auto-prefix (§3.4(6,7))', () => {
+  test('figure picks up chapter prefix when book mode is on', () => {
+    const tree = u('root', [
+      u('container', { kind: 'figure', identifier: 'fig1' }),
+      u('container', { kind: 'figure', identifier: 'fig2' }),
+    ]);
+    const state = new ReferenceState('ch1.md', {
+      frontmatter: {
+        numbering: {
+          book: { enabled: true },
+          title: { enabled: true },
+          heading_1: { enabled: true, label: 'Chapter %s' },
+        },
+      },
+      vfile: new VFile(),
+    });
+    enumerateTargetsTransform(tree, { state });
+    expect(state.enumerator).toBe('1');
+    expect(state.getTarget('fig1')?.node.enumerator).toBe('1.1');
+    expect(state.getTarget('fig2')?.node.enumerator).toBe('1.2');
+  });
+
+  test('appendix Alph prefix flows to figures', () => {
+    const tree = u('root', [u('container', { kind: 'figure', identifier: 'fa' })]);
+    const state = new ReferenceState('app-a.md', {
+      frontmatter: {
+        numbering: {
+          book: { enabled: true },
+          title: { enabled: true },
+          heading_1: { enabled: true, format: 'Alph', label: 'Appendix %s' },
+        },
+      },
+      vfile: new VFile(),
+    });
+    enumerateTargetsTransform(tree, { state });
+    expect(state.enumerator).toBe('A');
+    expect(state.getTarget('fa')?.node.enumerator).toBe('A.1');
+  });
+
+  test('continue: true opts out of prefix and keeps counter flat', () => {
+    const tree = u('root', [
+      u('container', { kind: 'figure', identifier: 'figc' }),
+    ]);
+    const state = new ReferenceState('ch1.md', {
+      frontmatter: {
+        numbering: {
+          book: { enabled: true },
+          title: { enabled: true },
+          heading_1: { enabled: true },
+          figure: { continue: true },
+        },
+      },
+      vfile: new VFile(),
+    });
+    enumerateTargetsTransform(tree, { state });
+    expect(state.getTarget('figc')?.node.enumerator).toBe('1');
+  });
+
+  test('no auto-prefix when book mode is off', () => {
+    const tree = u('root', [u('container', { kind: 'figure', identifier: 'fx' })]);
+    const state = new ReferenceState('p.md', {
+      frontmatter: {
+        numbering: {
+          // book flag not set → today's behaviour preserved
+          title: { enabled: true },
+          heading_1: { enabled: true },
+        },
+      },
+      vfile: new VFile(),
+    });
+    enumerateTargetsTransform(tree, { state });
+    expect(state.getTarget('fx')?.node.enumerator).toBe('1');
+  });
+
+  test('unnumbered page (no enumerator) → no prefix even in book mode', () => {
+    // mimics a frontmatter/backmatter page where heading_1.enabled is false
+    const tree = u('root', [u('container', { kind: 'figure', identifier: 'fz' })]);
+    const state = new ReferenceState('preface.md', {
+      frontmatter: {
+        numbering: {
+          book: { enabled: true },
+          title: { enabled: true },
+          heading_1: { enabled: false },
+        },
+      },
+      vfile: new VFile(),
+    });
+    enumerateTargetsTransform(tree, { state });
+    expect(state.enumerator).toBeUndefined();
+    expect(state.getTarget('fz')?.node.enumerator).toBe('1');
+  });
+
+  test('equation and table also pick up the prefix', () => {
+    const tree = u('root', [
+      u('math', { identifier: 'eq1' }),
+      u('container', { kind: 'table', identifier: 't1' }),
+    ]);
+    const state = new ReferenceState('ch1.md', {
+      frontmatter: {
+        numbering: {
+          book: { enabled: true },
+          title: { enabled: true },
+          heading_1: { enabled: true },
+        },
+      },
+      vfile: new VFile(),
+    });
+    enumerateTargetsTransform(tree, { state });
+    expect(state.getTarget('eq1')?.node.enumerator).toBe('1.1');
+    expect(state.getTarget('t1')?.node.enumerator).toBe('1.1');
+  });
+
+  test('subfigures inherit the chapter-prefixed parent enumerator', () => {
+    const tree = u('root', [
+      u('container', { kind: 'figure', identifier: 'fig-p' }, [
+        u('container', { kind: 'figure', subcontainer: true, identifier: 'fig-p-a' }),
+        u('container', { kind: 'figure', subcontainer: true, identifier: 'fig-p-b' }),
+      ]),
+    ]);
+    const state = new ReferenceState('ch2.md', {
+      frontmatter: {
+        numbering: {
+          book: { enabled: true },
+          title: { enabled: true },
+          heading_1: { enabled: true, start: 2 },
+        },
+      },
+      vfile: new VFile(),
+    });
+    enumerateTargetsTransform(tree, { state });
+    expect(state.enumerator).toBe('2');
+    expect(state.getTarget('fig-p')?.node.enumerator).toBe('2.1');
+    expect(state.getTarget('fig-p-a')?.node.parentEnumerator).toBe('2.1');
+  });
+});
+
 describe('Heading cross-ref rendering (§3.2(h))', () => {
   test('label takes precedence over template for numbered heading', () => {
     const heading = u('heading', {
@@ -271,6 +407,104 @@ describe('Heading cross-ref rendering (§3.2(h))', () => {
       new VFile(),
     );
     expect(toText(ref.children)).toBe('Appendix A');
+  });
+});
+
+describe('Book-mode auto-prefix for figures and equations (§3.2(e))', () => {
+  function pageState(opts: {
+    enumerator?: string;
+    book?: boolean;
+    figureContinue?: boolean;
+  }) {
+    return new ReferenceState('p.md', {
+      frontmatter: {
+        numbering: {
+          ...(opts.book ? { book: { enabled: true } } : {}),
+          title: { enabled: true },
+          heading_1: { enabled: true },
+          figure: {
+            enabled: true,
+            ...(opts.figureContinue ? { continue: true } : {}),
+          },
+        },
+        // Force the constructor to NOT auto-enumerate the title, so we can
+        // set this.enumerator explicitly for the test.
+        content_includes_title: true,
+      } as any,
+      vfile: new VFile(),
+    });
+  }
+
+  test('book mode prefixes figure with page enumerator', () => {
+    const state = pageState({ book: true });
+    (state as any).enumerator = '3';
+    const tree = u('root', [
+      u('container', { kind: 'figure', identifier: 'f1' }),
+      u('container', { kind: 'figure', identifier: 'f2' }),
+    ]);
+    enumerateTargetsTransform(tree, { state });
+    expect(state.getTarget('f1')?.node.enumerator).toBe('3.1');
+    expect(state.getTarget('f2')?.node.enumerator).toBe('3.2');
+  });
+
+  test('appendix-style Alph enumerator prefixes correctly', () => {
+    const state = pageState({ book: true });
+    (state as any).enumerator = 'A';
+    const tree = u('root', [
+      u('container', { kind: 'figure', identifier: 'fA1' }),
+      u('container', { kind: 'figure', identifier: 'fA2' }),
+    ]);
+    enumerateTargetsTransform(tree, { state });
+    expect(state.getTarget('fA1')?.node.enumerator).toBe('A.1');
+    expect(state.getTarget('fA2')?.node.enumerator).toBe('A.2');
+  });
+
+  test('no book mode → no prefix (today\'s behavior preserved)', () => {
+    const state = pageState({ book: false });
+    (state as any).enumerator = '3';
+    const tree = u('root', [u('container', { kind: 'figure', identifier: 'f1' })]);
+    enumerateTargetsTransform(tree, { state });
+    expect(state.getTarget('f1')?.node.enumerator).toBe('1');
+  });
+
+  test('figure.continue: true opts out of prefix (flat counter)', () => {
+    const state = pageState({ book: true, figureContinue: true });
+    (state as any).enumerator = '3';
+    const tree = u('root', [u('container', { kind: 'figure', identifier: 'f1' })]);
+    enumerateTargetsTransform(tree, { state });
+    expect(state.getTarget('f1')?.node.enumerator).toBe('1');
+  });
+
+  test('frontmatter page (no enumerator) keeps flat global counter', () => {
+    const state = pageState({ book: true });
+    // no this.enumerator set
+    const tree = u('root', [u('container', { kind: 'figure', identifier: 'f1' })]);
+    enumerateTargetsTransform(tree, { state });
+    expect(state.getTarget('f1')?.node.enumerator).toBe('1');
+  });
+
+  test('book mode prefixes proof:theorem and exercise', () => {
+    const state = new ReferenceState('p.md', {
+      frontmatter: {
+        numbering: {
+          book: { enabled: true },
+          title: { enabled: true },
+          heading_1: { enabled: true },
+          'proof:theorem': { enabled: true },
+          exercise: { enabled: true },
+        },
+        content_includes_title: true,
+      } as any,
+      vfile: new VFile(),
+    });
+    (state as any).enumerator = '6';
+    const tree = u('root', [
+      u('proof', { kind: 'theorem', identifier: 'thm1' }),
+      u('exercise', { identifier: 'ex1' }),
+    ]);
+    enumerateTargetsTransform(tree, { state });
+    expect(state.getTarget('thm1')?.node.enumerator).toBe('6.1');
+    expect(state.getTarget('ex1')?.node.enumerator).toBe('6.1');
   });
 });
 

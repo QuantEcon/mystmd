@@ -27,6 +27,41 @@ import type { CounterFormat, PageFrontmatter, Numbering } from 'myst-frontmatter
 
 const TRANSFORM_NAME = 'myst-transforms:enumerate';
 
+/**
+ * Kinds that get the chapter/appendix enumerator prepended when the page is
+ * inside a book section (§3.4(6)). Each kind keeps its own counter; only the
+ * leading prefix changes per-page. Authors opt out per-kind via
+ * `numbering.<kind>.continue: true` (§3.4(7)), which both keeps the counter
+ * flat across pages and drops the prefix.
+ *
+ * Proof family kinds (`proof:theorem`, `proof:lemma`, …) are matched by
+ * prefix so adding a new proof kind upstream doesn't require touching this
+ * list.
+ */
+const AUTO_PREFIX_KINDS = new Set<string>([
+  'figure',
+  'subfigure',
+  'equation',
+  'subequation',
+  'table',
+  'exercise',
+]);
+
+/**
+ * Pure kind matcher — does this kind belong to the family that gets the
+ * chapter/appendix prefix when book mode is on? The caller also checks
+ * `numbering.book.enabled`, `numbering[kind].continue`, and the
+ * page-side enumerator before applying the prefix.
+ */
+function shouldAutoPrefix(kind: string): boolean {
+  if (AUTO_PREFIX_KINDS.has(kind)) return true;
+  // Cover both the `proof` directive (`type: proof`) and the legacy
+  // `prf:*` naming so future renames don't break book mode.
+  if (kind.startsWith('proof:') || kind.startsWith('prf:')) return true;
+  if (kind === 'proof') return true;
+  return false;
+}
+
 const DEFAULT_NUMBERING: Numbering = {
   equation: { enabled: true, template: '(%s)' },
   subequation: { enabled: true, template: '(%s)' },
@@ -511,6 +546,21 @@ export class ReferenceState implements IReferenceStateResolver {
     // Ensure target kind is instantiated
     this.targetCounts[countKind] ??= { main: 0, sub: 0 };
     const kindFormat = this.numbering[countKind]?.format;
+    // §3.2(e) auto-prefix: in book mode, prepend the active chapter or
+    // appendix enumerator (this.enumerator — the page's H1 number / letter)
+    // so figures render "3.1", "A.2", etc. Pages in front/back matter have
+    // no this.enumerator, so the flat global counter is used automatically.
+    // Per-kind `continue: true` (§3.4(6)) opts out and keeps the counter
+    // flat across pages.
+    const continueKind =
+      this.numbering[countKind]?.continue || this.numbering.all?.continue;
+    const autoPrefix =
+      this.enumerator &&
+      this.numbering.book?.enabled &&
+      !continueKind &&
+      shouldAutoPrefix(countKind)
+        ? `${this.enumerator}.`
+        : '';
     if (node.subcontainer || kind === TargetKind.subequation) {
       this.targetCounts[countKind].sub += 1;
       // Will restart counting if there are more than 26 subequations/figures
@@ -519,13 +569,13 @@ export class ReferenceState implements IReferenceStateResolver {
       );
       if (node.subcontainer) {
         node.parentEnumerator = this.resolveEnumerator(
-          formatCounter(this.targetCounts[countKind].main, kindFormat),
+          autoPrefix + formatCounter(this.targetCounts[countKind].main, kindFormat),
           this.numbering[countKind]?.enumerator,
         );
         enumerator = letter;
       } else {
         enumerator = this.resolveEnumerator(
-          formatCounter(this.targetCounts[countKind].main, kindFormat) + letter,
+          autoPrefix + formatCounter(this.targetCounts[countKind].main, kindFormat) + letter,
           this.numbering[countKind]?.enumerator,
         );
       }
@@ -533,7 +583,7 @@ export class ReferenceState implements IReferenceStateResolver {
       this.targetCounts[kind].main += 1;
       this.targetCounts[kind].sub = 0;
       enumerator = this.resolveEnumerator(
-        formatCounter(this.targetCounts[kind].main, kindFormat),
+        autoPrefix + formatCounter(this.targetCounts[kind].main, kindFormat),
         this.numbering[kind]?.enumerator,
       );
     }
