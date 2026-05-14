@@ -153,7 +153,7 @@ describe.each([
 });
 
 describe('book section field', () => {
-  test.each(['frontmatter', 'chapters', 'appendices', 'backmatter'])(
+  test.each(['frontmatter', 'parts', 'chapters', 'appendices', 'backmatter'])(
     'section: %s parses on a ParentEntry',
     (section) => {
       const input = [

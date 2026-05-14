@@ -3,8 +3,12 @@
  * `section`-tagged subtree inherit the section's numbering defaults
  * (chapters → arabic, appendices → Alph, etc.) once `numbering.book: true`
  * is set on the project.
+ *
+ * `parts` is structural — it emits a divider with a Roman-numeralled title
+ * ("Part I — General Theory") and its children default to `section: chapters`.
+ * The other sections are logical wrappers (no divider, same level).
  */
-export type BookSection = 'frontmatter' | 'chapters' | 'appendices' | 'backmatter';
+export type BookSection = 'frontmatter' | 'parts' | 'chapters' | 'appendices' | 'backmatter';
 
 /**
  * Common attributes for all TOC items
