@@ -90,9 +90,12 @@ function getReferenceTemplate(
   let template: string | undefined;
   if (numbered) {
     if (kind === TargetKind.heading && node.type === 'heading') {
-      template =
-        numbering[`heading_${node.depth - (numbering?.title?.enabled ? 0 : 1) + (offset ?? 0)}`]
-          ?.template;
+      // §3.2(h): for heading-type targets, `label` takes precedence over
+      // `template`. This is what makes `[](#ch1)` render "Chapter 1" rather
+      // than "Section 1" when a project sets `numbering.heading_1.label`.
+      const item =
+        numbering[`heading_${node.depth - (numbering?.title?.enabled ? 0 : 1) + (offset ?? 0)}`];
+      template = item?.label ?? item?.template;
     } else if (node.subcontainer) {
       template = numbering.subfigure?.template;
     } else {
@@ -597,7 +600,14 @@ export function addChildrenFromTargetNode(
   const kind = kindFromNode(targetNode);
   const noNodeChildren = !node.children?.length;
   if (kind === TargetKind.heading) {
-    const numberHeading = shouldEnumerateNode(targetNode, TargetKind.heading, numbering);
+    // §3.4(8) / #12 fix: a heading that nominally has numbering enabled but
+    // never received an enumerator (e.g. on a page with page-level
+    // `numbering: false`, or under frontmatter:/backmatter: in book mode)
+    // must fall through to the title-only template. Otherwise `%s` in the
+    // heading template substitutes against UNKNOWN_REFERENCE_ENUMERATOR and
+    // renders "Chapter ??".
+    const numberHeading =
+      shouldEnumerateNode(targetNode, TargetKind.heading, numbering) && !!targetNode.enumerator;
     const template = getReferenceTemplate(
       { node: targetNode, kind },
       numbering,

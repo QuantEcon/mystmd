@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'vitest';
 import {
+  addChildrenFromTargetNode,
   ReferenceState,
   enumerateTargetsTransform,
   formatCounter,
@@ -9,6 +10,7 @@ import {
 } from './enumerate';
 import { u } from 'unist-builder';
 import { VFile } from 'vfile';
+import { toText } from 'myst-common';
 
 describe('formatCounter', () => {
   test.each([
@@ -172,6 +174,106 @@ describe('enumeration', () => {
     expect(state.getTarget('fig:2')?.node.enumerator).toBe('A.2');
   });
 });
+describe('Heading cross-ref rendering (§3.2(h))', () => {
+  test('label takes precedence over template for numbered heading', () => {
+    const heading = u('heading', {
+      identifier: 'ch1',
+      depth: 1,
+      enumerator: '1',
+    }, [u('text', 'Introduction')]);
+    const ref: any = { type: 'crossReference', identifier: 'ch1' };
+    addChildrenFromTargetNode(
+      ref,
+      heading as any,
+      {
+        title: { enabled: true },
+        heading_1: { enabled: true, template: 'Section %s', label: 'Chapter %s' },
+      },
+      new VFile(),
+    );
+    expect(toText(ref.children)).toBe('Chapter 1');
+  });
+
+  test('falls back to template when label is absent', () => {
+    const heading = u('heading', {
+      identifier: 'h1',
+      depth: 1,
+      enumerator: '1',
+    }, [u('text', 'Introduction')]);
+    const ref: any = { type: 'crossReference', identifier: 'h1' };
+    addChildrenFromTargetNode(
+      ref,
+      heading as any,
+      {
+        title: { enabled: true },
+        heading_1: { enabled: true, template: 'Section %s' },
+      },
+      new VFile(),
+    );
+    expect(toText(ref.children)).toBe('Section 1');
+  });
+
+  test('unnumbered heading falls back to title (#12 fix)', () => {
+    // Heading has no enumerator — even though numbering.heading_1 has a
+    // template, the cross-ref must render the heading text, not
+    // "Chapter ??".
+    const heading = u('heading', { identifier: 'preface', depth: 1 }, [u('text', 'Preface')]);
+    const ref: any = { type: 'crossReference', identifier: 'preface' };
+    addChildrenFromTargetNode(
+      ref,
+      heading as any,
+      {
+        title: { enabled: true },
+        heading_1: { enabled: true, template: 'Chapter %s', label: 'Chapter %s' },
+      },
+      new VFile(),
+    );
+    expect(toText(ref.children)).toBe('Preface');
+  });
+
+  test('explicit link text wins', () => {
+    const heading = u('heading', {
+      identifier: 'ch1',
+      depth: 1,
+      enumerator: '1',
+    }, [u('text', 'Introduction')]);
+    const ref: any = {
+      type: 'crossReference',
+      identifier: 'ch1',
+      children: [u('text', 'the intro')],
+    };
+    addChildrenFromTargetNode(
+      ref,
+      heading as any,
+      {
+        title: { enabled: true },
+        heading_1: { enabled: true, label: 'Chapter %s' },
+      },
+      new VFile(),
+    );
+    expect(toText(ref.children)).toBe('the intro');
+  });
+
+  test('label with Alph-formatted enumerator (appendix-style)', () => {
+    const heading = u('heading', {
+      identifier: 'app-a',
+      depth: 1,
+      enumerator: 'A',
+    }, [u('text', 'Proofs')]);
+    const ref: any = { type: 'crossReference', identifier: 'app-a' };
+    addChildrenFromTargetNode(
+      ref,
+      heading as any,
+      {
+        title: { enabled: true },
+        heading_1: { enabled: true, label: 'Appendix %s' },
+      },
+      new VFile(),
+    );
+    expect(toText(ref.children)).toBe('Appendix A');
+  });
+});
+
 describe('initializeTargetCounts', () => {
   test('no inputs initializes heading', () => {
     expect(initializeTargetCounts({})).toEqual({ heading: [0, 0, 0, 0, 0, 0] });
