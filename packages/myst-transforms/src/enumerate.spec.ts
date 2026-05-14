@@ -53,7 +53,7 @@ describe('formatHeadingEnumerator with formats', () => {
   test('Roman at depth 1, arabic sub-headings', () => {
     expect(formatHeadingEnumerator([3, 2, 1, 0, 0, 0], undefined, ['Roman'])).toBe('III.2.1');
   });
-  test('no formats array preserves today\'s arabic behaviour', () => {
+  test("no formats array preserves today's arabic behaviour", () => {
     expect(formatHeadingEnumerator([1, 2, 0, 0, 0, 0])).toBe('1.2');
   });
 });
@@ -214,9 +214,7 @@ describe('Book-mode auto-prefix (§3.4(6,7))', () => {
   });
 
   test('continue: true opts out of prefix and keeps counter flat', () => {
-    const tree = u('root', [
-      u('container', { kind: 'figure', identifier: 'figc' }),
-    ]);
+    const tree = u('root', [u('container', { kind: 'figure', identifier: 'figc' })]);
     const state = new ReferenceState('ch1.md', {
       frontmatter: {
         numbering: {
@@ -392,11 +390,15 @@ describe('Book-mode auto-prefix (§3.4(6,7))', () => {
 
 describe('Heading cross-ref rendering (§3.2(h))', () => {
   test('label takes precedence over template for numbered heading', () => {
-    const heading = u('heading', {
-      identifier: 'ch1',
-      depth: 1,
-      enumerator: '1',
-    }, [u('text', 'Introduction')]);
+    const heading = u(
+      'heading',
+      {
+        identifier: 'ch1',
+        depth: 1,
+        enumerator: '1',
+      },
+      [u('text', 'Introduction')],
+    );
     const ref: any = { type: 'crossReference', identifier: 'ch1' };
     addChildrenFromTargetNode(
       ref,
@@ -411,11 +413,15 @@ describe('Heading cross-ref rendering (§3.2(h))', () => {
   });
 
   test('falls back to template when label is absent', () => {
-    const heading = u('heading', {
-      identifier: 'h1',
-      depth: 1,
-      enumerator: '1',
-    }, [u('text', 'Introduction')]);
+    const heading = u(
+      'heading',
+      {
+        identifier: 'h1',
+        depth: 1,
+        enumerator: '1',
+      },
+      [u('text', 'Introduction')],
+    );
     const ref: any = { type: 'crossReference', identifier: 'h1' };
     addChildrenFromTargetNode(
       ref,
@@ -448,11 +454,15 @@ describe('Heading cross-ref rendering (§3.2(h))', () => {
   });
 
   test('explicit link text wins', () => {
-    const heading = u('heading', {
-      identifier: 'ch1',
-      depth: 1,
-      enumerator: '1',
-    }, [u('text', 'Introduction')]);
+    const heading = u(
+      'heading',
+      {
+        identifier: 'ch1',
+        depth: 1,
+        enumerator: '1',
+      },
+      [u('text', 'Introduction')],
+    );
     const ref: any = {
       type: 'crossReference',
       identifier: 'ch1',
@@ -471,11 +481,15 @@ describe('Heading cross-ref rendering (§3.2(h))', () => {
   });
 
   test('label with Alph-formatted enumerator (appendix-style)', () => {
-    const heading = u('heading', {
-      identifier: 'app-a',
-      depth: 1,
-      enumerator: 'A',
-    }, [u('text', 'Proofs')]);
+    const heading = u(
+      'heading',
+      {
+        identifier: 'app-a',
+        depth: 1,
+        enumerator: 'A',
+      },
+      [u('text', 'Proofs')],
+    );
     const ref: any = { type: 'crossReference', identifier: 'app-a' };
     addChildrenFromTargetNode(
       ref,
@@ -491,11 +505,7 @@ describe('Heading cross-ref rendering (§3.2(h))', () => {
 });
 
 describe('Book-mode auto-prefix for figures and equations (§3.2(e))', () => {
-  function pageState(opts: {
-    enumerator?: string;
-    book?: boolean;
-    figureContinue?: boolean;
-  }) {
+  function pageState(opts: { enumerator?: string; book?: boolean; figureContinue?: boolean }) {
     return new ReferenceState('p.md', {
       frontmatter: {
         numbering: {
@@ -539,7 +549,7 @@ describe('Book-mode auto-prefix for figures and equations (§3.2(e))', () => {
     expect(state.getTarget('fA2')?.node.enumerator).toBe('A.2');
   });
 
-  test('no book mode → no prefix (today\'s behavior preserved)', () => {
+  test("no book mode → no prefix (today's behavior preserved)", () => {
     const state = pageState({ book: false });
     (state as any).enumerator = '3';
     const tree = u('root', [u('container', { kind: 'figure', identifier: 'f1' })]);

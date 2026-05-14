@@ -351,9 +351,10 @@ export function formatHeadingEnumerator(
   prefix?: string,
   formats?: (CounterFormat | undefined)[],
 ): string {
-  const pairs = counts
-    .map((c, i) => [c, formats?.[i]] as const)
-    .filter(([c]) => c !== null) as [number, CounterFormat | undefined][];
+  const pairs = counts.map((c, i) => [c, formats?.[i]] as const).filter(([c]) => c !== null) as [
+    number,
+    CounterFormat | undefined,
+  ][];
   while (pairs.length && pairs[pairs.length - 1][0] === 0) {
     pairs.pop();
   }
@@ -552,8 +553,7 @@ export class ReferenceState implements IReferenceStateResolver {
     // no this.enumerator, so the flat global counter is used automatically.
     // Per-kind `continue: true` (§3.4(6)) opts out and keeps the counter
     // flat across pages.
-    const continueKind =
-      this.numbering[countKind]?.continue || this.numbering.all?.continue;
+    const continueKind = this.numbering[countKind]?.continue || this.numbering.all?.continue;
     const autoPrefix =
       this.enumerator &&
       this.numbering.book?.enabled &&
