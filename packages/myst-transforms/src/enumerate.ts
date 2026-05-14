@@ -1,7 +1,15 @@
 import type { Plugin } from 'unified';
 import { VFile } from 'vfile';
 import type { CrossReference, Paragraph } from 'myst-spec';
-import type { Cite, Container, Heading, Math, MathGroup, Link, IndexEntry } from 'myst-spec-ext';
+import type {
+  Cite,
+  Container,
+  Heading,
+  Math as MathNode,
+  MathGroup,
+  Link,
+  IndexEntry,
+} from 'myst-spec-ext';
 import type { PhrasingContent } from 'mdast';
 import { visit } from 'unist-util-visit';
 import { select, selectAll } from 'unist-util-select';
@@ -147,7 +155,7 @@ export enum ReferenceKind {
   eq = 'eq',
 }
 
-type TargetNodes = (Container | Math | MathGroup | Heading) & {
+type TargetNodes = (Container | MathNode | MathGroup | Heading) & {
   html_id: string;
   subcontainer?: boolean;
   parentEnumerator?: string;
@@ -624,13 +632,17 @@ export class ReferenceState implements IReferenceStateResolver {
         nodeAsLink.url = url;
         nodeAsLink.internal = true;
         if (dataUrl) nodeAsLink.dataUrl = dataUrl;
-        // §3.2(h): file-targets are the page's H1 (the title heading), so
-        // apply the same label > template > title fallback used for inline
-        // headings. The page's `heading_1` numbering item carries the book
-        // mode's "Chapter %s" / "Appendix %s" label.
+        // §3.2(h): file-targets are the page's title heading, so apply the
+        // same label > template > title fallback used for inline headings.
+        // Use the page's offset to pick the same heading numbering item that
+        // was used when its enumerator was generated — a nested TOC page
+        // with offset=1 should read `heading_2`, not `heading_1`. Otherwise
+        // a sub-section under a book chapter would render as e.g.
+        // "Chapter 1.1" instead of "Section 1.1".
         let text: string | undefined;
         if (enumerator) {
-          const item = fileTarget.numbering?.heading_1;
+          const depth = (fileTarget.offset ?? 0) + 1;
+          const item = fileTarget.numbering?.[`heading_${depth}`];
           const template = item?.label ?? item?.template;
           if (template) text = template.replace(/%s/g, enumerator);
         }

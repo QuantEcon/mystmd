@@ -129,6 +129,19 @@ export function injectBookSectionDefaults(
   // continuing the chapter sequence. Subsequent appendix pages have no
   // `start` and continue naturally.
   if (firstInSection && h1.start == null) h1.start = 1;
+  // Author-supplied per-section config (e.g. `numbering.chapters.label`
+  // or `numbering.appendices.format`) sits between explicit page
+  // frontmatter and the hardcoded defaults. Each field is filled with
+  // `??=` so the page-level value wins, then the section config, then
+  // the hardcoded fallback. Only applies when the section's matching
+  // kind block is one of the well-known book section keys.
+  const sectionConfig: { label?: string; format?: string; enabled?: boolean } | undefined =
+    section === 'chapters' || section === 'appendices' ? numbering[section] : undefined;
+  if (sectionConfig) {
+    h1.label ??= sectionConfig.label;
+    h1.format ??= sectionConfig.format as typeof h1.format;
+    h1.enabled ??= sectionConfig.enabled;
+  }
   switch (section) {
     case 'chapters':
       h1.enabled ??= true;

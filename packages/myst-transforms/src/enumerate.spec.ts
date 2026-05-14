@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'vitest';
 import {
   addChildrenFromTargetNode,
+  MultiPageReferenceResolver,
   ReferenceState,
   enumerateTargetsTransform,
   formatCounter,
@@ -501,6 +502,35 @@ describe('Heading cross-ref rendering (§3.2(h))', () => {
       new VFile(),
     );
     expect(toText(ref.children)).toBe('Appendix A');
+  });
+
+  test('file-target on nested page uses heading_${offset+1}, not heading_1', () => {
+    // Copilot review #1: a nested TOC page has offset>0; its title
+    // enumerator was generated at heading_${offset+1}. The file-target
+    // label rendering must read the same depth, otherwise a sub-section
+    // under a book chapter renders as "Chapter 1.1" (using heading_1's
+    // book label) instead of "Section 1.1".
+    const filePage = new ReferenceState('nested.md', {
+      frontmatter: {
+        numbering: {
+          book: { enabled: true },
+          title: { enabled: true, offset: 1 },
+          heading_1: { enabled: true, label: 'Chapter %s' },
+          heading_2: { enabled: true, label: 'Section %s' },
+        },
+      },
+      identifiers: ['nested-page'],
+      vfile: new VFile(),
+    });
+    filePage.url = '/nested';
+    // Force a deterministic enumerator (mimicking previousCounts having
+    // already filled heading_1 = 1 from the parent chapter, so the
+    // sub-page becomes heading_2 == 1 → "1.1").
+    filePage.enumerator = '1.1';
+    const resolver = new MultiPageReferenceResolver([filePage], 'caller.md');
+    const ref: any = { type: 'crossReference', identifier: 'nested-page' };
+    resolver.resolveReferenceContent(ref);
+    expect(toText(ref.children)).toBe('Section 1.1');
   });
 });
 

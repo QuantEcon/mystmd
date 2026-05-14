@@ -60,6 +60,48 @@ describe('injectBookSectionDefaults', () => {
     expect(fm.numbering?.heading_1?.enabled).toBe(false);
   });
 
+  test('numbering.chapters.label flows into heading_1', () => {
+    // Copilot review #2: a project setting `numbering.chapters.label`
+    // should reach pages in `section: chapters` instead of being
+    // silently ignored in favour of the hardcoded "Chapter %s".
+    const fm: PageFrontmatter = {
+      numbering: {
+        book: { enabled: true },
+        chapters: { label: 'Module %s' },
+      },
+    };
+    injectBookSectionDefaults(fm, 'chapters', false);
+    expect(fm.numbering?.heading_1?.label).toBe('Module %s');
+  });
+
+  test('numbering.appendices.format flows into heading_1', () => {
+    const fm: PageFrontmatter = {
+      numbering: {
+        book: { enabled: true },
+        appendices: { format: 'roman' },
+      },
+    };
+    injectBookSectionDefaults(fm, 'appendices', false);
+    // section config beats the hardcoded `Alph` default
+    expect(fm.numbering?.heading_1?.format).toBe('roman');
+    // hardcoded label still fills in because section didn't set one
+    expect(fm.numbering?.heading_1?.label).toBe('Appendix %s');
+  });
+
+  test('page heading_1 beats section config beats hardcoded default', () => {
+    const fm: PageFrontmatter = {
+      numbering: {
+        book: { enabled: true },
+        chapters: { label: 'Module %s', format: 'roman' },
+        // page-level wins for label; format comes from section config
+        heading_1: { label: 'Lesson %s' },
+      },
+    };
+    injectBookSectionDefaults(fm, 'chapters', false);
+    expect(fm.numbering?.heading_1?.label).toBe('Lesson %s'); // page wins
+    expect(fm.numbering?.heading_1?.format).toBe('roman'); // section wins over hardcoded
+  });
+
   test('does not clobber explicit author settings', () => {
     const fm: PageFrontmatter = {
       numbering: {

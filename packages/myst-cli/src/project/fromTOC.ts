@@ -228,13 +228,18 @@ function pagesFromEntries(
     // Do we have any children?
     const parentEntry = entry as Partial<ParentEntry>;
     if (parentEntry.children) {
+      // Only a *section-only* ParentEntry (no `file:`) keeps its children
+      // at the same level — that's the "logical wrapper" intent. A
+      // section-tagged FileEntry with children is still a structural
+      // parent, so its children move to the next level (e.g. ch1.md's
+      // sub-page becomes heading_2).
+      const isSectionGroup = !isFile(entry) && (entry as { section?: BookSection }).section;
       pagesFromEntries(
         session,
         path,
         parentEntry.children as EntryWithoutPattern[],
         pages,
-        // section subtree → children stay at the parent's level
-        (entry as { section?: BookSection }).section ? entryLevel : nextLevel(entryLevel),
+        isSectionGroup ? entryLevel : nextLevel(entryLevel),
         pageSlugs,
         opts,
         childSection,
