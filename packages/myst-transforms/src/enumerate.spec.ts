@@ -566,6 +566,42 @@ describe('Book-mode auto-prefix (§3.4(6,7))', () => {
     expect(state.getTarget('thm:2')?.node.enumerator).toBe('2');
   });
 
+  test('scope respects `start` on first encounter (#27)', () => {
+    // Regression: the scope-change reset used to fire on first encounter
+    // (because `lastScopeKeyByKind[kind]` started undefined), wiping the
+    // `start` offset seeded by initializeTargetCounts. Confirm that
+    // `figure: { start: 5, scope: section }` renders the first figure
+    // in §1.1 as `1.1.5`, not `1.1.1`, and that subsequent sections
+    // still reset back to 1.
+    const tree = u('root', [
+      u('heading', { identifier: 's1', depth: 2 }),
+      u('container', { kind: 'figure', identifier: 'fig:1' }),
+      u('container', { kind: 'figure', identifier: 'fig:2' }),
+      u('heading', { identifier: 's2', depth: 2 }),
+      u('container', { kind: 'figure', identifier: 'fig:3' }),
+    ]);
+    const state = new ReferenceState('ch1.md', {
+      frontmatter: {
+        numbering: {
+          book: { enabled: true },
+          all: { enabled: true },
+          title: { enabled: true },
+          heading_1: { enabled: true },
+          heading_2: { enabled: true },
+          figure: { start: 5, scope: 'section' },
+        },
+      },
+      vfile: new VFile(),
+    });
+    enumerateTargetsTransform(tree, { state });
+    expect(state.getTarget('fig:1')?.node.enumerator).toBe('1.1.5');
+    expect(state.getTarget('fig:2')?.node.enumerator).toBe('1.1.6');
+    // crossing into §1.2 resets the counter (start applies only at
+    // page-init time, not on every scope boundary — same as today's
+    // chapter-scoped behaviour).
+    expect(state.getTarget('fig:3')?.node.enumerator).toBe('1.2.1');
+  });
+
   test('figures also accept scope (#27)', () => {
     // Confirms scope generalises to every auto-prefix kind, not just
     // proof:* — `numbering.all.scope` applies to figure too.

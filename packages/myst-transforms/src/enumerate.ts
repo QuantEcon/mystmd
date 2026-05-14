@@ -30,7 +30,7 @@ import {
 } from 'myst-common';
 import type { LinkTransformer } from './links/types.js';
 import { updateLinkTextIfEmpty } from './links/utils.js';
-import { fillNumbering } from 'myst-frontmatter';
+import { fillNumbering, scopeAliasToDepth } from 'myst-frontmatter';
 import type { CounterFormat, PageFrontmatter, Numbering } from 'myst-frontmatter';
 
 const TRANSFORM_NAME = 'myst-transforms:enumerate';
@@ -76,37 +76,6 @@ function shouldAutoPrefix(kind: string): boolean {
  */
 function isProofFamilyKind(kind: string): boolean {
   return kind === 'proof' || kind.startsWith('proof:') || kind.startsWith('prf:');
-}
-
-/**
- * Map a scope alias (`chapter` / `section` / `subsection` / `heading_N`)
- * to its heading depth. Returns undefined for unrecognised values so the
- * caller can fall through to the next candidate. Mirrors the alias map
- * in `myst-frontmatter/src/numbering/validators.ts`; kept in sync because
- * `ReferenceState`'s constructor accepts pre-validated *and* raw
- * frontmatter (no separate validator pass), so we normalise here too.
- */
-function scopeAliasToDepth(scope: string): number | undefined {
-  switch (scope) {
-    case 'chapter':
-    case 'heading_1':
-      return 1;
-    case 'section':
-    case 'heading_2':
-      return 2;
-    case 'subsection':
-    case 'heading_3':
-      return 3;
-    case 'subsubsection':
-    case 'heading_4':
-      return 4;
-    case 'heading_5':
-      return 5;
-    case 'heading_6':
-      return 6;
-    default:
-      return undefined;
-  }
 }
 
 /**
@@ -678,10 +647,16 @@ export class ReferenceState implements IReferenceStateResolver {
           headingFormats(this.numbering),
         );
         autoPrefix = scopePrefix ? `${scopePrefix}.` : '';
-        if (this.lastScopeKeyByKind[countKind] !== scopePrefix) {
+        // Reset only on a real scope *change* — i.e. we've already seen
+        // this kind at a different scope key. Resetting on *first*
+        // encounter would clobber `numbering[kind].start` seeded by
+        // `initializeTargetCounts`, so e.g. `figure: { start: 5, scope:
+        // section }` would silently render `5.1.1` instead of `5.1.5`.
+        const prevScopeKey = this.lastScopeKeyByKind[countKind];
+        if (prevScopeKey !== undefined && prevScopeKey !== scopePrefix) {
           this.targetCounts[countKind] = { main: 0, sub: 0 };
-          this.lastScopeKeyByKind[countKind] = scopePrefix;
         }
+        this.lastScopeKeyByKind[countKind] = scopePrefix;
       } else {
         autoPrefix = `${this.enumerator}.`;
       }

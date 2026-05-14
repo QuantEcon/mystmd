@@ -9,7 +9,7 @@ import {
   validateString,
   validationWarning,
 } from 'simple-validators';
-import type { CounterFormat, Numbering, NumberingItem } from './types.js';
+import type { CounterFormat, Numbering, NumberingItem, NumberingScope } from './types.js';
 
 export const NUMBERING_OPTIONS = ['enumerator', 'all', 'headings', 'title'];
 
@@ -43,7 +43,15 @@ const COUNTER_FORMATS: CounterFormat[] = ['arabic', 'alph', 'Alph', 'roman', 'Ro
 
 const CONTINUE_STRINGS = ['continue', 'next'];
 
-const SCOPE_ALIASES: Record<string, string> = {
+/**
+ * Single source of truth for `numbering.<kind>.scope` aliases (#27).
+ * Maps every accepted spelling to its canonical `heading_N` form.
+ * Both the validator (which normalises to `heading_N`) and consumers
+ * that need the depth integer (e.g. `myst-transforms/src/enumerate.ts`'s
+ * `effectiveScopeDepth`) import this and `scopeAliasToDepth` rather
+ * than maintaining parallel switch statements.
+ */
+export const SCOPE_ALIASES: Record<string, string> = {
   chapter: 'heading_1',
   section: 'heading_2',
   subsection: 'heading_3',
@@ -55,7 +63,18 @@ const SCOPE_ALIASES: Record<string, string> = {
   heading_5: 'heading_5',
   heading_6: 'heading_6',
 };
-const SCOPE_VALUES = Object.keys(SCOPE_ALIASES);
+export const SCOPE_VALUES = Object.keys(SCOPE_ALIASES);
+
+/**
+ * Resolve a scope alias (`chapter`/`section`/`heading_N`/…) to its
+ * heading depth (1-based). Returns `undefined` for unrecognised values
+ * so the caller can fall through to the next candidate.
+ */
+export function scopeAliasToDepth(scope: string): number | undefined {
+  const canonical = SCOPE_ALIASES[scope];
+  if (!canonical) return undefined;
+  return Number(canonical.slice('heading_'.length));
+}
 
 export const NUMBERING_ALIAS = {
   sections: 'headings',
@@ -193,7 +212,7 @@ export function validateNumberingItem(
     if (defined(scopeStr)) {
       const normalized = SCOPE_ALIASES[scopeStr];
       if (normalized) {
-        output.scope = normalized;
+        output.scope = normalized as NumberingScope;
         output.enabled = output.enabled ?? true;
       } else {
         validationWarning(

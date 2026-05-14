@@ -1,5 +1,24 @@
 export type CounterFormat = 'arabic' | 'alph' | 'Alph' | 'roman' | 'Roman';
 
+/**
+ * Accepted values for `numbering.<kind>.scope` (#27). The validator
+ * normalises every spelling to `heading_N`; the alias forms are kept in
+ * the union so authors can write the LaTeX-familiar names directly.
+ * Source of truth for the alias map lives in
+ * `myst-frontmatter/src/numbering/validators.ts` (`SCOPE_ALIASES`).
+ */
+export type NumberingScope =
+  | 'chapter'
+  | 'section'
+  | 'subsection'
+  | 'subsubsection'
+  | 'heading_1'
+  | 'heading_2'
+  | 'heading_3'
+  | 'heading_4'
+  | 'heading_5'
+  | 'heading_6';
+
 export type NumberingItem = {
   enabled?: boolean;
   start?: number;
@@ -29,7 +48,7 @@ export type NumberingItem = {
    * to every proof-family kind; per-kind `scope` (`numbering.proof:theorem.scope`)
    * wins. `numbering.all.scope` is the project-wide default.
    */
-  scope?: string;
+  scope?: NumberingScope;
 };
 
 /**
