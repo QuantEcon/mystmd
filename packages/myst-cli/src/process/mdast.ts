@@ -103,6 +103,50 @@ export type TransformFn = (
   opts: Parameters<typeof transformMdast>[1],
 ) => Promise<void>;
 
+/**
+ * Per-section defaults injected into page frontmatter when
+ * `numbering.book.enabled === true` and the page carries a `section:` tag
+ * from the TOC (§3.5(3)).
+ *
+ * Each entry seeds `heading_1` with sensible defaults that the author can
+ * override at any layer above (page frontmatter, project numbering).
+ * Defaults are applied with `??=`-style precedence — never clobbering an
+ * explicit setting.
+ */
+export function injectBookSectionDefaults(
+  frontmatter: PageFrontmatter,
+  section?: import('myst-toc').BookSection,
+  firstInSection?: boolean,
+) {
+  if (!section) return;
+  if (!frontmatter.numbering?.book?.enabled) return;
+  const numbering = frontmatter.numbering;
+  numbering.heading_1 ??= {};
+  const h1 = numbering.heading_1;
+  // `firstInSection` resets the heading_1 counter at section transitions
+  // (chapters → appendices) so the first appendix renders "A" rather than
+  // continuing the chapter sequence. Subsequent appendix pages have no
+  // `start` and continue naturally.
+  if (firstInSection && h1.start == null) h1.start = 1;
+  switch (section) {
+    case 'chapters':
+      h1.enabled ??= true;
+      h1.label ??= 'Chapter %s';
+      // arabic is the default — no need to set `format`.
+      break;
+    case 'appendices':
+      h1.enabled ??= true;
+      h1.format ??= 'Alph';
+      h1.label ??= 'Appendix %s';
+      break;
+    case 'frontmatter':
+    case 'backmatter':
+      // Skip-semantic: do not advance the title counter (§3.4(1)).
+      h1.enabled = false;
+      break;
+  }
+}
+
 export async function transformMdast(
   session: ISession,
   opts: {
@@ -118,6 +162,10 @@ export async function transformMdast(
     index?: string;
     titleDepth?: number;
     offset?: number;
+    /** Book section the page belongs to — set by the TOC walker. */
+    section?: import('myst-toc').BookSection;
+    /** True when this page is the first one in its book section. */
+    firstInSection?: boolean;
   },
 ) {
   const {
@@ -132,6 +180,8 @@ export async function transformMdast(
     index,
     titleDepth, // Related to title set in markdown, rather than frontmatter
     offset, // Related to multi-page nesting
+    section,
+    firstInSection,
     execute,
   } = opts;
   const toc = tic();
@@ -172,6 +222,7 @@ export async function transformMdast(
     if (!frontmatter.numbering.title) frontmatter.numbering.title = {};
     if (frontmatter.numbering.title.offset == null) frontmatter.numbering.title.offset = offset;
   }
+  injectBookSectionDefaults(frontmatter, section, firstInSection);
   await addEditUrl(session, frontmatter, file);
   const references: References = {
     cite: { order: [], data: {} },

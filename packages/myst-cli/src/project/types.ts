@@ -11,9 +11,13 @@ export type PageSlugs = Record<string, number>;
  */
 export type PageLevels = -1 | 0 | 1 | 2 | 3 | 4 | 5 | 6;
 
+import type { BookSection } from 'myst-toc';
+
 export type LocalProjectFolder = {
   title: string;
   level: PageLevels;
+  /** Inherited from the TOC subtree's `section:` for book-style numbering */
+  section?: BookSection;
 };
 
 export type LocalProjectPage = {
@@ -24,6 +28,8 @@ export type LocalProjectPage = {
   title?: string;
   /** Flag to mark if the page is implied from a TOC pattern or folder structure */
   implicit?: boolean;
+  /** Inherited from the TOC subtree's `section:` for book-style numbering */
+  section?: BookSection;
 };
 
 export type ExternalURL = {

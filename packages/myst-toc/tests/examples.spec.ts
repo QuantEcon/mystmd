@@ -151,3 +151,34 @@ describe.each([
     }
   });
 });
+
+describe('book section field', () => {
+  test.each(['frontmatter', 'chapters', 'appendices', 'backmatter'])(
+    'section: %s parses on a ParentEntry',
+    (section) => {
+      const input = [
+        {
+          title: 'Group',
+          section,
+          children: [{ file: 'ch1.md' }],
+        },
+      ];
+      const toc = validateTOC(input, opts);
+      expect(opts.messages.errors).toBeUndefined();
+      expect(toc).toStrictEqual(input);
+    },
+  );
+
+  test('section: on a FileEntry parses', () => {
+    const input = [{ file: 'ch1.md', section: 'chapters' }];
+    const toc = validateTOC(input, opts);
+    expect(opts.messages.errors).toBeUndefined();
+    expect(toc).toStrictEqual(input);
+  });
+
+  test('invalid section value errors', () => {
+    const input = [{ title: 'g', section: 'bogus', children: [{ file: 'a.md' }] }];
+    validateTOC(input, opts);
+    expect(opts.messages.errors?.length).toBe(1);
+  });
+});

@@ -28,6 +28,7 @@ import type {
   URLEntry,
   FileParentEntry,
   URLParentEntry,
+  BookSection,
 } from 'myst-toc';
 import { isFile, isPattern, isURL } from 'myst-toc';
 import { globSync } from 'glob';
@@ -168,10 +169,15 @@ function pagesFromEntries(
   level: PageLevels = 1,
   pageSlugs: PageSlugs,
   opts?: SlugOptions,
+  inheritedSection?: BookSection,
 ): (LocalProjectFolder | LocalProjectPage)[] {
   const configFile = selectors.selectLocalConfigFile(session.store.getState(), path);
   for (const entry of entries) {
     let entryLevel = level;
+    // A subtree with `section:` tags its descendants; siblings without it
+    // keep the inherited value (so a top-level "Appendices" subtree wraps
+    // every descendant page even if intermediate parents omit `section:`).
+    const childSection: BookSection | undefined = entry.section ?? inheritedSection;
     if (isFile(entry)) {
       // Level must be "chapter" (0) or "section" (1-6) for files
       entryLevel = level < 0 ? 0 : level;
@@ -184,7 +190,13 @@ function pagesFromEntries(
       });
       if (resolvedFile && fs.existsSync(resolvedFile) && !isDirectory(resolvedFile)) {
         const { slug } = fileInfo(resolvedFile, pageSlugs, { ...opts, session });
-        pages.push({ file: resolvedFile, level: entryLevel, slug, ...leftover });
+        pages.push({
+          file: resolvedFile,
+          level: entryLevel,
+          slug,
+          ...leftover,
+          ...(childSection ? { section: childSection } : {}),
+        });
       }
     } else if (isURL(entry)) {
       pages.push({
@@ -194,9 +206,23 @@ function pagesFromEntries(
         open_in_same_tab: entry.open_in_same_tab,
       });
     } else {
-      // Parent Entry - may be a "part" with level -1
-      entryLevel = level < -1 ? -1 : level;
-      pages.push({ level: entryLevel, title: entry.title });
+      // ParentEntry. A `section:`-tagged subtree is a *logical* group, not
+      // a structural one: it doesn't emit a folder entry and doesn't bump
+      // the heading depth for its children. Without this, the section
+      // subtree would behave like a part header — ch1's H1 would land at
+      // heading_2 instead of heading_1 and book-section defaults wouldn't
+      // line up with what authors actually wrote on the page.
+      if (entry.section) {
+        // childSection is already entry.section (set above); fall through
+        // to recurse with the same level.
+      } else {
+        // Parent Entry - may be a "part" with level -1
+        entryLevel = level < -1 ? -1 : level;
+        pages.push({
+          level: entryLevel,
+          title: entry.title,
+        });
+      }
     }
 
     // Do we have any children?
@@ -207,9 +233,11 @@ function pagesFromEntries(
         path,
         parentEntry.children as EntryWithoutPattern[],
         pages,
-        nextLevel(entryLevel),
+        // section subtree → children stay at the parent's level
+        (entry as { section?: BookSection }).section ? entryLevel : nextLevel(entryLevel),
         pageSlugs,
         opts,
+        childSection,
       );
     }
   }

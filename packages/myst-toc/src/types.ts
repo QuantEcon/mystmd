@@ -1,10 +1,24 @@
 /**
+ * Named book sections for `section:` on a ParentEntry. Pages under a
+ * `section`-tagged subtree inherit the section's numbering defaults
+ * (chapters → arabic, appendices → Alph, etc.) once `numbering.book: true`
+ * is set on the project.
+ */
+export type BookSection = 'frontmatter' | 'chapters' | 'appendices' | 'backmatter';
+
+/**
  * Common attributes for all TOC items
  * Should be taken as a Partial<>
  */
 export type CommonEntry = {
   title?: string;
   hidden?: boolean;
+  /**
+   * Book-style section tag. When set on a ParentEntry, every descendant
+   * page is treated as belonging to that named section for numbering
+   * purposes. Only meaningful when project `numbering.book: true`.
+   */
+  section?: BookSection;
   // numbering?: string;
   // id?: string;
   // class?: string;
