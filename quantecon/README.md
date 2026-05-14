@@ -1,35 +1,39 @@
 # QuantEcon fork of `mystmd` — maintenance guide
 
-This fork lets QuantEcon develop and use new `mystmd` features before they have been reviewed and merged by the upstream `jupyter-book/mystmd` team. The goal is to make it as easy as possible to open upstream PRs from feature branches, while also being able to run a combined build that includes all in-progress features.
+This fork lets QuantEcon develop and use new `mystmd` features before they land in `jupyter-book/mystmd`. Features are developed on feature branches, squash-merged into this fork's `main`, and the same feature branches are kept alive so they can be opened as upstream PRs whenever the upstream team is ready to review them.
 
 ## How it works — the key idea
 
 ```
-jupyter-book/mystmd:main  ─────┐
-        │  (sync periodically) │  (feature branches start here)
-        ▼                      │
-QuantEcon/mystmd:main          │  ← mirror + quantecon/ tooling
-        │                      │
-        │   feature/foo  ◄─────┤  ← branched from upstream/main; PR target = upstream main
-        │   feature/bar  ◄─────┘  ← branched from upstream/main; PR target = upstream main
-        ▼  (built by build.sh, which merges feature branches into quantecon)
-QuantEcon/mystmd:quantecon     ← combined build: main + all feature branches
+jupyter-book/mystmd:main  ───── (sync periodically via merge)
+        │
+        ▼
+QuantEcon/mystmd:main  ◄────────────────────────────────────┐
+        │                                                    │
+        │   feature/<name>  (branched from upstream/main)    │
+        │        │                                            │
+        │        │   PR against QuantEcon/mystmd:main         │
+        │        ├──── squash-merge ────────────────────────► │
+        │        │                                            │
+        │        │   (branch kept alive after merge,
+        │        │    used later for upstream PR against
+        │        ▼    jupyter-book/mystmd:main)
+        │   feature/<name> (preserved)
 ```
 
-**Feature branches serve two purposes simultaneously:**
+**Feature branches serve two purposes:**
 
-1. They are the source of upstream PRs — targeting `jupyter-book/mystmd:main`, showing only the diff for that one feature. They are branched from `upstream/main` so they don't carry the `quantecon/` folder.
-2. They are consumed by `build.sh`, which merges them onto the throwaway `quantecon` branch (which inherits the `quantecon/` folder from `main`).
+1. **Local integration.** Each branch is squash-merged into `main` once it's ready, so projects can install from `main` and immediately use the feature.
+2. **Upstream PR artifact.** The branch is *not deleted* after squash-merge. When upstream is ready to review, the original branch (with its granular commit history) is pushed and opened as a PR against `jupyter-book/mystmd:main`.
 
-This means **you never need to choose** between "make it easy to upstream" and "make it available to use now". The feature branch does both.
+This means you get a clean integration `main` for day-to-day use *and* preserved per-commit history for upstream review — without maintaining a separate integration branch.
 
 ## Branching model
 
 | Branch | Purpose |
 |---|---|
-| `main` | `upstream/main` **plus** the `quantecon/` tooling folder (this directory). Synced via `git merge upstream/main` — see note below. **The only commits permitted on `main` are changes to `quantecon/`.** |
-| `feature/<name>` | One branch per logical patch. **Branched from `upstream/main`** (not `main`), kept rebased on `upstream/main`. This is the branch you open the upstream PR from. |
-| `quantecon` | Throwaway combined build. Rebuilt by `build.sh` as `main` + all active feature branches. **Never commit here directly — it is always discarded and regenerated.** |
+| `main` | `upstream/main` **plus** all squash-merged features. Synced from upstream periodically via merge (see below). Projects install from here. |
+| `feature/<name>` | One branch per logical patch. **Branched from `upstream/main`** (not `main`), kept rebased on `upstream/main`. Opened as a PR against `QuantEcon/mystmd:main` for local merge, then preserved for the eventual upstream PR. |
 
 ## One-time setup
 
@@ -37,18 +41,33 @@ This means **you never need to choose** between "make it easy to upstream" and "
 git remote add upstream https://github.com/jupyter-book/mystmd.git
 ```
 
-Verify your remotes look like this:
+Verify your remotes:
 
 ```
-origin    https://github.com/QuantEcon/mystmd.git  (fetch/push)
-upstream  https://github.com/jupyter-book/mystmd.git  (fetch/push)
+origin    https://github.com/QuantEcon/mystmd.git
+upstream  https://github.com/jupyter-book/mystmd.git
 ```
 
 ## Regular workflow
 
+### Develop a new feature
+
+> **Important:** branch from `upstream/main`, **not** from `main`. The feature branch must stay rebaseable onto `upstream/main` so it remains a clean upstream PR candidate.
+
+```bash
+git fetch upstream
+git checkout -b feature/<name> upstream/main
+# make your changes, commit
+git push origin feature/<name>
+```
+
+Open a PR on GitHub: **base: `QuantEcon/mystmd:main`**, **compare: `QuantEcon/mystmd:feature/<name>`**.
+
+Review locally, address feedback, then **squash-merge** through the GitHub UI. Do **not** delete the branch after merging — it is the upstream PR artifact.
+
 ### Sync `main` with upstream
 
-Because `main` carries the `quantecon/` tooling, it is permanently a few commits ahead of `upstream/main`. Syncing is therefore a **merge**, not a fast-forward:
+`main` carries squash commits that aren't in `upstream/main`, so syncing is a **merge**, not a fast-forward:
 
 ```bash
 git fetch upstream
@@ -57,126 +76,64 @@ git merge upstream/main      # produces a merge commit
 git push origin main
 ```
 
-> **Do not use the GitHub "Sync fork" button.** It expects a fast-forward and, when it can't, will offer to *discard* the diverging commits — which would delete this `quantecon/` folder. Always sync from the command line.
+> **Do not use the GitHub "Sync fork" button.** It expects a fast-forward and will offer to *discard* the diverging commits — which would delete the features you've merged in. Always sync from the command line.
 
-> **If `main` is branch-protected and the sync has to go through a PR**, when merging that PR on GitHub choose **"Create a merge commit"** — *never* "Squash and merge". Squash-merge rewrites the upstream commit to a new SHA, so it stops being an ancestor of `main`. GitHub's "X commits behind" counter then stays stuck reporting the upstream commit as missing (the *content* is there, but the *ancestry* isn't), and every subsequent `git merge upstream/main` produces a noisy near-empty merge commit. A real merge commit preserves the ancestry.
-
-After syncing, rebuild the `quantecon` branch (see below) so it includes the latest upstream changes.
-
-### Develop a new feature
-
-> **Important:** branch from `upstream/main`, **not** from `main`. This keeps the `quantecon/` folder out of your feature branch, so the upstream PR diff shows only your actual changes.
-
-```bash
-git fetch upstream
-git checkout -b feature/<name> upstream/main
-# make your changes and commit them
-git push origin feature/<name>
-```
-
-Then:
-1. Add the branch name to `quantecon/features.txt` (on `main`, then commit and push)
-2. Open a PR on GitHub: **base: `jupyter-book/mystmd:main`**, **compare: `QuantEcon/mystmd:feature/<name>`**
-3. Rebuild the `quantecon` branch so the feature is available immediately
-
-> **Why this works:** `build.sh` runs from `main` (which has the `quantecon/` folder), checks out the `quantecon` branch, and merges your feature branch into it. Because git merges *changes* (not full trees), the feature branch doesn't need to contain `quantecon/` — the folder comes from `main`, and your feature's changes are layered on top.
-
-### Migrating an existing feature branch to use upstream/main as base
-
-If you already have a feature branch that was created from `main` (and therefore includes the `quantecon/` folder commits), rebase it onto `upstream/main`:
-
-```bash
-git fetch upstream
-git checkout feature/<name>
-git rebase --onto upstream/main main
-git push --force-with-lease origin feature/<name>
-```
-
-This replays only your feature's commits on top of `upstream/main`, dropping the `quantecon/` folder commits from the branch's history. The upstream PR diff will then show only your actual changes.
-
-### Rebuild the `quantecon` branch
-
-```bash
-./quantecon/build.sh          # local only (safe, no push)
-./quantecon/build.sh --push   # build and push to origin/quantecon
-```
-
-The script:
-1. Syncs local `main` from `origin/main`
-2. Resets `quantecon` to `main` (discarding any previous build)
-3. Merges each branch listed in `features.txt` in order (merge commits, not squash)
-4. Patches `packages/mystmd/package.json` version to append `-qe` (e.g. `1.9.0-qe`). The `copy:version` build step propagates this to `version.ts` at build time, so `myst --version` identifies the QuantEcon build.
-5. Optionally pushes to `origin/quantecon`
-
-Run this after every upstream sync, after updating any feature branch, or after adding/removing a feature branch from `features.txt`.
-
-### Update a feature branch (e.g. to address upstream reviewer feedback)
-
-```bash
-git checkout feature/<name>
-# make changes, amend or add commits
-git push --force-with-lease origin feature/<name>
-# the upstream PR updates automatically
-./quantecon/build.sh --push   # rebuild quantecon with the updated branch
-```
+> **If `main` is branch-protected and the sync has to go through a PR**, choose **"Create a merge commit"** when merging — *never* "Squash and merge". A real merge commit preserves the ancestry so `git merge upstream/main` works cleanly next time.
 
 ### Keep a feature branch current with upstream
 
-If `upstream/main` has moved since you branched:
+If `upstream/main` moves and you need to refresh a still-open feature branch (e.g., to address feedback or prepare for upstreaming):
 
 ```bash
 git fetch upstream
 git checkout feature/<name>
 git rebase upstream/main
 git push --force-with-lease origin feature/<name>
-./quantecon/build.sh --push
 ```
 
-## Resolving merge conflicts
+If that feature has already been squash-merged into our `main`, the rebased branch simply replays the same commits onto a newer base — upstream PR readiness is preserved.
 
-Conflicts are **always fixed on the feature branch**, never on `quantecon` (which is throwaway and rebuilt from scratch each time).
+## Opening the upstream PR
 
-`build.sh` will abort cleanly and tell you which branch caused the conflict.
+When the upstream team is ready to review a feature:
 
-**Feature conflicts with upstream** (upstream changed code the feature touches):
-```bash
-git fetch upstream
-git checkout feature/<name>
-git rebase upstream/main   # resolve conflicts here, then: git add . && git rebase --continue
-git push --force-with-lease origin feature/<name>
-./quantecon/build.sh --push
-```
+1. Make sure the feature branch is rebased onto current `upstream/main` (see above).
+2. Push the branch (likely already pushed).
+3. Open a PR on GitHub: **base: `jupyter-book/mystmd:main`**, **compare: `QuantEcon/mystmd:feature/<name>`**.
 
-**Feature A conflicts with feature B** (two patches touch the same lines):
-```bash
-# Rebase the later branch on top of the earlier one to establish ordering
-git checkout feature/<name-b>
-git rebase feature/<name-a>
-git push --force-with-lease origin feature/<name-b>
-# Make sure features.txt lists feature/<name-a> before feature/<name-b>
-./quantecon/build.sh --push
-```
+The PR shows the granular per-commit history, which reviewers prefer. The squash commit on QuantEcon's `main` is *not* what upstream sees — that's a local-integration artifact.
 
-## When upstream merges a feature
+### When upstream merges the feature
 
 Once the upstream PR is merged into `jupyter-book/mystmd:main`:
 
-1. Sync `main` with upstream — it now contains the feature
-2. Remove the branch from `features.txt`
-3. Delete the feature branch
-4. Rebuild `quantecon` — the feature is now in `main` itself, so nothing is lost
+1. Sync our `main` with upstream (instructions above) — upstream's version now lands.
+2. Delete the local feature branch:
+   ```bash
+   git branch -d feature/<name>
+   git push origin --delete feature/<name>
+   ```
+
+The squash commit that lived on our `main` is now redundant with the upstream merge. Git's merge machinery handles this correctly (the changes are already in the tree), so no manual cleanup is needed.
+
+## Resolving merge conflicts between features
+
+If two feature branches touch the same lines, squash-merge them in dependency order. After the first one lands on `main`, rebase the second onto the new `main`:
 
 ```bash
-git fetch upstream
-git checkout main && git merge upstream/main && git push origin main
-# edit features.txt to remove the branch
-git branch -d feature/<name> && git push origin --delete feature/<name>
-./quantecon/build.sh --push
+git checkout feature/<later>
+git rebase main
+# resolve conflicts, git add, git rebase --continue
+git push --force-with-lease origin feature/<later>
 ```
+
+Then continue with the normal PR review and squash-merge.
+
+> The rebased `feature/<later>` is still upstream-PR-ready — when the time comes to upstream it, rebase it back onto `upstream/main` (which will pull in `feature/<earlier>` if that has already been upstreamed, or stage the upstream PR after `feature/<earlier>`'s).
 
 ## Installing the QuantEcon build in GitHub Actions
 
-The `quantecon` branch is a standard monorepo — it must be cloned, built from source, and the `mystmd` package installed globally. There is no published npm package.
+This is a standard monorepo — clone, build, install globally. There is no published npm package.
 
 ```yaml
 - uses: actions/setup-node@v4
@@ -187,7 +144,7 @@ The `quantecon` branch is a standard monorepo — it must be cloned, built from 
 
 - name: Install mystmd (QuantEcon fork)
   run: |
-    git clone --branch quantecon --depth 1 \
+    git clone --branch main --depth 1 \
       https://github.com/QuantEcon/mystmd.git /tmp/qe-mystmd
     cd /tmp/qe-mystmd
     bun install
@@ -196,11 +153,22 @@ The `quantecon` branch is a standard monorepo — it must be cloned, built from 
 
 - name: Verify
   run: myst --version
-  # should print e.g. 1.9.0-qe
 ```
 
-This installs the `myst` CLI globally. The `-qe` version suffix confirms you are running the QuantEcon build.
+Pin to a specific commit if you need reproducibility:
 
-## Active patches
+```bash
+git clone https://github.com/QuantEcon/mystmd.git /tmp/qe-mystmd
+cd /tmp/qe-mystmd
+git checkout <commit-sha>
+bun install && bun run build
+npm install -g /tmp/qe-mystmd/packages/mystmd
+```
 
-See [features.txt](features.txt) for the current list of carry-patches and links to their upstream PRs.
+## Active feature branches
+
+```bash
+git branch -r | grep '^  origin/feature/'
+```
+
+Each is squash-merged into `main` once ready, and preserved for eventual upstream PR.
