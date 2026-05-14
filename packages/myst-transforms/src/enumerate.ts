@@ -23,7 +23,7 @@ import {
 import type { LinkTransformer } from './links/types.js';
 import { updateLinkTextIfEmpty } from './links/utils.js';
 import { fillNumbering } from 'myst-frontmatter';
-import type { PageFrontmatter, Numbering } from 'myst-frontmatter';
+import type { CounterFormat, PageFrontmatter, Numbering } from 'myst-frontmatter';
 
 const TRANSFORM_NAME = 'myst-transforms:enumerate';
 
@@ -248,20 +248,84 @@ export function incrementHeadingCounts(
 }
 
 /**
+ * Format a positive integer counter as arabic / alph / Alph / roman / Roman.
+ *
+ * - `arabic` (default): 1, 2, 3, …
+ * - `alph`  / `Alph`:   a, b, c, … z, aa, ab, … (excel-style overflow)
+ * - `roman` / `Roman`:  i, ii, iii, iv, v, … (zero is empty)
+ *
+ * Non-positive values are returned as `String(value)` unchanged so callers
+ * can pass 0 / negative sentinels without surprise.
+ */
+export function formatCounter(value: number, format?: CounterFormat): string {
+  if (!format || format === 'arabic') return String(value);
+  if (value <= 0) return String(value);
+  if (format === 'alph' || format === 'Alph') {
+    let n = value;
+    let out = '';
+    while (n > 0) {
+      const rem = (n - 1) % 26;
+      out = String.fromCharCode('a'.charCodeAt(0) + rem) + out;
+      n = Math.floor((n - 1) / 26);
+    }
+    return format === 'Alph' ? out.toUpperCase() : out;
+  }
+  // roman / Roman
+  const romans: [number, string][] = [
+    [1000, 'm'],
+    [900, 'cm'],
+    [500, 'd'],
+    [400, 'cd'],
+    [100, 'c'],
+    [90, 'xc'],
+    [50, 'l'],
+    [40, 'xl'],
+    [10, 'x'],
+    [9, 'ix'],
+    [5, 'v'],
+    [4, 'iv'],
+    [1, 'i'],
+  ];
+  let n = value;
+  let out = '';
+  for (const [num, sym] of romans) {
+    while (n >= num) {
+      out += sym;
+      n -= num;
+    }
+  }
+  return format === 'Roman' ? out.toUpperCase() : out;
+}
+
+/**
  * Return dot-delimited header numbering based on heading counts
  *
  * counts is a list of 6 counts, corresponding to 6 heading depths
  *
  * Leading zeros are kept, trailing zeros are removed, nulls are ignored.
+ *
+ * Optional `formats` is a parallel list of per-depth counter formats; when
+ * provided, each depth's count is rendered via `formatCounter`. Heading
+ * depths without a format default to arabic, matching today's behaviour.
  */
-export function formatHeadingEnumerator(counts: (number | null)[], prefix?: string): string {
-  counts = counts.filter((d) => d !== null);
-  while (counts && counts[counts.length - 1] === 0) {
-    counts.pop();
+export function formatHeadingEnumerator(
+  counts: (number | null)[],
+  prefix?: string,
+  formats?: (CounterFormat | undefined)[],
+): string {
+  const pairs = counts
+    .map((c, i) => [c, formats?.[i]] as const)
+    .filter(([c]) => c !== null) as [number, CounterFormat | undefined][];
+  while (pairs.length && pairs[pairs.length - 1][0] === 0) {
+    pairs.pop();
   }
-  const enumerator = counts.join('.');
+  const enumerator = pairs.map(([c, fmt]) => formatCounter(c, fmt)).join('.');
   const out = prefix ? prefix.replace(/%s/g, String(enumerator)) : String(enumerator);
   return out;
+}
+
+function headingFormats(numbering: Numbering): (CounterFormat | undefined)[] {
+  return [1, 2, 3, 4, 5, 6].map((d) => numbering[`heading_${d}`]?.format);
 }
 
 export function initializeTargetCounts(
@@ -366,6 +430,7 @@ export class ReferenceState implements IReferenceStateResolver {
       this.enumerator = formatHeadingEnumerator(
         this.targetCounts.heading,
         this.numbering.title?.enumerator ?? this.numbering.enumerator?.enumerator,
+        headingFormats(this.numbering),
       );
     }
     this.identifiers = opts?.identifiers ?? [];
@@ -434,6 +499,7 @@ export class ReferenceState implements IReferenceStateResolver {
         this.numbering[
           `heading_${node.depth - (this.numbering?.title?.enabled ? 0 : 1) + this.offset}`
         ]?.enumerator ?? this.numbering.enumerator?.enumerator,
+        headingFormats(this.numbering),
       );
       node.enumerator = enumerator;
       return enumerator;
@@ -441,6 +507,7 @@ export class ReferenceState implements IReferenceStateResolver {
     const countKind = kind === TargetKind.subequation ? TargetKind.equation : kind;
     // Ensure target kind is instantiated
     this.targetCounts[countKind] ??= { main: 0, sub: 0 };
+    const kindFormat = this.numbering[countKind]?.format;
     if (node.subcontainer || kind === TargetKind.subequation) {
       this.targetCounts[countKind].sub += 1;
       // Will restart counting if there are more than 26 subequations/figures
@@ -449,13 +516,13 @@ export class ReferenceState implements IReferenceStateResolver {
       );
       if (node.subcontainer) {
         node.parentEnumerator = this.resolveEnumerator(
-          this.targetCounts[countKind].main,
+          formatCounter(this.targetCounts[countKind].main, kindFormat),
           this.numbering[countKind]?.enumerator,
         );
         enumerator = letter;
       } else {
         enumerator = this.resolveEnumerator(
-          this.targetCounts[countKind].main + letter,
+          formatCounter(this.targetCounts[countKind].main, kindFormat) + letter,
           this.numbering[countKind]?.enumerator,
         );
       }
@@ -463,7 +530,7 @@ export class ReferenceState implements IReferenceStateResolver {
       this.targetCounts[kind].main += 1;
       this.targetCounts[kind].sub = 0;
       enumerator = this.resolveEnumerator(
-        this.targetCounts[kind].main,
+        formatCounter(this.targetCounts[kind].main, kindFormat),
         this.numbering[kind]?.enumerator,
       );
     }

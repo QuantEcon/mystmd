@@ -2,12 +2,59 @@ import { describe, expect, test } from 'vitest';
 import {
   ReferenceState,
   enumerateTargetsTransform,
+  formatCounter,
   formatHeadingEnumerator,
   incrementHeadingCounts,
   initializeTargetCounts,
 } from './enumerate';
 import { u } from 'unist-builder';
 import { VFile } from 'vfile';
+
+describe('formatCounter', () => {
+  test.each([
+    [1, undefined, '1'],
+    [1, 'arabic', '1'],
+    [27, 'arabic', '27'],
+    [1, 'alph', 'a'],
+    [26, 'alph', 'z'],
+    [27, 'alph', 'aa'],
+    [28, 'alph', 'ab'],
+    [52, 'alph', 'az'],
+    [53, 'alph', 'ba'],
+    [1, 'Alph', 'A'],
+    [27, 'Alph', 'AA'],
+    [1, 'roman', 'i'],
+    [4, 'roman', 'iv'],
+    [9, 'roman', 'ix'],
+    [40, 'roman', 'xl'],
+    [90, 'roman', 'xc'],
+    [400, 'roman', 'cd'],
+    [900, 'roman', 'cm'],
+    [1994, 'roman', 'mcmxciv'],
+    [1, 'Roman', 'I'],
+    [4, 'Roman', 'IV'],
+    [1994, 'Roman', 'MCMXCIV'],
+    [0, 'Alph', '0'], // non-positive passes through
+    [-1, 'Roman', '-1'],
+  ] as const)('formatCounter(%s, %s) → %s', (n, fmt, expected) => {
+    expect(formatCounter(n as number, fmt as any)).toBe(expected);
+  });
+});
+
+describe('formatHeadingEnumerator with formats', () => {
+  test('Alph at depth 1 renders as letter', () => {
+    expect(formatHeadingEnumerator([1, 0, 0, 0, 0, 0], undefined, ['Alph'])).toBe('A');
+  });
+  test('Alph chapter prefix on a sub-heading', () => {
+    expect(formatHeadingEnumerator([2, 3, 0, 0, 0, 0], undefined, ['Alph'])).toBe('B.3');
+  });
+  test('Roman at depth 1, arabic sub-headings', () => {
+    expect(formatHeadingEnumerator([3, 2, 1, 0, 0, 0], undefined, ['Roman'])).toBe('III.2.1');
+  });
+  test('no formats array preserves today\'s arabic behaviour', () => {
+    expect(formatHeadingEnumerator([1, 2, 0, 0, 0, 0])).toBe('1.2');
+  });
+});
 
 describe('Heading counts and formatting', () => {
   test.each([
