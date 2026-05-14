@@ -2,7 +2,19 @@
 
 This fork lets QuantEcon develop and use new `mystmd` features before they land in `jupyter-book/mystmd`. Features are developed on feature branches, squash-merged into this fork's `main`, and the same feature branches are kept alive so they can be opened as upstream PRs whenever the upstream team is ready to review them.
 
-> **About this folder.** `quantecon/` doubles as a local scratch space for planning docs, demo books, and experiments. Everything except this `README.md` is gitignored — feel free to drop PLAN docs, demo `myst.yml` projects, etc. here without worrying about accidental commits. To track something new intentionally, add it to the allow-list in [.gitignore](.gitignore).
+> **About this folder.** `quantecon/` doubles as a local scratch space for planning docs, demo books, and experiments. Everything except [`README.md`](README.md) and [`VERSION.yml`](VERSION.yml) is gitignored — feel free to drop PLAN docs, demo `myst.yml` projects, etc. here without worrying about accidental commits. To track something new intentionally, add it to the allow-list in [.gitignore](.gitignore).
+
+## Build identifier
+
+[`VERSION.yml`](VERSION.yml) records which QuantEcon-specific features are merged into this fork's `main`, identified by a `qe-vN` tag that's also a git tag on the corresponding squash-merge commit. It's a diagnostic/traceability artifact, not a release version — lecture builds can cat the file to log what fork state they're using.
+
+When landing a new feature:
+
+1. Squash-merge the feature PR into `main`
+2. Tag the resulting commit: `git tag qe-v<N+1> <sha> -m "qe-v<N+1>: feature/<name> merged via #<pr>"` then `git push origin qe-v<N+1>`
+3. Append the feature to `merged_features` in `VERSION.yml` and bump `qe_version`
+
+When upstream merges one of our features, update the entry's `upstream` block rather than deleting it — `VERSION.yml` doubles as an upstreaming tracker.
 
 ## How it works — the key idea
 

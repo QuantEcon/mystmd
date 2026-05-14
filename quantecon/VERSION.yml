@@ -1,0 +1,39 @@
+# QuantEcon mystmd build identifier
+#
+# This file is the canonical diagnostic record of which QuantEcon-specific
+# features are in this fork's `main`. The `qe_version` field corresponds to
+# a git tag of the same name on the commit that landed the latest feature.
+#
+# Update this file as part of the "land a feature" workflow:
+#   1. Squash-merge the feature PR into main
+#   2. Tag the resulting commit with the next `qe-vN`
+#   3. Append the feature to `merged_features` and bump `qe_version`
+#
+# When upstream merges one of our features, update its `upstream` block
+# rather than deleting the entry — the history is useful.
+
+qe_version: qe-v2
+upstream_base: 1.9.0
+
+merged_features:
+  - id: 1
+    name: myst-to-ipynb
+    description: CommonMark ipynb export + image attachment embedding
+    local_pr: 16
+    merge_sha: a045d57d
+    tag: qe-v1
+    upstream:
+      status: pending      # pending | open | merged
+      pr: null
+      merged_sha: null
+
+  - id: 2
+    name: book-numbering
+    description: Book-style numbering — format, label, section-tagged TOC, auto-prefix
+    local_pr: 22
+    merge_sha: 032957c2
+    tag: qe-v2
+    upstream:
+      status: pending
+      pr: null
+      merged_sha: null
