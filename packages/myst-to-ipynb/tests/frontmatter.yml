@@ -1,0 +1,108 @@
+title: myst-to-ipynb frontmatter and metadata
+cases:
+  - title: empty frontmatter defaults to python
+    mdast:
+      type: root
+      children:
+        - type: paragraph
+          children:
+            - type: text
+              value: Hello world!
+    ipynb:
+      cells:
+        - cell_type: markdown
+          metadata: {}
+          source:
+            - "Hello world!"
+      metadata:
+        language_info:
+          name: python
+      nbformat: 4
+      nbformat_minor: 2
+
+  - title: kernelspec from frontmatter
+    frontmatter:
+      kernelspec:
+        name: julia-1.10
+        display_name: Julia 1.10
+        language: julia
+    mdast:
+      type: root
+      children:
+        - type: paragraph
+          children:
+            - type: text
+              value: Hello
+    ipynb:
+      cells:
+        - cell_type: markdown
+          metadata: {}
+          source:
+            - "Hello"
+      metadata:
+        language_info:
+          name: julia
+        kernelspec:
+          name: julia-1.10
+          display_name: Julia 1.10
+          language: julia
+      nbformat: 4
+      nbformat_minor: 2
+
+  - title: kernelspec python3
+    frontmatter:
+      kernelspec:
+        name: python3
+        display_name: Python 3
+        language: python
+    mdast:
+      type: root
+      children:
+        - type: paragraph
+          children:
+            - type: text
+              value: Test
+    ipynb:
+      cells:
+        - cell_type: markdown
+          metadata: {}
+          source:
+            - "Test"
+      metadata:
+        language_info:
+          name: python
+        kernelspec:
+          name: python3
+          display_name: Python 3
+          language: python
+      nbformat: 4
+      nbformat_minor: 2
+
+  - title: kernelspec R language
+    frontmatter:
+      kernelspec:
+        name: ir
+        display_name: R
+        language: R
+    mdast:
+      type: root
+      children:
+        - type: paragraph
+          children:
+            - type: text
+              value: R notebook
+    ipynb:
+      cells:
+        - cell_type: markdown
+          metadata: {}
+          source:
+            - "R notebook"
+      metadata:
+        language_info:
+          name: R
+        kernelspec:
+          name: ir
+          display_name: R
+          language: R
+      nbformat: 4
+      nbformat_minor: 2

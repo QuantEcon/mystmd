@@ -11,10 +11,14 @@ function labelWrapper(handler: Handle) {
 }
 
 function crossReference(node: any, _: Parent, state: NestedState, info: Info): string {
-  const { urlSource, label, identifier } = node;
+  const { urlSource, label, identifier, url, html_id } = node;
+  // Treat empty strings as missing so the fallback chain reaches #label / #identifier / #html_id / url.
+  const resolvedUrl =
+    urlSource ||
+    (label ? `#${label}` : identifier ? `#${identifier}` : html_id ? `#${html_id}` : url || '');
   const nodeCopy = {
     ...node,
-    url: urlSource ?? (label ? `#${label}` : identifier ? `#${identifier}` : ''),
+    url: resolvedUrl,
   };
   return defaultHandlers.link(nodeCopy, _, state, info);
 }

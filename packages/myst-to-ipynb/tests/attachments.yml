@@ -1,0 +1,176 @@
+title: Image Attachments
+cases:
+  - title: single image with attachment embedding
+    options:
+      images: attachment
+      imageData:
+        /_static/img/chart.png:
+          mime: image/png
+          data: iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==
+    mdast:
+      type: root
+      children:
+        - type: block
+          children:
+            - type: paragraph
+              children:
+                - type: text
+                  value: "Here is a chart:"
+            - type: image
+              url: /_static/img/chart.png
+              alt: A chart
+    ipynb:
+      cells:
+        - cell_type: markdown
+          metadata: {}
+          attachments:
+            chart.png:
+              image/png: iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==
+          source:
+            - "Here is a chart:\n"
+            - "\n"
+            - "![A chart](attachment:chart.png)"
+      metadata:
+        language_info:
+          name: python
+      nbformat: 4
+      nbformat_minor: 2
+
+  - title: multiple images in one cell with attachment embedding
+    options:
+      images: attachment
+      imageData:
+        /_static/img/alpha.png:
+          mime: image/png
+          data: AAAA
+        /_static/img/beta.jpg:
+          mime: image/jpeg
+          data: BBBB
+    mdast:
+      type: root
+      children:
+        - type: block
+          children:
+            - type: paragraph
+              children:
+                - type: image
+                  url: /_static/img/alpha.png
+                  alt: Alpha
+            - type: paragraph
+              children:
+                - type: image
+                  url: /_static/img/beta.jpg
+                  alt: Beta
+    ipynb:
+      cells:
+        - cell_type: markdown
+          metadata: {}
+          attachments:
+            alpha.png:
+              image/png: AAAA
+            beta.jpg:
+              image/jpeg: BBBB
+          source:
+            - "![Alpha](attachment:alpha.png)\n"
+            - "\n"
+            - "![Beta](attachment:beta.jpg)"
+      metadata:
+        language_info:
+          name: python
+      nbformat: 4
+      nbformat_minor: 2
+
+  - title: image without matching data stays as reference
+    options:
+      images: attachment
+      imageData:
+        /_static/img/other.png:
+          mime: image/png
+          data: CCCC
+    mdast:
+      type: root
+      children:
+        - type: block
+          children:
+            - type: paragraph
+              children:
+                - type: image
+                  url: /_static/img/missing.png
+                  alt: Missing
+    ipynb:
+      cells:
+        - cell_type: markdown
+          metadata: {}
+          source:
+            - "![Missing](/_static/img/missing.png)"
+      metadata:
+        language_info:
+          name: python
+      nbformat: 4
+      nbformat_minor: 2
+
+  - title: images as reference (default) keeps URLs
+    options:
+      imageData:
+        /_static/img/chart.png:
+          mime: image/png
+          data: DDDD
+    mdast:
+      type: root
+      children:
+        - type: block
+          children:
+            - type: paragraph
+              children:
+                - type: image
+                  url: /_static/img/chart.png
+                  alt: Chart
+    ipynb:
+      cells:
+        - cell_type: markdown
+          metadata: {}
+          source:
+            - "![Chart](/_static/img/chart.png)"
+      metadata:
+        language_info:
+          name: python
+      nbformat: 4
+      nbformat_minor: 2
+
+  - title: attachment embedding with commonmark conversion
+    options:
+      markdown: commonmark
+      images: attachment
+      imageData:
+        /_static/img/plot.png:
+          mime: image/png
+          data: EEEE
+    mdast:
+      type: root
+      children:
+        - type: block
+          children:
+            - type: paragraph
+              children:
+                - type: text
+                  value: A plot
+            - type: image
+              url: /_static/img/plot.png
+              alt: My plot
+              class: width-80
+    ipynb:
+      cells:
+        - cell_type: markdown
+          metadata: {}
+          attachments:
+            plot.png:
+              image/png: EEEE
+          source:
+            - "A plot\n"
+            - "\n"
+            - "![My plot](attachment:plot.png)"
+      metadata:
+        language_info:
+          name: python
+      nbformat: 4
+      nbformat_minor: 2
