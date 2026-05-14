@@ -1,6 +1,6 @@
 import { describe, expect, it, beforeEach, vi } from 'vitest';
 import memfs from 'memfs';
-import { resolve } from 'node:path';
+import { basename, resolve } from 'node:path';
 import { Session } from '../session';
 import { projectFromTOC } from './fromTOC';
 import { config } from '../store/index.js';
@@ -25,11 +25,10 @@ function primeProjectConfig(path: string, projectConfig: Record<string, unknown>
 
 /**
  * Helpers — strip absolute paths from page outputs so assertions stay
- * portable (memfs gives us absolute paths via `path.resolve`).
+ * portable (memfs gives us absolute paths via `path.resolve`). Use
+ * `path.basename` so the split handles platform-native separators
+ * (forward slash on POSIX, backslash on Windows).
  */
-function basename(p: string): string {
-  return p.split('/').pop() ?? p;
-}
 function simplifyPages(pages: (LocalProjectFolder | LocalProjectPage)[]) {
   return pages.map((p) => {
     if ('file' in p) {
@@ -191,6 +190,31 @@ describe('projectFromTOC: section parts', () => {
         'file' in p && p.file === 'ch1.md',
     );
     expect(chPage?.section).toBe('chapters');
+  });
+
+  it('FileEntry with section: parts does NOT trigger the parts level shift', () => {
+    // Regression for Copilot review #2 on PR #26: hasPartsSubtree must
+    // match the emission predicate exactly. A FileEntry tagged with
+    // section: parts is malformed (a divider can't be a file), so it
+    // gets downgraded to section: chapters without emitting a folder —
+    // and crucially must not shift the top-level level to -1.
+    memfs.vol.fromJSON({ 'index.md': '', 'rogue.md': '' });
+    primeProjectConfig('.', { numbering: { book: { enabled: true } } });
+    const proj = projectFromTOC(session, '.', [
+      { file: 'index' },
+      // FileEntry with section: parts — should be treated as a regular
+      // page (no part folder, no level shift). The section downgrades
+      // to 'chapters' via the parts→chapters child-default rule.
+      { file: 'rogue', section: 'parts' } as any,
+    ]);
+    const page = simplifyPages(proj.pages).find(
+      (p): p is { file: string; section: string; slug: string; level: number } =>
+        'file' in p && p.file === 'rogue.md',
+    );
+    expect(page?.level).toBe(1); // not -1
+    expect(page?.section).toBe('chapters');
+    // No part divider folder emitted.
+    expect(proj.pages.some((p) => !('file' in p) && p.section === 'parts')).toBe(false);
   });
 
   it('no parts in TOC → top-level level stays at 1 (regression)', () => {

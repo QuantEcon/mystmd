@@ -377,9 +377,20 @@ export function projectFromTOC(
   return { path: path || '.', file: indexFile, index: slug, pages };
 }
 
+/**
+ * Walk the TOC for any entry that will actually emit a part divider.
+ * Must match the predicate in `pagesFromEntries` — `section: parts` only
+ * fires on a non-file, non-url ParentEntry. A FileEntry/URLEntry with
+ * `section: parts` is malformed and silently treated as a regular page
+ * (its `section` is downgraded to `'chapters'` by the parts→chapters
+ * child-default rule), so it must NOT trigger the level shift.
+ */
 function hasPartsSubtree(entries: EntryWithoutPattern[]): boolean {
   for (const entry of entries) {
-    if ((entry as { section?: BookSection }).section === 'parts') return true;
+    const isParentEntry = !isFile(entry) && !isURL(entry);
+    if (isParentEntry && (entry as { section?: BookSection }).section === 'parts') {
+      return true;
+    }
     const parent = entry as Partial<ParentEntry>;
     if (parent.children && hasPartsSubtree(parent.children as EntryWithoutPattern[])) {
       return true;
