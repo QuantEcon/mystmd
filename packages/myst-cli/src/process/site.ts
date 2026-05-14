@@ -398,7 +398,7 @@ function computeSectionMetadata(
 ): Map<string, { section?: BookSection; firstInSection: boolean }> {
   const out = new Map<string, { section?: BookSection; firstInSection: boolean }>();
   let lastSection: BookSection | undefined;
-  let sawAnyInSection = new Set<BookSection>();
+  const sawAnyInSection = new Set<BookSection>();
   for (const page of pages) {
     const file = (page as { file?: string }).file;
     if (!file) {

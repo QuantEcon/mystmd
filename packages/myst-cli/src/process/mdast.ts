@@ -76,6 +76,7 @@ import { bibFilesInDir, selectFile } from './file.js';
 import { parseMyst } from './myst.js';
 import { kernelExecutionTransform, LocalDiskCache } from 'myst-execute';
 import type { IOutput } from '@jupyterlab/nbformat';
+import type { BookSection } from 'myst-toc';
 import { rawDirectiveTransform } from '../transforms/raw.js';
 import { addEditUrl } from '../utils/addEditUrl.js';
 import {
@@ -115,7 +116,7 @@ export type TransformFn = (
  */
 export function injectBookSectionDefaults(
   frontmatter: PageFrontmatter,
-  section?: import('myst-toc').BookSection,
+  section?: BookSection,
   firstInSection?: boolean,
 ) {
   if (!section) return;
@@ -163,7 +164,7 @@ export async function transformMdast(
     titleDepth?: number;
     offset?: number;
     /** Book section the page belongs to — set by the TOC walker. */
-    section?: import('myst-toc').BookSection;
+    section?: BookSection;
     /** True when this page is the first one in its book section. */
     firstInSection?: boolean;
   },
