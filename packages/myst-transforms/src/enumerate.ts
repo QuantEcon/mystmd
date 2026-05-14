@@ -70,6 +70,92 @@ function shouldAutoPrefix(kind: string): boolean {
   return false;
 }
 
+/**
+ * Is this kind part of the proof family (for umbrella scope resolution)?
+ * Used so `numbering.proof.scope` applies to every `proof:*` / `prf:*` kind.
+ */
+function isProofFamilyKind(kind: string): boolean {
+  return kind === 'proof' || kind.startsWith('proof:') || kind.startsWith('prf:');
+}
+
+/**
+ * Map a scope alias (`chapter` / `section` / `subsection` / `heading_N`)
+ * to its heading depth. Returns undefined for unrecognised values so the
+ * caller can fall through to the next candidate. Mirrors the alias map
+ * in `myst-frontmatter/src/numbering/validators.ts`; kept in sync because
+ * `ReferenceState`'s constructor accepts pre-validated *and* raw
+ * frontmatter (no separate validator pass), so we normalise here too.
+ */
+function scopeAliasToDepth(scope: string): number | undefined {
+  switch (scope) {
+    case 'chapter':
+    case 'heading_1':
+      return 1;
+    case 'section':
+    case 'heading_2':
+      return 2;
+    case 'subsection':
+    case 'heading_3':
+      return 3;
+    case 'subsubsection':
+    case 'heading_4':
+      return 4;
+    case 'heading_5':
+      return 5;
+    case 'heading_6':
+      return 6;
+    default:
+      return undefined;
+  }
+}
+
+/**
+ * Resolve a kind's effective auto-prefix scope depth (#27).
+ *
+ * Lookup order, most-specific first:
+ *  1. `numbering[kind].scope`                — e.g. `numbering['proof:theorem'].scope`
+ *  2. `numbering.proof.scope`                — umbrella default for proof family
+ *  3. `numbering.all.scope`                  — project-wide default
+ *  4. `chapter` (depth 1)                    — current MyST behaviour
+ *
+ * Returns the heading depth (1 = chapter / heading_1, 2 = section /
+ * heading_2, …).
+ */
+function effectiveScopeDepth(numbering: Numbering, kind: string): number {
+  const candidates = [numbering[kind]?.scope];
+  if (isProofFamilyKind(kind)) candidates.push(numbering.proof?.scope);
+  candidates.push(numbering.all?.scope);
+  for (const scope of candidates) {
+    if (!scope) continue;
+    const depth = scopeAliasToDepth(scope);
+    if (depth) return depth;
+  }
+  return 1;
+}
+
+/**
+ * Format a heading-prefix string at a fixed scope depth, preserving zero
+ * counts (matches LaTeX `\thechapter.\thesection.…` literal output).
+ *
+ * Unlike `formatHeadingEnumerator`, this does NOT strip trailing zeros —
+ * so a section-scoped proof appearing before the first `## Section` in
+ * chapter 5 renders as `5.0.1`, not `5.1`. The literal form avoids
+ * ambiguity with later `5.1.x` numbers and matches the PDF.
+ */
+function formatHeadingPrefix(
+  counts: (number | null)[],
+  scopeDepth: number,
+  formats?: (CounterFormat | undefined)[],
+): string {
+  const parts: string[] = [];
+  for (let i = 0; i < scopeDepth; i++) {
+    const count = counts[i];
+    if (count === null) continue;
+    parts.push(formatCounter(count ?? 0, formats?.[i]));
+  }
+  return parts.join('.');
+}
+
 const DEFAULT_NUMBERING: Numbering = {
   equation: { enabled: true, template: '(%s)' },
   subequation: { enabled: true, template: '(%s)' },
@@ -448,6 +534,15 @@ export class ReferenceState implements IReferenceStateResolver {
   identifiers: string[];
   enumerator?: string;
   offset: number;
+  /**
+   * Per-kind last-seen scope-key (#27). When a scoped kind (e.g.
+   * `proof:theorem` with `scope: section`) is incremented, the prefix
+   * derived from the current heading counts is recorded here; if the
+   * next increment of the same kind sees a different prefix, the main
+   * counter resets. Empty on fresh pages — counter reset across pages
+   * is governed by `targetCounts` carry-over, not this map.
+   */
+  lastScopeKeyByKind: Record<string, string>;
 
   constructor(
     filePath: string,
@@ -487,6 +582,7 @@ export class ReferenceState implements IReferenceStateResolver {
     this.url = opts?.url;
     this.dataUrl = opts?.dataUrl;
     this.title = opts?.frontmatter?.title;
+    this.lastScopeKeyByKind = {};
   }
 
   addTarget(node: TargetNodes, hidden?: boolean) {
@@ -562,13 +658,34 @@ export class ReferenceState implements IReferenceStateResolver {
     // Per-kind `continue: true` (§3.4(6)) opts out and keeps the counter
     // flat across pages.
     const continueKind = this.numbering[countKind]?.continue || this.numbering.all?.continue;
-    const autoPrefix =
+    let autoPrefix = '';
+    if (
       this.enumerator &&
       this.numbering.book?.enabled &&
       !continueKind &&
       shouldAutoPrefix(countKind)
-        ? `${this.enumerator}.`
-        : '';
+    ) {
+      // #27: scope > 1 means "go deeper than the chapter prefix" — e.g.
+      // `Theorem 5.1.2` from chapter 5, section 1, second theorem. The
+      // counter must also reset on each scope boundary (e.g. new heading_2),
+      // so we track the last-seen scope key per kind and reset main/sub
+      // when it changes. Scope == 1 keeps today's behaviour exactly.
+      const scopeDepth = effectiveScopeDepth(this.numbering, countKind);
+      if (scopeDepth > 1) {
+        const scopePrefix = formatHeadingPrefix(
+          this.targetCounts.heading,
+          scopeDepth,
+          headingFormats(this.numbering),
+        );
+        autoPrefix = scopePrefix ? `${scopePrefix}.` : '';
+        if (this.lastScopeKeyByKind[countKind] !== scopePrefix) {
+          this.targetCounts[countKind] = { main: 0, sub: 0 };
+          this.lastScopeKeyByKind[countKind] = scopePrefix;
+        }
+      } else {
+        autoPrefix = `${this.enumerator}.`;
+      }
+    }
     if (node.subcontainer || kind === TargetKind.subequation) {
       this.targetCounts[countKind].sub += 1;
       // Will restart counting if there are more than 26 subequations/figures

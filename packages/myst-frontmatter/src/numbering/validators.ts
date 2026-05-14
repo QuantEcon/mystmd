@@ -36,11 +36,26 @@ const NUMBERING_ITEM_KEYS = [
   'format',
   'label',
   'reset_on_part',
+  'scope',
 ];
 
 const COUNTER_FORMATS: CounterFormat[] = ['arabic', 'alph', 'Alph', 'roman', 'Roman'];
 
 const CONTINUE_STRINGS = ['continue', 'next'];
+
+const SCOPE_ALIASES: Record<string, string> = {
+  chapter: 'heading_1',
+  section: 'heading_2',
+  subsection: 'heading_3',
+  subsubsection: 'heading_4',
+  heading_1: 'heading_1',
+  heading_2: 'heading_2',
+  heading_3: 'heading_3',
+  heading_4: 'heading_4',
+  heading_5: 'heading_5',
+  heading_6: 'heading_6',
+};
+const SCOPE_VALUES = Object.keys(SCOPE_ALIASES);
 
 export const NUMBERING_ALIAS = {
   sections: 'headings',
@@ -170,6 +185,22 @@ export function validateNumberingItem(
     if (defined(resetOnPart)) {
       output.reset_on_part = resetOnPart;
       output.enabled = output.enabled ?? true;
+    }
+  }
+  if (defined(value.scope)) {
+    const scopeOpts = incrementOptions('scope', opts);
+    const scopeStr = validateString(value.scope, scopeOpts);
+    if (defined(scopeStr)) {
+      const normalized = SCOPE_ALIASES[scopeStr];
+      if (normalized) {
+        output.scope = normalized;
+        output.enabled = output.enabled ?? true;
+      } else {
+        validationWarning(
+          `must be one of: ${SCOPE_VALUES.join(', ')} (got "${scopeStr}")`,
+          scopeOpts,
+        );
+      }
     }
   }
   if (Object.keys(output).length === 0) return undefined;
