@@ -2,12 +2,17 @@
 #
 # This file is the canonical diagnostic record of which QuantEcon-specific
 # features are in this fork's `main`. The `qe_version` field corresponds to
-# a git tag of the same name on the commit that landed the latest feature.
+# a git tag of the same name on a `main` commit at a chosen checkpoint.
 #
-# Update this file as part of the "land a feature" workflow:
-#   1. Squash-merge the feature PR into main
-#   2. Tag the resulting commit with the next `qe-vN`
-#   3. Append the feature to `merged_features` and bump `qe_version`
+# Tags are cut at meaningful checkpoints (typically when a batch of features
+# is ready for downstream dogfooding), **not per-PR**. When cutting a tag:
+#   1. Pick the `main` commit at the head of the batch
+#   2. Tag it `qe-v<N+1>` and push the tag
+#   3. Append each newly-included feature to `merged_features` and bump
+#      `qe_version`
+#
+# Per-PR landing only adds the feature to `merged_features` with its squash
+# `merge_sha`; `tag` may be set later once the next `qe-v<N>` cuts.
 #
 # When upstream merges one of our features, update its `upstream` block
 # rather than deleting the entry — the history is useful.

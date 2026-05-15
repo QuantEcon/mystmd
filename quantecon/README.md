@@ -1,18 +1,18 @@
 # QuantEcon fork of `mystmd` — maintenance guide
 
-This fork lets QuantEcon develop and use new `mystmd` features before they land in `jupyter-book/mystmd`. Features are developed on feature branches, squash-merged into this fork's `main`, and the same feature branches are kept alive so they can be opened as upstream PRs whenever the upstream team is ready to review them.
+This fork lets QuantEcon develop and use new `mystmd` features before they land in `jupyter-book/mystmd`. Features are developed on short-lived feature branches off this fork's `main`, squash-merged in, and the feature branch is deleted. Upstream PRs are prepared later by **cherry-picking** one or more squash commits from `main` onto a fresh branch off `upstream/main` — bundling related features into a cohesive upstream story when that makes sense.
 
 > **About this folder.** `quantecon/` doubles as a local scratch space for planning docs, demo books, and experiments. Everything except [`README.md`](README.md) and [`VERSION.yml`](VERSION.yml) is gitignored — feel free to drop PLAN docs, demo `myst.yml` projects, etc. here without worrying about accidental commits. To track something new intentionally, add it to the allow-list in [.gitignore](.gitignore).
 
 ## Build identifier
 
-[`VERSION.yml`](VERSION.yml) records which QuantEcon-specific features are merged into this fork's `main`, identified by a `qe-vN` tag that's also a git tag on the corresponding squash-merge commit. It's a diagnostic/traceability artifact, not a release version — lecture builds can cat the file to log what fork state they're using.
+[`VERSION.yml`](VERSION.yml) records which QuantEcon-specific features are merged into this fork's `main`, identified by a `qe-vN` tag that's also a git tag on a `main` commit. It's a diagnostic/traceability artifact, not a release version — lecture builds can cat the file to log what fork state they're using.
 
-When landing a new feature:
+Tags are cut at meaningful checkpoints, **not per-PR** — typically when a batch of features is ready for downstream dogfooding. To cut a tag:
 
-1. Squash-merge the feature PR into `main`
-2. Tag the resulting commit: `git tag qe-v<N+1> <sha> -m "qe-v<N+1>: feature/<name> merged via #<pr>"` then `git push origin qe-v<N+1>`
-3. Append the feature to `merged_features` in `VERSION.yml` and bump `qe_version`
+1. Pick the `main` commit at the head of the batch
+2. Tag it: `git tag qe-v<N+1> <sha> -m "qe-v<N+1>: <summary of features included>"` then `git push origin qe-v<N+1>`
+3. Append each newly-included feature to `merged_features` in `VERSION.yml` and bump `qe_version`
 
 When upstream merges one of our features, update the entry's `upstream` block rather than deleting it — `VERSION.yml` doubles as an upstreaming tracker.
 
@@ -22,32 +22,39 @@ When upstream merges one of our features, update the entry's `upstream` block ra
 jupyter-book/mystmd:main  ───── (sync periodically via merge)
         │
         ▼
-QuantEcon/mystmd:main  ◄────────────────────────────────────┐
-        │                                                    │
-        │   feature/<name>  (branched from upstream/main)    │
-        │        │                                            │
-        │        │   PR against QuantEcon/mystmd:main         │
-        │        ├──── squash-merge ────────────────────────► │
-        │        │                                            │
-        │        │   (branch kept alive after merge,
-        │        │    used later for upstream PR against
-        │        ▼    jupyter-book/mystmd:main)
-        │   feature/<name> (preserved)
+QuantEcon/mystmd:main  ◄──────────────────────────────────────┐
+        │                                                      │
+        │   feature/<name>  (branched from origin/main)        │
+        │        │                                              │
+        │        │   PR against QuantEcon/mystmd:main           │
+        │        ├──── squash-merge ──────────────────────────► │
+        │        │                                              │
+        │        ▼   (branch deleted after merge)
+        │   (gone — the main-line squash commit is the artifact)
+        │
+        │   …later, when ready to upstream:
+        │
+        │   upstream/<topic>  (fresh branch off upstream/main)
+        │        │   cherry-pick <squash-sha> [<squash-sha> …]
+        │        │
+        │        │   PR against jupyter-book/mystmd:main
+        │        ▼
+        │   upstream review & merge
 ```
 
-**Feature branches serve two purposes:**
+**Why this works:**
 
-1. **Local integration.** Each branch is squash-merged into `main` once it's ready, so projects can install from `main` and immediately use the feature.
-2. **Upstream PR artifact.** The branch is *not deleted* after squash-merge. When upstream is ready to review, the original branch (with its granular commit history) is pushed and opened as a PR against `jupyter-book/mystmd:main`.
-
-This means you get a clean integration `main` for day-to-day use *and* preserved per-commit history for upstream review — without maintaining a separate integration branch.
+1. **Local integration.** Each feature is squash-merged into `main` once it's ready, so projects can install from `main` and immediately use the feature. Feature branches are throwaway scaffolding; the squash commit is the canonical artifact.
+2. **Upstream PR composition.** When upstream is ready, we cherry-pick one or more squash commits onto a fresh branch from `upstream/main` and open the PR. The cherry-pick lets us bundle related features ("book mode + section scope") as a cohesive upstream story, or split them apart, depending on what the upstream maintainers want to review.
+3. **No long-lived branches.** Feature dependencies (PR #28 building on PR #22) just work — branch off `main`, get the prior features for free. No parallel rebases against `upstream/main`.
 
 ## Branching model
 
 | Branch | Purpose |
 |---|---|
-| `main` | `upstream/main` **plus** all squash-merged features. Synced from upstream periodically via merge (see below). Projects install from here. |
-| `feature/<name>` | One branch per logical patch. **Branched from `upstream/main`** (not `main`), kept rebased on `upstream/main`. Opened as a PR against `QuantEcon/mystmd:main` for local merge, then preserved for the eventual upstream PR. |
+| `main` | `upstream/main` **plus** all squash-merged QuantEcon features. Synced from upstream periodically via merge (see below). Projects install from here. |
+| `feature/<name>` | One short-lived branch per logical patch. **Branched from `origin/main`** (the fork's `main`). Opened as a PR against `QuantEcon/mystmd:main`, squash-merged, then deleted. |
+| `upstream/<topic>` | Short-lived branch prepared at upstream-PR time. **Branched from `upstream/main`**. One or more squash commits from `main` are cherry-picked onto it, then it's opened as a PR against `jupyter-book/mystmd:main`. Deleted once that PR resolves. |
 
 ## One-time setup
 
@@ -66,18 +73,16 @@ upstream  https://github.com/jupyter-book/mystmd.git
 
 ### Develop a new feature
 
-> **Important:** branch from `upstream/main`, **not** from `main`. The feature branch must stay rebaseable onto `upstream/main` so it remains a clean upstream PR candidate.
-
 ```bash
-git fetch upstream
-git checkout -b feature/<name> upstream/main
+git fetch origin
+git checkout -b feature/<name> origin/main
 # make your changes, commit
-git push origin feature/<name>
+git push -u origin feature/<name>
 ```
 
 Open a PR on GitHub: **base: `QuantEcon/mystmd:main`**, **compare: `QuantEcon/mystmd:feature/<name>`**.
 
-Review locally, address feedback, then **squash-merge** through the GitHub UI. Do **not** delete the branch after merging — it is the upstream PR artifact.
+Review locally, address feedback, then **squash-merge** through the GitHub UI. Delete the branch after merging — the squash commit on `main` is the canonical artifact, and the branch is no longer needed. (GitHub offers a "Delete branch" button right after the merge.)
 
 ### Sync `main` with upstream
 
@@ -94,41 +99,57 @@ git push origin main
 
 > **If `main` is branch-protected and the sync has to go through a PR**, choose **"Create a merge commit"** when merging — *never* "Squash and merge". A real merge commit preserves the ancestry so `git merge upstream/main` works cleanly next time.
 
-### Keep a feature branch current with upstream
+### Keep a feature branch current with `main`
 
-If `upstream/main` moves and you need to refresh a still-open feature branch (e.g., to address feedback or prepare for upstreaming):
+If `main` moves while a feature PR is in review (e.g. another feature lands first), rebase onto the new `main`:
 
 ```bash
-git fetch upstream
+git fetch origin
 git checkout feature/<name>
-git rebase upstream/main
+git rebase origin/main
+# resolve any conflicts
 git push --force-with-lease origin feature/<name>
 ```
 
-If that feature has already been squash-merged into our `main`, the rebased branch simply replays the same commits onto a newer base — upstream PR readiness is preserved.
+This is the only rebase you need during normal development — the cherry-pick model means we never rebase a feature branch onto `upstream/main` itself.
 
-## Opening the upstream PR
+## Opening an upstream PR
 
-When the upstream team is ready to review a feature:
+When the upstream team is ready to review one or more of our features:
 
-1. Make sure the feature branch is rebased onto current `upstream/main` (see above).
-2. Push the branch (likely already pushed).
-3. Open a PR on GitHub: **base: `jupyter-book/mystmd:main`**, **compare: `QuantEcon/mystmd:feature/<name>`**.
+1. Pick the squash commit SHA(s) on `main` for the feature(s) you want to upstream. `VERSION.yml`'s `merged_features` block records the SHA for each (`merge_sha`).
+2. Create a fresh branch off `upstream/main`:
+   ```bash
+   git fetch upstream
+   git checkout -b upstream/<topic> upstream/main
+   ```
+3. Cherry-pick the squash commits in dependency order:
+   ```bash
+   git cherry-pick <sha-1> [<sha-2> …]
+   # resolve conflicts if upstream has drifted
+   ```
+4. Push and open the upstream PR:
+   ```bash
+   git push -u origin upstream/<topic>
+   ```
+   Open a PR on GitHub: **base: `jupyter-book/mystmd:main`**, **compare: `QuantEcon/mystmd:upstream/<topic>`**.
 
-The PR shows the granular per-commit history, which reviewers prefer. The squash commit on QuantEcon's `main` is *not* what upstream sees — that's a local-integration artifact.
+**Bundling vs. splitting.** Whether to cherry-pick one squash commit or several into the same upstream PR is a per-attempt judgment call:
+
+- *Bundle* when the features form one coherent story upstream maintainers will review together (e.g. "book mode + section-scoped numbering" — the second extends the first; reviewing them apart wastes everyone's time).
+- *Split* when the features are independent. Two upstream PRs, two cherry-pick branches.
+
+If the cherry-picked commits should appear as one upstream commit (cleaner review), `git rebase -i upstream/main` to fixup before pushing.
 
 ### When upstream merges the feature
 
 Once the upstream PR is merged into `jupyter-book/mystmd:main`:
 
-1. Sync our `main` with upstream (instructions above) — upstream's version now lands.
-2. Delete the local feature branch:
-   ```bash
-   git branch -d feature/<name>
-   git push origin --delete feature/<name>
-   ```
+1. **Sync our `main` with upstream** (instructions above) — upstream's version of the change now lands in our `main`.
+2. **Update `VERSION.yml`** — set the `upstream` block on the affected entries to `status: merged`, with the upstream PR number and merged SHA.
+3. **Delete the `upstream/<topic>` branch** if it's still around.
 
-The squash commit that lived on our `main` is now redundant with the upstream merge. Git's merge machinery handles this correctly (the changes are already in the tree), so no manual cleanup is needed.
+The original squash commit on our `main` is now redundant with the upstream merge. Git's merge machinery handles this correctly (the changes are already in the tree), so no manual cleanup is needed in source files.
 
 ## Resolving merge conflicts between features
 
@@ -136,14 +157,12 @@ If two feature branches touch the same lines, squash-merge them in dependency or
 
 ```bash
 git checkout feature/<later>
-git rebase main
+git rebase origin/main
 # resolve conflicts, git add, git rebase --continue
 git push --force-with-lease origin feature/<later>
 ```
 
-Then continue with the normal PR review and squash-merge.
-
-> The rebased `feature/<later>` is still upstream-PR-ready — when the time comes to upstream it, rebase it back onto `upstream/main` (which will pull in `feature/<earlier>` if that has already been upstreamed, or stage the upstream PR after `feature/<earlier>`'s).
+Then continue with the normal PR review and squash-merge. When eventually upstreaming, the cherry-pick order on the `upstream/<topic>` branch is the same dependency order.
 
 ## Installing the QuantEcon build in GitHub Actions
 
@@ -164,25 +183,24 @@ This is a standard monorepo — clone, build, install globally. There is no publ
     bun install
     bun run build
     npm install -g /tmp/qe-mystmd/packages/mystmd
-
-- name: Verify
-  run: myst --version
 ```
 
-Pin to a specific commit if you need reproducibility:
+Pin to a specific tag if you need reproducibility:
 
 ```bash
 git clone https://github.com/QuantEcon/mystmd.git /tmp/qe-mystmd
 cd /tmp/qe-mystmd
-git checkout <commit-sha>
+git checkout qe-v<N>           # or a specific commit sha
 bun install && bun run build
 npm install -g /tmp/qe-mystmd/packages/mystmd
 ```
 
-## Active feature branches
+## In-flight feature branches
+
+Feature branches are short-lived: open, review, squash-merge, delete. If any remain on `origin`:
 
 ```bash
 git branch -r | grep '^  origin/feature/'
 ```
 
-Each is squash-merged into `main` once ready, and preserved for eventual upstream PR.
+…they're either work in progress or stale leftovers that can be deleted. Check the corresponding PR state before deleting.
