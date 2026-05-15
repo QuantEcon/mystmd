@@ -1,0 +1,90 @@
+# QuantEcon mystmd → upstream PR tracker
+#
+# Each entry is a logical *upstream PR candidate* — a coherent feature
+# that we plan to eventually open as a PR against jupyter-book/mystmd:main.
+# A candidate may span multiple `main` squash commits (e.g. the original
+# feature PR + later follow-up fixes, or several related features we want
+# to bundle into one cohesive upstream review).
+#
+# `commits` is the ordered list of `main` squash SHAs to cherry-pick onto
+# a fresh `upstream/<topic>` branch off `upstream/main`. Order matters —
+# list them in dependency order so cherry-pick replays cleanly.
+#
+# Relationship to VERSION.yml: each `merge_sha` in VERSION.yml's
+# `merged_features` should appear in some candidate's `commits` here.
+# VERSION.yml is "what's in our main"; this file is "how we plan to ship
+# it upstream."
+#
+# Status lifecycle:
+#   planned  — candidate identified, commits may not all exist on main yet
+#   pending  — all commits landed on main; upstream PR not yet opened
+#   open     — upstream PR open, under review
+#   merged   — upstream merged it (sync our main, then delete this entry's
+#              `upstream/<topic>` branch if still around)
+
+upstream_candidates:
+
+  - id: myst-to-ipynb
+    title: CommonMark ipynb export + image attachment embedding
+    description: |
+      Adds ipynb export with CommonMark output and inline image
+      attachment embedding. Independent of book-mode work.
+    status: pending
+    commits:
+      - sha: a045d57d
+        local_pr: 16
+        title: "feat(ipynb): CommonMark ipynb export + image attachment embedding"
+    depends_on: []
+    upstream:
+      pr: null
+      branch: null      # set when the upstream/<topic> branch is pushed
+      merged_sha: null
+    notes: |
+      Self-contained; can ship upstream any time.
+
+  - id: book-mode-with-section-scope
+    title: Book-style numbering (with LaTeX-style section scope)
+    description: |
+      Bundles the original book-mode work (#22) with the section-scope
+      extension (#28). The two form one coherent story upstream — #28
+      builds on #22's auto-prefix machinery (`shouldAutoPrefix`,
+      `AUTO_PREFIX_KINDS`, the `numbering.book` flag) and is a small
+      targeted extension of it. Shipping them as one upstream PR avoids
+      the awkward two-step where reviewers see the section-scope hook
+      points before the machinery exists.
+    status: pending
+    commits:
+      - sha: 032957c2
+        local_pr: 22
+        title: "Book-style numbering: format, label, section-tagged TOC, auto-prefix"
+      - sha: 80bb9ecf
+        local_pr: 28
+        title: "feat(book): section-level scope for proof:* / figure / equation auto-prefix"
+    depends_on: []
+    upstream:
+      pr: null
+      branch: null
+      merged_sha: null
+    notes: |
+      Could be split into two upstream PRs if maintainers prefer smaller
+      reviews; default plan is one bundled PR.
+
+  - id: book-parts
+    title: Book parts dividers
+    description: |
+      `section: parts` ParentEntry: emits a Roman-numbered divider folder
+      ("Part I — Theory") and wraps chapter groups. Chapter counter
+      continues across part boundaries (LaTeX `book` default).
+    status: planned   # PR #26 still open against our main
+    commits: []       # populated once #26 squash-merges into main
+    depends_on:
+      - book-mode-with-section-scope
+    upstream:
+      pr: null
+      branch: null
+      merged_sha: null
+    notes: |
+      Depends on book-mode being upstream first (or bundled into the same
+      upstream PR). Could alternatively fold into `book-mode-with-section-scope`
+      to ship the complete book UX as one upstream PR — decide at upstream
+      time based on maintainer preference.
