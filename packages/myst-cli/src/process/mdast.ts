@@ -142,21 +142,54 @@ export function injectBookSectionDefaults(
     h1.format ??= sectionConfig.format as typeof h1.format;
     h1.enabled ??= sectionConfig.enabled;
   }
+  // #25: the chapter-prefix machinery in `enumerate.ts` only composes
+  // when the *whole chain* `title → heading_1 → heading_2 → heading_3`
+  // is enabled. The page's H1 (e.g. `# Introduction` produced by pandoc
+  // from `\chapter{Introduction}`) is absorbed as the page title; it has
+  // to be numbered (via `title.enabled`) for `this.enumerator` to carry
+  // the chapter prefix into figures, theorems, and `## Section` / `###
+  // Subsection` headings within the page.
+  //
+  // For frontmatter / backmatter we seed `false` so a project-level
+  // `numbering.heading_2.enabled: true` (often needed to make chapter
+  // pages work) does not leak through and number the preface's `##`
+  // headings as `1, 2, 3`.
+  //
+  // All assignments use `??=` so per-page and per-project overrides
+  // always win — this layer is *defaults*, not mandates.
+  numbering.title ??= {};
+  numbering.heading_2 ??= {};
+  numbering.heading_3 ??= {};
+  const title = numbering.title;
+  const h2 = numbering.heading_2;
+  const h3 = numbering.heading_3;
   switch (section) {
     case 'chapters':
       h1.enabled ??= true;
       h1.label ??= 'Chapter %s';
       // arabic is the default — no need to set `format`.
+      title.enabled ??= true;
+      h2.enabled ??= true;
+      h3.enabled ??= true;
       break;
     case 'appendices':
       h1.enabled ??= true;
       h1.format ??= 'Alph';
       h1.label ??= 'Appendix %s';
+      title.enabled ??= true;
+      h2.enabled ??= true;
+      h3.enabled ??= true;
       break;
     case 'frontmatter':
     case 'backmatter':
       // Skip-semantic: do not advance the title counter (§3.4(1)).
-      h1.enabled = false;
+      // `??=` (not `=`) so a page that explicitly wants to be numbered
+      // (e.g. a Preface the author wants in the chapter sequence) can
+      // still override via its own frontmatter.
+      h1.enabled ??= false;
+      title.enabled ??= false;
+      h2.enabled ??= false;
+      h3.enabled ??= false;
       break;
   }
 }
