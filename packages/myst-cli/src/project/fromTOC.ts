@@ -33,6 +33,21 @@ import type {
 import { isFile, isPattern, isURL } from 'myst-toc';
 import { globSync } from 'glob';
 import { isDirectory } from 'myst-cli-utils';
+import { formatCounter } from 'myst-transforms';
+import type { CounterFormat } from 'myst-frontmatter';
+
+type PartCounter = { count: number };
+
+function formatPartTitle(
+  index: number,
+  rawTitle: string,
+  format: CounterFormat,
+  label: string,
+): string {
+  const formatted = formatCounter(index, format);
+  const heading = label.replace('%s', formatted);
+  return `${heading} — ${rawTitle}`;
+}
 
 export const DEFAULT_INDEX_FILENAMES = ['index', 'readme', 'main'];
 const DEFAULT_INDEX_WITH_EXT = ['.md', '.ipynb', '.myst.json']
@@ -170,14 +185,28 @@ function pagesFromEntries(
   pageSlugs: PageSlugs,
   opts?: SlugOptions,
   inheritedSection?: BookSection,
+  partCounter: PartCounter = { count: 0 },
 ): (LocalProjectFolder | LocalProjectPage)[] {
   const configFile = selectors.selectLocalConfigFile(session.store.getState(), path);
+  const projectConfig = selectors.selectLocalProjectConfig(session.store.getState(), path);
+  const numbering = projectConfig?.numbering;
+  const bookMode = numbering?.book?.enabled === true;
+  const partsFormat = (numbering?.parts?.format as CounterFormat | undefined) ?? 'Roman';
+  const partsLabel = numbering?.parts?.label ?? 'Part %s';
   for (const entry of entries) {
     let entryLevel = level;
     // A subtree with `section:` tags its descendants; siblings without it
     // keep the inherited value (so a top-level "Appendices" subtree wraps
     // every descendant page even if intermediate parents omit `section:`).
-    const childSection: BookSection | undefined = entry.section ?? inheritedSection;
+    // `section: parts` is special: the parts tag belongs to the divider
+    // itself, but descendants should inherit `section: chapters` (the
+    // dp2 convention — a part wraps chapters by default).
+    let childSection: BookSection | undefined;
+    if (entry.section === 'parts') {
+      childSection = 'chapters';
+    } else {
+      childSection = entry.section ?? inheritedSection;
+    }
     if (isFile(entry)) {
       // Level must be "chapter" (0) or "section" (1-6) for files
       entryLevel = level < 0 ? 0 : level;
@@ -206,13 +235,27 @@ function pagesFromEntries(
         open_in_same_tab: entry.open_in_same_tab,
       });
     } else {
-      // ParentEntry. A `section:`-tagged subtree is a *logical* group, not
-      // a structural one: it doesn't emit a folder entry and doesn't bump
-      // the heading depth for its children. Without this, the section
-      // subtree would behave like a part header — ch1's H1 would land at
-      // heading_2 instead of heading_1 and book-section defaults wouldn't
-      // line up with what authors actually wrote on the page.
-      if (entry.section) {
+      // ParentEntry. Three cases:
+      //  (a) section: 'parts' — structural divider. Emit a folder at
+      //      part-level (-1) with a formatted title ("Part I — Title")
+      //      and tag it section: 'parts'. Children bump to next level.
+      //  (b) other section tags — logical wrapper. No folder emitted,
+      //      no level bump. Without this, "Appendices" would behave
+      //      like a part header.
+      //  (c) no section tag — pre-existing folder behaviour (may be a
+      //      conventional part at level -1).
+      if (entry.section === 'parts') {
+        entryLevel = level < -1 ? -1 : level;
+        partCounter.count += 1;
+        const title = bookMode
+          ? formatPartTitle(partCounter.count, entry.title, partsFormat, partsLabel)
+          : entry.title;
+        pages.push({
+          level: entryLevel,
+          title,
+          section: 'parts',
+        });
+      } else if (entry.section) {
         // childSection is already entry.section (set above); fall through
         // to recurse with the same level.
       } else {
@@ -228,21 +271,28 @@ function pagesFromEntries(
     // Do we have any children?
     const parentEntry = entry as Partial<ParentEntry>;
     if (parentEntry.children) {
-      // Only a *section-only* ParentEntry (no `file:`) keeps its children
-      // at the same level — that's the "logical wrapper" intent. A
-      // section-tagged FileEntry with children is still a structural
+      // A *logical* section-only ParentEntry (no `file:`) keeps its
+      // children at the same level — that's the "logical wrapper" intent
+      // for chapters/appendices/frontmatter/backmatter.
+      //
+      // A `section: parts` ParentEntry is structural (a real divider with
+      // children at next level), so it does NOT count as a logical wrapper.
+      //
+      // A section-tagged FileEntry with children is still a structural
       // parent, so its children move to the next level (e.g. ch1.md's
       // sub-page becomes heading_2).
-      const isSectionGroup = !isFile(entry) && (entry as { section?: BookSection }).section;
+      const entrySection = (entry as { section?: BookSection }).section;
+      const isLogicalSectionGroup = !isFile(entry) && entrySection && entrySection !== 'parts';
       pagesFromEntries(
         session,
         path,
         parentEntry.children as EntryWithoutPattern[],
         pages,
-        isSectionGroup ? entryLevel : nextLevel(entryLevel),
+        isLogicalSectionGroup ? entryLevel : nextLevel(entryLevel),
         pageSlugs,
         opts,
         childSection,
+        partCounter,
       );
     }
   }
@@ -315,9 +365,38 @@ export function projectFromTOC(
   const slug = 'index';
   pageSlugs[slug] = 1;
 
+  // If the TOC declares any `section: 'parts'` subtree, start at level=-1
+  // so parts land at -1, chapters at 0 (page H1 → heading_1), and inner
+  // sections follow naturally. Without this, a parts divider at level=1
+  // would push chapter pages to level=2 and their H1 would render as
+  // heading_2 (e.g. "0.1") instead of heading_1 ("1").
+  const tocLevel: PageLevels = hasPartsSubtree(entries) ? -1 : level;
+
   const pages: (LocalProjectFolder | LocalProjectPage)[] = [];
-  pagesFromEntries(session, path, entries, pages, level, pageSlugs, opts);
+  pagesFromEntries(session, path, entries, pages, tocLevel, pageSlugs, opts);
   return { path: path || '.', file: indexFile, index: slug, pages };
+}
+
+/**
+ * Walk the TOC for any entry that will actually emit a part divider.
+ * Must match the predicate in `pagesFromEntries` — `section: parts` only
+ * fires on a non-file, non-url ParentEntry. A FileEntry/URLEntry with
+ * `section: parts` is malformed and silently treated as a regular page
+ * (its `section` is downgraded to `'chapters'` by the parts→chapters
+ * child-default rule), so it must NOT trigger the level shift.
+ */
+function hasPartsSubtree(entries: EntryWithoutPattern[]): boolean {
+  for (const entry of entries) {
+    const isParentEntry = !isFile(entry) && !isURL(entry);
+    if (isParentEntry && (entry as { section?: BookSection }).section === 'parts') {
+      return true;
+    }
+    const parent = entry as Partial<ParentEntry>;
+    if (parent.children && hasPartsSubtree(parent.children as EntryWithoutPattern[])) {
+      return true;
+    }
+  }
+  return false;
 }
 
 function pagesFromSphinxChapters(

@@ -23,7 +23,7 @@ import {
   validateChoice,
 } from 'simple-validators';
 
-const BOOK_SECTION_CHOICES = ['frontmatter', 'chapters', 'appendices', 'backmatter'];
+const BOOK_SECTION_CHOICES = ['frontmatter', 'parts', 'chapters', 'appendices', 'backmatter'];
 const COMMON_ENTRY_KEYS = ['title', 'hidden', 'section'];
 // const COMMON_ENTRY_KEYS = ['title', 'hidden', 'section', 'numbering', 'id', 'class'];
 
