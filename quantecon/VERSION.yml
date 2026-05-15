@@ -15,16 +15,24 @@
 # `merge_sha` and `tag: null`. The `tag:` field is filled in later when a
 # `qe-vN` tag is cut.
 #
-# Tags are cut at meaningful checkpoints (typically when a batch of
-# features is ready for downstream dogfooding), **not per-PR**. When
-# cutting a tag:
-#   1. Pick the `main` commit at the head of the batch
-#   2. Tag it `qe-v<N+1>` and push the tag
-#   3. Set `tag: qe-v<N+1>` on each previously-untagged entry in
-#      `merged_features` that is included in the batch, then bump
-#      `qe_version` to `qe-v<N+1>`
+# Tags can be cut per-PR (one tag per feature, easy traceability) or
+# batched at a checkpoint (one tag covering several merged features
+# ready to deploy to book-dp1 / book-dp2 for testing) — pick whichever
+# fits the cadence.
+# To cut a tag, do the metadata update *first* so the tagged commit's
+# tree is self-consistent:
+#   1. Open a doc PR updating this file: bump `qe_version` to `qe-v<N+1>`
+#      and set `tag: qe-v<N+1>` on each previously-untagged entry in
+#      `merged_features` that is included in this tag.
+#   2. Squash-merge the doc PR.
+#   3. Tag the resulting `main` commit:
+#         git tag qe-v<N+1> <sha> -m "qe-v<N+1>: <summary>"
+#         git push origin qe-v<N+1>
+#
+# Doing it in this order means anyone who `cat`s VERSION.yml at tag
+# `qe-v<N+1>` sees a self-consistent file (qe_version matches the tag).
 
-qe_version: qe-v3
+qe_version: qe-v4
 upstream_base: 1.9.0
 
 merged_features:
@@ -48,3 +56,10 @@ merged_features:
     local_pr: 28
     merge_sha: 80bb9ecf
     tag: qe-v3
+
+  - id: 4
+    name: book-parts
+    description: Book parts dividers (Roman-numbered) with continuous chapter counter
+    local_pr: 26
+    merge_sha: 5edc040d
+    tag: qe-v4
