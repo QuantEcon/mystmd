@@ -11,16 +11,18 @@
 # by commit SHA: each `merge_sha` here appears in some upstream
 # candidate's `commits` list there.
 #
+# Per-PR landing appends the feature to `merged_features` with its squash
+# `merge_sha` and `tag: null`. The `tag:` field is filled in later when a
+# `qe-vN` tag is cut.
+#
 # Tags are cut at meaningful checkpoints (typically when a batch of
 # features is ready for downstream dogfooding), **not per-PR**. When
 # cutting a tag:
 #   1. Pick the `main` commit at the head of the batch
 #   2. Tag it `qe-v<N+1>` and push the tag
-#   3. Append each newly-included feature to `merged_features` and bump
-#      `qe_version`
-#
-# Per-PR landing only adds the feature to `merged_features` with its
-# squash `merge_sha`; `tag` may be set later once the next `qe-v<N>` cuts.
+#   3. Set `tag: qe-v<N+1>` on each previously-untagged entry in
+#      `merged_features` that is included in the batch, then bump
+#      `qe_version` to `qe-v<N+1>`
 
 qe_version: qe-v2
 upstream_base: 1.9.0

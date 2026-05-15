@@ -2,7 +2,7 @@
 
 This fork lets QuantEcon develop and use new `mystmd` features before they land in `jupyter-book/mystmd`. Features are developed on short-lived feature branches off this fork's `main`, squash-merged in, and the feature branch is deleted. Upstream PRs are prepared later by **cherry-picking** one or more squash commits from `main` onto a fresh branch off `upstream/main` — bundling related features into a cohesive upstream story when that makes sense.
 
-> **About this folder.** `quantecon/` doubles as a local scratch space for planning docs, demo books, and experiments. Everything except [`README.md`](README.md) and [`VERSION.yml`](VERSION.yml) is gitignored — feel free to drop PLAN docs, demo `myst.yml` projects, etc. here without worrying about accidental commits. To track something new intentionally, add it to the allow-list in [.gitignore](.gitignore).
+> **About this folder.** `quantecon/` doubles as a local scratch space for planning docs, demo books, and experiments. By default everything is gitignored; only the files in [`.gitignore`](.gitignore)'s allow-list are tracked — currently [`README.md`](README.md), [`VERSION.yml`](VERSION.yml), [`UPSTREAM-PRS.yml`](UPSTREAM-PRS.yml), and [`.gitignore`](.gitignore) itself. Feel free to drop PLAN docs, demo `myst.yml` projects, etc. here without worrying about accidental commits. To track something new intentionally, add it to the allow-list.
 
 ## The two tracker files
 
