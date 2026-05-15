@@ -17,7 +17,7 @@ Two tracked YAML files in `quantecon/` record orthogonal facts. Keep them in syn
 
 Every time a feature PR lands on `main`, append a row to `merged_features` with its squash `merge_sha`. The `tag` field stays null until a `qe-v<N>` tag is cut over that feature.
 
-Tags can be cut per-PR (one tag per feature, easy traceability) or batched at a checkpoint (one tag covering several merged features ready for downstream dogfooding) — pick whichever fits the cadence. To cut a tag, do the metadata update *first* so the tagged commit's tree is self-consistent:
+Tags can be cut per-PR (one tag per feature, easy traceability) or batched at a checkpoint (one tag covering several merged features ready to deploy to book-dp1 / book-dp2 for testing) — pick whichever fits the cadence. To cut a tag, do the metadata update *first* so the tagged commit's tree is self-consistent:
 
 1. Open a doc PR updating `VERSION.yml`: bump `qe_version` to `qe-v<N+1>` and set `tag: qe-v<N+1>` on each previously-untagged entry in `merged_features` that is included in this tag.
 2. Squash-merge the doc PR.

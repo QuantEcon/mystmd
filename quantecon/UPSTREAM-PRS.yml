@@ -75,8 +75,11 @@ upstream_candidates:
       `section: parts` ParentEntry: emits a Roman-numbered divider folder
       ("Part I — Theory") and wraps chapter groups. Chapter counter
       continues across part boundaries (LaTeX `book` default).
-    status: planned   # PR #26 still open against our main
-    commits: []       # populated once #26 squash-merges into main
+    status: pending
+    commits:
+      - sha: 5edc040d
+        local_pr: 26
+        title: "Book parts: section: parts dividers with Roman labels"
     depends_on:
       - book-mode-with-section-scope
     upstream:
