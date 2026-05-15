@@ -9,7 +9,7 @@ import {
   validateString,
   validationWarning,
 } from 'simple-validators';
-import type { CounterFormat, Numbering, NumberingItem } from './types.js';
+import type { CounterFormat, Numbering, NumberingItem, NumberingScope } from './types.js';
 
 export const NUMBERING_OPTIONS = ['enumerator', 'all', 'headings', 'title'];
 
@@ -36,11 +36,45 @@ const NUMBERING_ITEM_KEYS = [
   'format',
   'label',
   'reset_on_part',
+  'scope',
 ];
 
 const COUNTER_FORMATS: CounterFormat[] = ['arabic', 'alph', 'Alph', 'roman', 'Roman'];
 
 const CONTINUE_STRINGS = ['continue', 'next'];
+
+/**
+ * Single source of truth for `numbering.<kind>.scope` aliases (#27).
+ * Maps every accepted spelling to its canonical `heading_N` form.
+ * Both the validator (which normalises to `heading_N`) and consumers
+ * that need the depth integer (e.g. `myst-transforms/src/enumerate.ts`'s
+ * `effectiveScopeDepth`) import this and `scopeAliasToDepth` rather
+ * than maintaining parallel switch statements.
+ */
+export const SCOPE_ALIASES: Record<string, string> = {
+  chapter: 'heading_1',
+  section: 'heading_2',
+  subsection: 'heading_3',
+  subsubsection: 'heading_4',
+  heading_1: 'heading_1',
+  heading_2: 'heading_2',
+  heading_3: 'heading_3',
+  heading_4: 'heading_4',
+  heading_5: 'heading_5',
+  heading_6: 'heading_6',
+};
+export const SCOPE_VALUES = Object.keys(SCOPE_ALIASES);
+
+/**
+ * Resolve a scope alias (`chapter`/`section`/`heading_N`/…) to its
+ * heading depth (1-based). Returns `undefined` for unrecognised values
+ * so the caller can fall through to the next candidate.
+ */
+export function scopeAliasToDepth(scope: string): number | undefined {
+  const canonical = SCOPE_ALIASES[scope];
+  if (!canonical) return undefined;
+  return Number(canonical.slice('heading_'.length));
+}
 
 export const NUMBERING_ALIAS = {
   sections: 'headings',
@@ -170,6 +204,22 @@ export function validateNumberingItem(
     if (defined(resetOnPart)) {
       output.reset_on_part = resetOnPart;
       output.enabled = output.enabled ?? true;
+    }
+  }
+  if (defined(value.scope)) {
+    const scopeOpts = incrementOptions('scope', opts);
+    const scopeStr = validateString(value.scope, scopeOpts);
+    if (defined(scopeStr)) {
+      const normalized = SCOPE_ALIASES[scopeStr];
+      if (normalized) {
+        output.scope = normalized as NumberingScope;
+        output.enabled = output.enabled ?? true;
+      } else {
+        validationWarning(
+          `must be one of: ${SCOPE_VALUES.join(', ')} (got "${scopeStr}")`,
+          scopeOpts,
+        );
+      }
     }
   }
   if (Object.keys(output).length === 0) return undefined;

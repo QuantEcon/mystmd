@@ -1,16 +1,28 @@
 # QuantEcon mystmd build identifier
 #
-# This file is the canonical diagnostic record of which QuantEcon-specific
-# features are in this fork's `main`. The `qe_version` field corresponds to
-# a git tag of the same name on the commit that landed the latest feature.
+# This file records *which QuantEcon-specific squash commits are in our
+# `main`*, identified by `qe-vN` git tags on chosen checkpoint commits.
+# It is the diagnostic / traceability artifact — lecture builds can cat
+# it to log what fork state they're using.
 #
-# Update this file as part of the "land a feature" workflow:
-#   1. Squash-merge the feature PR into main
-#   2. Tag the resulting commit with the next `qe-vN`
-#   3. Append the feature to `merged_features` and bump `qe_version`
+# Upstream status is tracked separately in `UPSTREAM-PRS.yml`. That file
+# plans how these squash commits get bundled (or split) into upstream
+# PRs, and records the upstream PR / merge status. Cross-reference is
+# by commit SHA: each `merge_sha` here appears in some upstream
+# candidate's `commits` list there.
 #
-# When upstream merges one of our features, update its `upstream` block
-# rather than deleting the entry — the history is useful.
+# Per-PR landing appends the feature to `merged_features` with its squash
+# `merge_sha` and `tag: null`. The `tag:` field is filled in later when a
+# `qe-vN` tag is cut.
+#
+# Tags are cut at meaningful checkpoints (typically when a batch of
+# features is ready for downstream dogfooding), **not per-PR**. When
+# cutting a tag:
+#   1. Pick the `main` commit at the head of the batch
+#   2. Tag it `qe-v<N+1>` and push the tag
+#   3. Set `tag: qe-v<N+1>` on each previously-untagged entry in
+#      `merged_features` that is included in the batch, then bump
+#      `qe_version` to `qe-v<N+1>`
 
 qe_version: qe-v2
 upstream_base: 1.9.0
@@ -22,10 +34,6 @@ merged_features:
     local_pr: 16
     merge_sha: a045d57d
     tag: qe-v1
-    upstream:
-      status: pending      # pending | open | merged
-      pr: null
-      merged_sha: null
 
   - id: 2
     name: book-numbering
@@ -33,7 +41,10 @@ merged_features:
     local_pr: 22
     merge_sha: 032957c2
     tag: qe-v2
-    upstream:
-      status: pending
-      pr: null
-      merged_sha: null
+
+  - id: 3
+    name: book-proof-scope
+    description: Section-level scope for proof:* / figure / equation auto-prefix
+    local_pr: 28
+    merge_sha: 80bb9ecf
+    tag: null      # cut at next qe-v<N> checkpoint

@@ -365,6 +365,269 @@ describe('Book-mode auto-prefix (§3.4(6,7))', () => {
     expect(ch3.enumerator).toBe('3');
   });
 
+  // ---------------------------------------------------------------------
+  // #27: section-scoped auto-prefix (LaTeX `\newtheorem{...}[section]`).
+  // ---------------------------------------------------------------------
+
+  test('proof:* picks up section prefix when scope=section (#27)', () => {
+    // chapter 1 with two sections; each section has two theorems.
+    // Expected: 1.1.1, 1.1.2, 1.2.1, 1.2.2 (LaTeX `[section]` parity).
+    const tree = u('root', [
+      u('heading', { identifier: 's1', depth: 2 }),
+      u('proof', { kind: 'theorem', identifier: 'thm:1' }),
+      u('proof', { kind: 'theorem', identifier: 'thm:2' }),
+      u('heading', { identifier: 's2', depth: 2 }),
+      u('proof', { kind: 'theorem', identifier: 'thm:3' }),
+      u('proof', { kind: 'theorem', identifier: 'thm:4' }),
+    ]);
+    const state = new ReferenceState('ch1.md', {
+      frontmatter: {
+        numbering: {
+          book: { enabled: true },
+          all: { enabled: true },
+          title: { enabled: true },
+          heading_1: { enabled: true },
+          heading_2: { enabled: true },
+          proof: { scope: 'section' },
+        },
+      },
+      vfile: new VFile(),
+    });
+    enumerateTargetsTransform(tree, { state });
+    expect(state.getTarget('thm:1')?.node.enumerator).toBe('1.1.1');
+    expect(state.getTarget('thm:2')?.node.enumerator).toBe('1.1.2');
+    expect(state.getTarget('thm:3')?.node.enumerator).toBe('1.2.1');
+    expect(state.getTarget('thm:4')?.node.enumerator).toBe('1.2.2');
+  });
+
+  test('per-kind scope wins over proof umbrella (#27)', () => {
+    // umbrella sets section-scoped for all proofs, but lemma overrides
+    // back to chapter scope — theorem stays section-scoped.
+    const tree = u('root', [
+      u('heading', { identifier: 's1', depth: 2 }),
+      u('proof', { kind: 'theorem', identifier: 'thm:1' }),
+      u('proof', { kind: 'lemma', identifier: 'lem:1' }),
+      u('heading', { identifier: 's2', depth: 2 }),
+      u('proof', { kind: 'theorem', identifier: 'thm:2' }),
+      u('proof', { kind: 'lemma', identifier: 'lem:2' }),
+    ]);
+    const state = new ReferenceState('ch1.md', {
+      frontmatter: {
+        numbering: {
+          book: { enabled: true },
+          all: { enabled: true },
+          title: { enabled: true },
+          heading_1: { enabled: true },
+          heading_2: { enabled: true },
+          proof: { scope: 'section' },
+          'proof:lemma': { scope: 'chapter' },
+        },
+      },
+      vfile: new VFile(),
+    });
+    enumerateTargetsTransform(tree, { state });
+    expect(state.getTarget('thm:1')?.node.enumerator).toBe('1.1.1');
+    expect(state.getTarget('thm:2')?.node.enumerator).toBe('1.2.1');
+    // lemma keeps the chapter-only prefix and counter doesn't reset
+    expect(state.getTarget('lem:1')?.node.enumerator).toBe('1.1');
+    expect(state.getTarget('lem:2')?.node.enumerator).toBe('1.2');
+  });
+
+  test('proof:* before first heading_2 renders literal 5.0.1 (#27)', () => {
+    // LaTeX `\newtheorem{theorem}[section]` literally prints section=0
+    // when no section has been started yet. Match the PDF: render as
+    // `5.0.1`, not the trailing-zero-stripped `5.1` (which would also
+    // collide with later `5.1.x` numbers).
+    const tree = u('root', [
+      u('proof', { kind: 'theorem', identifier: 'thm:pre' }),
+      u('heading', { identifier: 's1', depth: 2 }),
+      u('proof', { kind: 'theorem', identifier: 'thm:post' }),
+    ]);
+    const state = new ReferenceState('ch5.md', {
+      frontmatter: {
+        numbering: {
+          book: { enabled: true },
+          all: { enabled: true },
+          title: { enabled: true },
+          heading_1: { enabled: true, start: 5 },
+          heading_2: { enabled: true },
+          proof: { scope: 'section' },
+        },
+      },
+      vfile: new VFile(),
+    });
+    enumerateTargetsTransform(tree, { state });
+    expect(state.getTarget('thm:pre')?.node.enumerator).toBe('5.0.1');
+    expect(state.getTarget('thm:post')?.node.enumerator).toBe('5.1.1');
+  });
+
+  test('section scope under an appendix uses Alph chapter (#27)', () => {
+    // appendix A: heading_1 format=Alph; heading_2 stays arabic.
+    // Expected `A.1.1`, `A.1.2` for two theorems in §A.1.
+    const tree = u('root', [
+      u('heading', { identifier: 'sa', depth: 2 }),
+      u('proof', { kind: 'theorem', identifier: 'thm:a1' }),
+      u('proof', { kind: 'theorem', identifier: 'thm:a2' }),
+    ]);
+    const state = new ReferenceState('app-a.md', {
+      frontmatter: {
+        numbering: {
+          book: { enabled: true },
+          all: { enabled: true },
+          title: { enabled: true },
+          heading_1: { enabled: true, format: 'Alph' },
+          heading_2: { enabled: true },
+          proof: { scope: 'section' },
+        },
+      },
+      vfile: new VFile(),
+    });
+    enumerateTargetsTransform(tree, { state });
+    expect(state.enumerator).toBe('A');
+    expect(state.getTarget('thm:a1')?.node.enumerator).toBe('A.1.1');
+    expect(state.getTarget('thm:a2')?.node.enumerator).toBe('A.1.2');
+  });
+
+  test('scope accepts heading_2 alias (#27)', () => {
+    const tree = u('root', [
+      u('heading', { identifier: 's1', depth: 2 }),
+      u('proof', { kind: 'theorem', identifier: 'thm:1' }),
+    ]);
+    const state = new ReferenceState('ch1.md', {
+      frontmatter: {
+        numbering: {
+          book: { enabled: true },
+          all: { enabled: true },
+          title: { enabled: true },
+          heading_1: { enabled: true },
+          heading_2: { enabled: true },
+          'proof:theorem': { scope: 'heading_2' },
+        },
+      },
+      vfile: new VFile(),
+    });
+    enumerateTargetsTransform(tree, { state });
+    expect(state.getTarget('thm:1')?.node.enumerator).toBe('1.1.1');
+  });
+
+  test('scope=subsection (heading_3) prefixes with chapter.section.subsection (#27)', () => {
+    const tree = u('root', [
+      u('heading', { identifier: 's1', depth: 2 }),
+      u('heading', { identifier: 'ss1', depth: 3 }),
+      u('proof', { kind: 'theorem', identifier: 'thm:1' }),
+      u('proof', { kind: 'theorem', identifier: 'thm:2' }),
+      u('heading', { identifier: 'ss2', depth: 3 }),
+      u('proof', { kind: 'theorem', identifier: 'thm:3' }),
+    ]);
+    const state = new ReferenceState('ch1.md', {
+      frontmatter: {
+        numbering: {
+          book: { enabled: true },
+          all: { enabled: true },
+          title: { enabled: true },
+          heading_1: { enabled: true },
+          heading_2: { enabled: true },
+          heading_3: { enabled: true },
+          proof: { scope: 'subsection' },
+        },
+      },
+      vfile: new VFile(),
+    });
+    enumerateTargetsTransform(tree, { state });
+    expect(state.getTarget('thm:1')?.node.enumerator).toBe('1.1.1.1');
+    expect(state.getTarget('thm:2')?.node.enumerator).toBe('1.1.1.2');
+    // counter resets on heading_3 boundary, not heading_2
+    expect(state.getTarget('thm:3')?.node.enumerator).toBe('1.1.2.1');
+  });
+
+  test('continue: true on a kind still wins over scope (#27)', () => {
+    // `continue: true` keeps the counter globally flat and drops the
+    // prefix entirely, even when scope is set. Matches §3.4(6) opt-out.
+    const tree = u('root', [
+      u('heading', { identifier: 's1', depth: 2 }),
+      u('proof', { kind: 'theorem', identifier: 'thm:1' }),
+      u('proof', { kind: 'theorem', identifier: 'thm:2' }),
+    ]);
+    const state = new ReferenceState('ch1.md', {
+      frontmatter: {
+        numbering: {
+          book: { enabled: true },
+          all: { enabled: true },
+          title: { enabled: true },
+          heading_1: { enabled: true },
+          heading_2: { enabled: true },
+          'proof:theorem': { scope: 'section', continue: true },
+        },
+      },
+      vfile: new VFile(),
+    });
+    enumerateTargetsTransform(tree, { state });
+    expect(state.getTarget('thm:1')?.node.enumerator).toBe('1');
+    expect(state.getTarget('thm:2')?.node.enumerator).toBe('2');
+  });
+
+  test('scope respects `start` on first encounter (#27)', () => {
+    // Regression: the scope-change reset used to fire on first encounter
+    // (because `lastScopeKeyByKind[kind]` started undefined), wiping the
+    // `start` offset seeded by initializeTargetCounts. Confirm that
+    // `figure: { start: 5, scope: section }` renders the first figure
+    // in §1.1 as `1.1.5`, not `1.1.1`, and that subsequent sections
+    // still reset back to 1.
+    const tree = u('root', [
+      u('heading', { identifier: 's1', depth: 2 }),
+      u('container', { kind: 'figure', identifier: 'fig:1' }),
+      u('container', { kind: 'figure', identifier: 'fig:2' }),
+      u('heading', { identifier: 's2', depth: 2 }),
+      u('container', { kind: 'figure', identifier: 'fig:3' }),
+    ]);
+    const state = new ReferenceState('ch1.md', {
+      frontmatter: {
+        numbering: {
+          book: { enabled: true },
+          all: { enabled: true },
+          title: { enabled: true },
+          heading_1: { enabled: true },
+          heading_2: { enabled: true },
+          figure: { start: 5, scope: 'section' },
+        },
+      },
+      vfile: new VFile(),
+    });
+    enumerateTargetsTransform(tree, { state });
+    expect(state.getTarget('fig:1')?.node.enumerator).toBe('1.1.5');
+    expect(state.getTarget('fig:2')?.node.enumerator).toBe('1.1.6');
+    // crossing into §1.2 resets the counter (start applies only at
+    // page-init time, not on every scope boundary — same as today's
+    // chapter-scoped behaviour).
+    expect(state.getTarget('fig:3')?.node.enumerator).toBe('1.2.1');
+  });
+
+  test('figures also accept scope (#27)', () => {
+    // Confirms scope generalises to every auto-prefix kind, not just
+    // proof:* — `numbering.all.scope` applies to figure too.
+    const tree = u('root', [
+      u('heading', { identifier: 's1', depth: 2 }),
+      u('container', { kind: 'figure', identifier: 'fig:1' }),
+      u('heading', { identifier: 's2', depth: 2 }),
+      u('container', { kind: 'figure', identifier: 'fig:2' }),
+    ]);
+    const state = new ReferenceState('ch3.md', {
+      frontmatter: {
+        numbering: {
+          book: { enabled: true },
+          all: { enabled: true, scope: 'section' },
+          title: { enabled: true },
+          heading_1: { enabled: true, start: 3 },
+          heading_2: { enabled: true },
+        },
+      },
+      vfile: new VFile(),
+    });
+    enumerateTargetsTransform(tree, { state });
+    expect(state.getTarget('fig:1')?.node.enumerator).toBe('3.1.1');
+    expect(state.getTarget('fig:2')?.node.enumerator).toBe('3.2.1');
+  });
+
   test('subfigures inherit the chapter-prefixed parent enumerator', () => {
     const tree = u('root', [
       u('container', { kind: 'figure', identifier: 'fig-p' }, [
