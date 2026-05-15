@@ -24,7 +24,7 @@
 #      `merged_features` that is included in the batch, then bump
 #      `qe_version` to `qe-v<N+1>`
 
-qe_version: qe-v2
+qe_version: qe-v3
 upstream_base: 1.9.0
 
 merged_features:
@@ -47,4 +47,4 @@ merged_features:
     description: Section-level scope for proof:* / figure / equation auto-prefix
     local_pr: 28
     merge_sha: 80bb9ecf
-    tag: null      # cut at next qe-v<N> checkpoint
+    tag: qe-v3

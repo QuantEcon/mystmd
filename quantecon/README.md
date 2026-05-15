@@ -15,13 +15,15 @@ Two tracked YAML files in `quantecon/` record orthogonal facts. Keep them in syn
 
 ### Maintaining `VERSION.yml`
 
-Every time a feature PR lands on `main`, append a row to `merged_features` with its squash `merge_sha`. The `tag` field stays null until the next `qe-v<N>` checkpoint.
+Every time a feature PR lands on `main`, append a row to `merged_features` with its squash `merge_sha`. The `tag` field stays null until a `qe-v<N>` tag is cut over that feature.
 
-Tags are cut at meaningful checkpoints, **not per-PR** — typically when a batch of features is ready for downstream dogfooding. To cut a tag:
+Tags can be cut per-PR (one tag per feature, easy traceability) or batched at a checkpoint (one tag covering several merged features ready for downstream dogfooding) — pick whichever fits the cadence. To cut a tag, do the metadata update *first* so the tagged commit's tree is self-consistent:
 
-1. Pick the `main` commit at the head of the batch
-2. Tag it: `git tag qe-v<N+1> <sha> -m "qe-v<N+1>: <summary of features included>"` then `git push origin qe-v<N+1>`
-3. Set `tag: qe-v<N+1>` on each newly-included feature in `merged_features` and bump `qe_version`
+1. Open a doc PR updating `VERSION.yml`: bump `qe_version` to `qe-v<N+1>` and set `tag: qe-v<N+1>` on each previously-untagged entry in `merged_features` that is included in this tag.
+2. Squash-merge the doc PR.
+3. Tag the resulting `main` commit: `git tag qe-v<N+1> <sha> -m "qe-v<N+1>: <summary>"` then `git push origin qe-v<N+1>`.
+
+Doing it in this order means anyone who `cat`s `VERSION.yml` at tag `qe-v<N+1>` sees a self-consistent file (qe_version field matches the tag).
 
 ### Maintaining `UPSTREAM-PRS.yml`
 
