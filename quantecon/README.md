@@ -4,17 +4,34 @@ This fork lets QuantEcon develop and use new `mystmd` features before they land 
 
 > **About this folder.** `quantecon/` doubles as a local scratch space for planning docs, demo books, and experiments. Everything except [`README.md`](README.md) and [`VERSION.yml`](VERSION.yml) is gitignored — feel free to drop PLAN docs, demo `myst.yml` projects, etc. here without worrying about accidental commits. To track something new intentionally, add it to the allow-list in [.gitignore](.gitignore).
 
-## Build identifier
+## The two tracker files
 
-[`VERSION.yml`](VERSION.yml) records which QuantEcon-specific features are merged into this fork's `main`, identified by a `qe-vN` tag that's also a git tag on a `main` commit. It's a diagnostic/traceability artifact, not a release version — lecture builds can cat the file to log what fork state they're using.
+Two tracked YAML files in `quantecon/` record orthogonal facts. Keep them in sync — cross-reference is by squash-commit SHA.
+
+| File | Question it answers |
+|---|---|
+| [`VERSION.yml`](VERSION.yml) | *What QuantEcon squash commits are in our `main` right now?* Diagnostic / traceability — lecture builds cat this to log the fork state they're using. |
+| [`UPSTREAM-PRS.yml`](UPSTREAM-PRS.yml) | *How do we plan to ship those squash commits upstream?* Bundles related squashes into logical upstream PR candidates, records dependency order for cherry-pick, tracks upstream PR / merge status. |
+
+### Maintaining `VERSION.yml`
+
+Every time a feature PR lands on `main`, append a row to `merged_features` with its squash `merge_sha`. The `tag` field stays null until the next `qe-v<N>` checkpoint.
 
 Tags are cut at meaningful checkpoints, **not per-PR** — typically when a batch of features is ready for downstream dogfooding. To cut a tag:
 
 1. Pick the `main` commit at the head of the batch
 2. Tag it: `git tag qe-v<N+1> <sha> -m "qe-v<N+1>: <summary of features included>"` then `git push origin qe-v<N+1>`
-3. Append each newly-included feature to `merged_features` in `VERSION.yml` and bump `qe_version`
+3. Set `tag: qe-v<N+1>` on each newly-included feature in `merged_features` and bump `qe_version`
 
-When upstream merges one of our features, update the entry's `upstream` block rather than deleting it — `VERSION.yml` doubles as an upstreaming tracker.
+### Maintaining `UPSTREAM-PRS.yml`
+
+Update this whenever a feature lands on `main` or its upstream plan changes:
+
+- New feature with no obvious bundle → add as a standalone candidate (`status: pending`, `commits: [<sha>]`).
+- Feature extends an existing candidate → append its sha to that candidate's `commits` list (e.g. a follow-up Copilot-fix PR that lands on `main` after the original feature).
+- Feature deserves its own upstream story but depends on another → new candidate with `depends_on: [<other-candidate-id>]`.
+
+Status transitions: `planned` → `pending` (all commits landed) → `open` (upstream PR exists) → `merged` (upstream merged it). On `merged`, also run the post-merge sync workflow below.
 
 ## How it works — the key idea
 
@@ -117,7 +134,7 @@ This is the only rebase you need during normal development — the cherry-pick m
 
 When the upstream team is ready to review one or more of our features:
 
-1. Pick the squash commit SHA(s) on `main` for the feature(s) you want to upstream. `VERSION.yml`'s `merged_features` block records the SHA for each (`merge_sha`).
+1. Look up the candidate in [`UPSTREAM-PRS.yml`](UPSTREAM-PRS.yml) — its `commits` block lists the squash SHAs to cherry-pick, in dependency order. (If no candidate exists yet for what you're shipping, add or adjust one first.)
 2. Create a fresh branch off `upstream/main`:
    ```bash
    git fetch upstream
@@ -146,7 +163,7 @@ If the cherry-picked commits should appear as one upstream commit (cleaner revie
 Once the upstream PR is merged into `jupyter-book/mystmd:main`:
 
 1. **Sync our `main` with upstream** (instructions above) — upstream's version of the change now lands in our `main`.
-2. **Update `VERSION.yml`** — set the `upstream` block on the affected entries to `status: merged`, with the upstream PR number and merged SHA.
+2. **Update [`UPSTREAM-PRS.yml`](UPSTREAM-PRS.yml)** — set the candidate's `status: merged` and fill in `upstream.pr` and `upstream.merged_sha`.
 3. **Delete the `upstream/<topic>` branch** if it's still around.
 
 The original squash commit on our `main` is now redundant with the upstream merge. Git's merge machinery handles this correctly (the changes are already in the tree), so no manual cleanup is needed in source files.
