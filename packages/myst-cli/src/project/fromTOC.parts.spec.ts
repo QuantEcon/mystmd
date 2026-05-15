@@ -217,6 +217,37 @@ describe('projectFromTOC: section parts', () => {
     expect(proj.pages.some((p) => !('file' in p) && p.section === 'parts')).toBe(false);
   });
 
+  it('parts compose with numbering.proof.scope: section (#28 interaction)', () => {
+    // Smoke test: setting `numbering.proof.scope: section` (the LaTeX-style
+    // section-scoped numbering shipped in #28) must not perturb the parts
+    // TOC parser. The two features operate at different layers — parts
+    // are a TOC artefact; scope is an in-page counter — but a future
+    // change that accidentally couples them (e.g. by reading scope inside
+    // fromTOC) would silently regress book-dp2-style projects. Pin the
+    // expected parts output with scope in the project config and assert
+    // it matches the same output without scope.
+    memfs.vol.fromJSON({ 'index.md': '', 'ch1.md': '', 'ch2.md': '' });
+    primeProjectConfig('.', {
+      numbering: {
+        book: { enabled: true },
+        proof: { scope: 'section' },
+      },
+    });
+    const proj = projectFromTOC(session, '.', [
+      { file: 'index' },
+      {
+        title: 'Theory',
+        section: 'parts',
+        children: [{ file: 'ch1' }, { file: 'ch2' }],
+      },
+    ]);
+    expect(simplifyPages(proj.pages)).toEqual([
+      { level: -1, section: 'parts', title: 'Part I — Theory' },
+      { file: 'ch1.md', slug: 'ch1', level: 0, section: 'chapters' },
+      { file: 'ch2.md', slug: 'ch2', level: 0, section: 'chapters' },
+    ]);
+  });
+
   it('no parts in TOC → top-level level stays at 1 (regression)', () => {
     // Existing TOCs without parts must not have their page levels shifted
     // by the parts auto-detection.
