@@ -15,6 +15,19 @@ describe('injectBookSectionDefaults', () => {
     expect(fm.numbering).toEqual({ book: { enabled: true } });
   });
 
+  test('no-op when section is parts (divider-only, no page seeding)', () => {
+    // `parts` is a valid BookSection used for divider entries in the
+    // TOC; pages tagged with it shouldn't have any numbering-chain
+    // objects injected. Regression guard: an earlier revision
+    // pre-initialized `heading_1/title/heading_2…6` before the switch,
+    // which leaked empty `{}` objects into pages tagged `section: parts`
+    // (and would have made `h1.start = 1` if `firstInSection` were
+    // true). The function must mutate nothing for unhandled sections.
+    const fm: PageFrontmatter = { numbering: { book: { enabled: true } } };
+    injectBookSectionDefaults(fm, 'parts', true);
+    expect(fm.numbering).toEqual({ book: { enabled: true } });
+  });
+
   test('chapters section seeds heading_1 with the Chapter label', () => {
     const fm: PageFrontmatter = { numbering: { book: { enabled: true } } };
     injectBookSectionDefaults(fm, 'chapters', false);
