@@ -150,13 +150,16 @@ export function injectBookSectionDefaults(
   // the chapter prefix into figures, theorems, and `## Section` / `###
   // Subsection` headings within the page.
   //
-  // For frontmatter / backmatter we seed `false` so a project-level
-  // `numbering.heading_2.enabled: true` (often needed to make chapter
-  // pages work) does not leak through and number the preface's `##`
-  // headings as `1, 2, 3`.
+  // Seeding the chain on chapter / appendix pages means authors no
+  // longer need a project-level `title.enabled: true` /
+  // `heading_2.enabled: true` workaround — the section default supplies
+  // it. The matching frontmatter / backmatter branch seeds `false` for
+  // the same chain so preface / back-matter pages stay unnumbered in
+  // the common case (project sets only `numbering.book: true`).
   //
-  // All assignments use `??=` so per-page and per-project overrides
-  // always win — this layer is *defaults*, not mandates.
+  // All assignments use `??=` per §3.5(g): section defaults are layer 3
+  // (page > project > section > built-in). A project that explicitly
+  // enables those depths still wins — by design.
   numbering.title ??= {};
   numbering.heading_2 ??= {};
   numbering.heading_3 ??= {};
@@ -183,9 +186,8 @@ export function injectBookSectionDefaults(
     case 'frontmatter':
     case 'backmatter':
       // Skip-semantic: do not advance the title counter (§3.4(1)).
-      // `??=` (not `=`) so a page that explicitly wants to be numbered
-      // (e.g. a Preface the author wants in the chapter sequence) can
-      // still override via its own frontmatter.
+      // `??=` per §3.5(g) precedence — a page or project that
+      // explicitly enables one of these still wins.
       h1.enabled ??= false;
       title.enabled ??= false;
       h2.enabled ??= false;
