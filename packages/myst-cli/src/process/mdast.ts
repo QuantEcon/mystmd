@@ -143,12 +143,12 @@ export function injectBookSectionDefaults(
     h1.enabled ??= sectionConfig.enabled;
   }
   // #25: the chapter-prefix machinery in `enumerate.ts` only composes
-  // when the *whole chain* `title → heading_1 → heading_2 → heading_3`
-  // is enabled. The page's H1 (e.g. `# Introduction` produced by pandoc
+  // when the *whole chain* `title → heading_1 → … → heading_6` is
+  // enabled. The page's H1 (e.g. `# Introduction` produced by pandoc
   // from `\chapter{Introduction}`) is absorbed as the page title; it has
   // to be numbered (via `title.enabled`) for `this.enumerator` to carry
-  // the chapter prefix into figures, theorems, and `## Section` / `###
-  // Subsection` headings within the page.
+  // the chapter prefix into figures, theorems, and `##`–`######`
+  // headings within the page.
   //
   // Seeding the chain on chapter / appendix pages means authors no
   // longer need a project-level `title.enabled: true` /
@@ -157,15 +157,25 @@ export function injectBookSectionDefaults(
   // the same chain so preface / back-matter pages stay unnumbered in
   // the common case (project sets only `numbering.book: true`).
   //
+  // The chain covers all six HTML heading depths because mystmd's
+  // numbering schema caps at `heading_6` (myst-frontmatter
+  // numbering/types.ts) — wiring 1–6 is exhaustive, not arbitrary.
+  //
   // All assignments use `??=` per §3.5(g): section defaults are layer 3
   // (page > project > section > built-in). A project that explicitly
   // enables those depths still wins — by design.
   numbering.title ??= {};
   numbering.heading_2 ??= {};
   numbering.heading_3 ??= {};
+  numbering.heading_4 ??= {};
+  numbering.heading_5 ??= {};
+  numbering.heading_6 ??= {};
   const title = numbering.title;
   const h2 = numbering.heading_2;
   const h3 = numbering.heading_3;
+  const h4 = numbering.heading_4;
+  const h5 = numbering.heading_5;
+  const h6 = numbering.heading_6;
   switch (section) {
     case 'chapters':
       h1.enabled ??= true;
@@ -174,6 +184,9 @@ export function injectBookSectionDefaults(
       title.enabled ??= true;
       h2.enabled ??= true;
       h3.enabled ??= true;
+      h4.enabled ??= true;
+      h5.enabled ??= true;
+      h6.enabled ??= true;
       break;
     case 'appendices':
       h1.enabled ??= true;
@@ -182,6 +195,9 @@ export function injectBookSectionDefaults(
       title.enabled ??= true;
       h2.enabled ??= true;
       h3.enabled ??= true;
+      h4.enabled ??= true;
+      h5.enabled ??= true;
+      h6.enabled ??= true;
       break;
     case 'frontmatter':
     case 'backmatter':
@@ -192,6 +208,9 @@ export function injectBookSectionDefaults(
       title.enabled ??= false;
       h2.enabled ??= false;
       h3.enabled ??= false;
+      h4.enabled ??= false;
+      h5.enabled ??= false;
+      h6.enabled ??= false;
       break;
   }
 }

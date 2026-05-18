@@ -102,50 +102,66 @@ describe('injectBookSectionDefaults', () => {
     expect(fm.numbering?.heading_1?.format).toBe('roman'); // section wins over hardcoded
   });
 
-  // #25: chapter-prefix machinery needs the full chain title → heading_1 →
-  // heading_2 → heading_3 enabled. Without these defaults, qe-v2 produced
-  // flat figure / section numbering on chapter pages (`1` instead of `1.1`)
-  // because the absorbed title H1 wasn't numbered and the prefix couldn't
-  // compose. The matching frontmatter / backmatter branch seeds `false`
-  // so preface pages stay unnumbered in the common case (project sets
-  // only `numbering.book: true`). Per §3.5(g) precedence (page > project
-  // > section > built-in), a project that explicitly enables those
-  // depths still wins — by design.
+  // #25 / #36: chapter-prefix machinery needs the full chain title →
+  // heading_1 → … → heading_6 enabled. Without these defaults, qe-v2
+  // produced flat figure / section numbering on chapter pages (`1`
+  // instead of `1.1`) because the absorbed title H1 wasn't numbered
+  // and the prefix couldn't compose. The matching frontmatter /
+  // backmatter branch seeds `false` so preface pages stay unnumbered
+  // in the common case (project sets only `numbering.book: true`).
+  //
+  // The chain covers all six HTML heading depths — mystmd's numbering
+  // schema caps at `heading_6` (myst-frontmatter numbering/types.ts).
+  //
+  // Per §3.5(g) precedence (page > project > section > built-in), a
+  // project that explicitly enables those depths still wins — by design.
 
-  test('chapters seeds the title → heading_1 → heading_2 → heading_3 chain (#25)', () => {
+  test('chapters seeds the title → heading_1 → … → heading_6 chain (#25, #36)', () => {
     const fm: PageFrontmatter = { numbering: { book: { enabled: true } } };
     injectBookSectionDefaults(fm, 'chapters', false);
     expect(fm.numbering?.title?.enabled).toBe(true);
     expect(fm.numbering?.heading_1?.enabled).toBe(true);
     expect(fm.numbering?.heading_2?.enabled).toBe(true);
     expect(fm.numbering?.heading_3?.enabled).toBe(true);
+    expect(fm.numbering?.heading_4?.enabled).toBe(true);
+    expect(fm.numbering?.heading_5?.enabled).toBe(true);
+    expect(fm.numbering?.heading_6?.enabled).toBe(true);
   });
 
-  test('appendices seeds the title → heading_1 → heading_2 → heading_3 chain (#25)', () => {
+  test('appendices seeds the title → heading_1 → … → heading_6 chain (#25, #36)', () => {
     const fm: PageFrontmatter = { numbering: { book: { enabled: true } } };
     injectBookSectionDefaults(fm, 'appendices', false);
     expect(fm.numbering?.title?.enabled).toBe(true);
     expect(fm.numbering?.heading_1?.enabled).toBe(true);
     expect(fm.numbering?.heading_2?.enabled).toBe(true);
     expect(fm.numbering?.heading_3?.enabled).toBe(true);
+    expect(fm.numbering?.heading_4?.enabled).toBe(true);
+    expect(fm.numbering?.heading_5?.enabled).toBe(true);
+    expect(fm.numbering?.heading_6?.enabled).toBe(true);
   });
 
-  test('frontmatter disables the full chain (#25 side-issue)', () => {
+  test('frontmatter disables the full chain (#25, #36)', () => {
     const fm: PageFrontmatter = { numbering: { book: { enabled: true } } };
     injectBookSectionDefaults(fm, 'frontmatter', false);
     expect(fm.numbering?.title?.enabled).toBe(false);
     expect(fm.numbering?.heading_1?.enabled).toBe(false);
     expect(fm.numbering?.heading_2?.enabled).toBe(false);
     expect(fm.numbering?.heading_3?.enabled).toBe(false);
+    expect(fm.numbering?.heading_4?.enabled).toBe(false);
+    expect(fm.numbering?.heading_5?.enabled).toBe(false);
+    expect(fm.numbering?.heading_6?.enabled).toBe(false);
   });
 
-  test('backmatter disables the full chain (#25 side-issue)', () => {
+  test('backmatter disables the full chain (#25, #36)', () => {
     const fm: PageFrontmatter = { numbering: { book: { enabled: true } } };
     injectBookSectionDefaults(fm, 'backmatter', false);
     expect(fm.numbering?.title?.enabled).toBe(false);
     expect(fm.numbering?.heading_1?.enabled).toBe(false);
     expect(fm.numbering?.heading_2?.enabled).toBe(false);
     expect(fm.numbering?.heading_3?.enabled).toBe(false);
+    expect(fm.numbering?.heading_4?.enabled).toBe(false);
+    expect(fm.numbering?.heading_5?.enabled).toBe(false);
+    expect(fm.numbering?.heading_6?.enabled).toBe(false);
   });
 
   test('section defaults seed false for frontmatter when nothing else specifies', () => {
