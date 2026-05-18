@@ -122,42 +122,95 @@ export function injectBookSectionDefaults(
   if (!section) return;
   if (!frontmatter.numbering?.book?.enabled) return;
   const numbering = frontmatter.numbering;
-  numbering.heading_1 ??= {};
-  const h1 = numbering.heading_1;
-  // `firstInSection` resets the heading_1 counter at section transitions
-  // (chapters → appendices) so the first appendix renders "A" rather than
-  // continuing the chapter sequence. Subsequent appendix pages have no
-  // `start` and continue naturally.
-  if (firstInSection && h1.start == null) h1.start = 1;
-  // Author-supplied per-section config (e.g. `numbering.chapters.label`
-  // or `numbering.appendices.format`) sits between explicit page
-  // frontmatter and the hardcoded defaults. Each field is filled with
-  // `??=` so the page-level value wins, then the section config, then
-  // the hardcoded fallback. Only applies when the section's matching
-  // kind block is one of the well-known book section keys.
-  const sectionConfig: { label?: string; format?: string; enabled?: boolean } | undefined =
-    section === 'chapters' || section === 'appendices' ? numbering[section] : undefined;
-  if (sectionConfig) {
-    h1.label ??= sectionConfig.label;
-    h1.format ??= sectionConfig.format as typeof h1.format;
-    h1.enabled ??= sectionConfig.enabled;
-  }
+  // All mutations live inside the switch so any unhandled `BookSection`
+  // value (currently only `parts`, which is divider-only) is a clean
+  // no-op past the gate checks — no spurious empty `{}` objects
+  // injected into the page's resolved frontmatter.
+  //
+  // #25: the chapter-prefix machinery in `enumerate.ts` only composes
+  // when the *whole chain* `title → heading_1 → … → heading_6` is
+  // enabled. The page's H1 (e.g. `# Introduction` produced by pandoc
+  // from `\chapter{Introduction}`) is absorbed as the page title; it
+  // has to be numbered (via `title.enabled`) for `this.enumerator` to
+  // carry the chapter prefix into figures, theorems, and `##`–`######`
+  // headings within the page. Seeding the chain on chapter / appendix
+  // pages means authors no longer need a project-level
+  // `title.enabled: true` / `heading_2.enabled: true` workaround. The
+  // frontmatter / backmatter branch seeds `false` for the same chain
+  // so preface / back-matter pages stay unnumbered in the common case.
+  //
+  // The chain covers all six HTML heading depths because mystmd's
+  // numbering schema caps at `heading_6` (myst-frontmatter
+  // numbering/types.ts) — wiring 1–6 is exhaustive, not arbitrary.
+  //
+  // All assignments use `??=` per §3.5(g): section defaults are layer 3
+  // (page > project > section > built-in). A project that explicitly
+  // enables those depths still wins — by design.
   switch (section) {
     case 'chapters':
+    case 'appendices': {
+      numbering.heading_1 ??= {};
+      numbering.title ??= {};
+      numbering.heading_2 ??= {};
+      numbering.heading_3 ??= {};
+      numbering.heading_4 ??= {};
+      numbering.heading_5 ??= {};
+      numbering.heading_6 ??= {};
+      const h1 = numbering.heading_1;
+      // `firstInSection` resets the heading_1 counter at section
+      // transitions (chapters → appendices) so the first appendix
+      // renders "A" rather than continuing the chapter sequence.
+      if (firstInSection && h1.start == null) h1.start = 1;
+      // Author-supplied per-section config (e.g.
+      // `numbering.chapters.label` or `numbering.appendices.format`)
+      // sits between explicit page frontmatter and the hardcoded
+      // defaults.
+      const sectionConfig: { label?: string; format?: string; enabled?: boolean } | undefined =
+        numbering[section];
+      if (sectionConfig) {
+        h1.label ??= sectionConfig.label;
+        h1.format ??= sectionConfig.format as typeof h1.format;
+        h1.enabled ??= sectionConfig.enabled;
+      }
       h1.enabled ??= true;
-      h1.label ??= 'Chapter %s';
-      // arabic is the default — no need to set `format`.
+      if (section === 'chapters') {
+        h1.label ??= 'Chapter %s';
+        // arabic is the default — no need to set `format`.
+      } else {
+        h1.format ??= 'Alph';
+        h1.label ??= 'Appendix %s';
+      }
+      numbering.title.enabled ??= true;
+      numbering.heading_2.enabled ??= true;
+      numbering.heading_3.enabled ??= true;
+      numbering.heading_4.enabled ??= true;
+      numbering.heading_5.enabled ??= true;
+      numbering.heading_6.enabled ??= true;
       break;
-    case 'appendices':
-      h1.enabled ??= true;
-      h1.format ??= 'Alph';
-      h1.label ??= 'Appendix %s';
-      break;
+    }
     case 'frontmatter':
-    case 'backmatter':
+    case 'backmatter': {
+      numbering.heading_1 ??= {};
+      numbering.title ??= {};
+      numbering.heading_2 ??= {};
+      numbering.heading_3 ??= {};
+      numbering.heading_4 ??= {};
+      numbering.heading_5 ??= {};
+      numbering.heading_6 ??= {};
       // Skip-semantic: do not advance the title counter (§3.4(1)).
-      h1.enabled = false;
+      // `??=` per §3.5(g) precedence — a page or project that
+      // explicitly enables one of these still wins.
+      numbering.heading_1.enabled ??= false;
+      numbering.title.enabled ??= false;
+      numbering.heading_2.enabled ??= false;
+      numbering.heading_3.enabled ??= false;
+      numbering.heading_4.enabled ??= false;
+      numbering.heading_5.enabled ??= false;
+      numbering.heading_6.enabled ??= false;
       break;
+    }
+    // `parts` falls through: divider-only section, no page-level
+    // numbering seeding needed.
   }
 }
 
