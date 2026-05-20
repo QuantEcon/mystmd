@@ -60,6 +60,9 @@ upstream_candidates:
       - sha: 80bb9ecf
         local_pr: 28
         title: "feat(book): section-level scope for proof:* / figure / equation auto-prefix"
+      - sha: 043ddcb5
+        local_pr: 33
+        title: "feat(book): full title→heading chain in injectBookSectionDefaults"
     depends_on: []
     upstream:
       pr: null
@@ -67,7 +70,10 @@ upstream_candidates:
       merged_sha: null
     notes: |
       Could be split into two upstream PRs if maintainers prefer smaller
-      reviews; default plan is one bundled PR.
+      reviews; default plan is one bundled PR. #33 is a direct follow-up
+      to #22's injectBookSectionDefaults (extends the per-section wiring
+      from heading_1 to the full title→heading_1..6 chain) — naturally
+      part of the same upstream story.
 
   - id: book-parts
     title: Book parts dividers
