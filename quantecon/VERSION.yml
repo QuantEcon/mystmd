@@ -32,7 +32,7 @@
 # Doing it in this order means anyone who `cat`s VERSION.yml at tag
 # `qe-v<N+1>` sees a self-consistent file (qe_version matches the tag).
 
-qe_version: qe-v4
+qe_version: qe-v5
 upstream_base: 1.9.0
 
 merged_features:
@@ -63,3 +63,10 @@ merged_features:
     local_pr: 26
     merge_sha: 5edc040d
     tag: qe-v4
+
+  - id: 5
+    name: book-section-heading-chain
+    description: Full title→heading_1..6 chain per section in injectBookSectionDefaults
+    local_pr: 33
+    merge_sha: 043ddcb5
+    tag: qe-v5
