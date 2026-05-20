@@ -33,7 +33,7 @@
 # `qe-v<N+1>` sees a self-consistent file (qe_version matches the tag).
 
 qe_version: qe-v5
-upstream_base: 1.9.0
+upstream_base: 1.9.1
 
 merged_features:
   - id: 1
