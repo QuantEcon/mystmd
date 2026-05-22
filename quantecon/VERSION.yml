@@ -32,7 +32,7 @@
 # Doing it in this order means anyone who `cat`s VERSION.yml at tag
 # `qe-v<N+1>` sees a self-consistent file (qe_version matches the tag).
 
-qe_version: qe-v5
+qe_version: qe-v6
 upstream_base: 1.9.1
 
 merged_features:
@@ -70,3 +70,10 @@ merged_features:
     local_pr: 33
     merge_sha: 043ddcb5
     tag: qe-v5
+
+  - id: 6
+    name: book-proof-counter-share
+    description: Shared counters across proof:* kinds (LaTeX \newtheorem[<other>] parity)
+    local_pr: 40
+    merge_sha: a63d53f1
+    tag: qe-v6

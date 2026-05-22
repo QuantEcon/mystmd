@@ -43,15 +43,18 @@ upstream_candidates:
       Self-contained; can ship upstream any time.
 
   - id: book-mode-with-section-scope
-    title: Book-style numbering (with LaTeX-style section scope)
+    title: Book-style numbering (with LaTeX-style section scope and counter sharing)
     description: |
       Bundles the original book-mode work (#22) with the section-scope
-      extension (#28). The two form one coherent story upstream — #28
-      builds on #22's auto-prefix machinery (`shouldAutoPrefix`,
-      `AUTO_PREFIX_KINDS`, the `numbering.book` flag) and is a small
-      targeted extension of it. Shipping them as one upstream PR avoids
-      the awkward two-step where reviewers see the section-scope hook
-      points before the machinery exists.
+      extension (#28), the heading-chain follow-up (#33), and the
+      shared-counter extension (#40). All four form one coherent story
+      upstream — #28 builds on #22's auto-prefix machinery
+      (`shouldAutoPrefix`, `AUTO_PREFIX_KINDS`, the `numbering.book`
+      flag), #33 extends #22's `injectBookSectionDefaults`, and #40
+      adds the `counter:` alias that completes LaTeX-`\newtheorem`
+      parity on top of #28's `scope:`. Shipping them as one upstream
+      PR avoids the awkward two-step where reviewers see hook points
+      before the machinery exists.
     status: pending
     commits:
       - sha: 032957c2
@@ -63,17 +66,23 @@ upstream_candidates:
       - sha: 043ddcb5
         local_pr: 33
         title: "feat(book): full title→heading chain in injectBookSectionDefaults"
+      - sha: a63d53f1
+        local_pr: 40
+        title: "feat(book): shared counters across proof:* kinds (#34)"
     depends_on: []
     upstream:
       pr: null
       branch: null
       merged_sha: null
     notes: |
-      Could be split into two upstream PRs if maintainers prefer smaller
-      reviews; default plan is one bundled PR. #33 is a direct follow-up
-      to #22's injectBookSectionDefaults (extends the per-section wiring
-      from heading_1 to the full title→heading_1..6 chain) — naturally
-      part of the same upstream story.
+      Could be split into smaller upstream PRs if maintainers prefer;
+      default plan is one bundled PR. #33 is a direct follow-up to
+      #22's injectBookSectionDefaults (extends the per-section wiring
+      from heading_1 to the full title→heading_1..6 chain). #40 is a
+      direct follow-up to #28's section-scope work — it closes the
+      residual counter-share gap so interleaved theorem/lemma/proposition
+      enumerators match the LaTeX PDF (LaTeX `\newtheorem{lemma}[theorem]`
+      parity). Naturally part of the same upstream story.
 
   - id: book-parts
     title: Book parts dividers
