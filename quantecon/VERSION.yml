@@ -77,3 +77,10 @@ merged_features:
     local_pr: 40
     merge_sha: a63d53f1
     tag: qe-v6
+
+  - id: 7
+    name: cli-show-qe-version
+    description: Show qe-vN identifier in `myst --version` output (fork-only tooling, not for upstream)
+    local_pr: 42
+    merge_sha: 95494e41
+    tag: null
