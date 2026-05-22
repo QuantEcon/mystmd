@@ -32,7 +32,7 @@
 # Doing it in this order means anyone who `cat`s VERSION.yml at tag
 # `qe-v<N+1>` sees a self-consistent file (qe_version matches the tag).
 
-qe_version: qe-v6
+qe_version: qe-v7
 upstream_base: 1.9.1
 
 merged_features:
@@ -83,4 +83,4 @@ merged_features:
     description: Show qe-vN identifier in `myst --version` output (fork-only tooling, not for upstream)
     local_pr: 42
     merge_sha: 95494e41
-    tag: null
+    tag: qe-v7
