@@ -14,6 +14,7 @@ function suppressor(event: string, ...args: any[]) {
 
 import { Command } from 'commander';
 import version from './version.js';
+import qeVersion from './qe-version.js';
 import { makeBuildCLI } from './build.js';
 import { makeCleanCLI } from './clean.js';
 import { makeInitCLI, addDefaultCommand } from './init.js';
@@ -35,7 +36,13 @@ program.addCommand(makeBuildCLI(program));
 program.addCommand(makeStartCLI(program));
 program.addCommand(makeCleanCLI(program));
 program.addCommand(makeTemplatesCLI(program));
-program.version(`v${version}`, '-v, --version', `Print the current version of ${readableName()}`);
+// QuantEcon fork: append the `qe-vN` build identifier when present.
+// Source of truth lives in `quantecon/VERSION.yml` and is baked in at
+// build time via `scripts/copy-qe-version.mjs`; if the file is absent
+// (e.g. an upstream-only checkout) `qeVersion` is `null` and the
+// version string falls back to the upstream-only form.
+const versionLabel = qeVersion ? `v${version} (${qeVersion})` : `v${version}`;
+program.version(versionLabel, '-v, --version', `Print the current version of ${readableName()}`);
 program.option('-d, --debug', 'Log out any errors to the console');
 program.option(
   '--config <config-file>',
