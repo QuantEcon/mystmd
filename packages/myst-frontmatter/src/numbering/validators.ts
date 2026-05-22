@@ -394,12 +394,20 @@ export function validateNumbering(input: any, opts: ValidationOptions): Numberin
   // `myst-transforms/src/enumerate.ts` where node-attached warnings are
   // natural; here we only handle the per-entry concerns the validator
   // already has full local knowledge of.
+  //
+  // The owner-field drop is gated on the *key* being a proof-family
+  // kind. Cross-family entries (`figure.counter: proof:theorem`) keep
+  // both their `counter` field (so the engine can emit its family
+  // warning) and all their owner-fields (`figure.start`, `figure.scope`,
+  // etc.) intact — otherwise a typo'd alias would silently delete
+  // valid configuration the engine then refuses to honor.
   Object.entries(output)
     .filter(([key]) => !NUMBERING_OPTIONS.includes(key))
     .forEach(([key, item]) => {
       if (!item?.counter) return;
       const normalized = normalizeCounterTarget(key, item.counter);
       if (normalized !== item.counter) item.counter = normalized;
+      if (!isProofFamilyKindForCounter(key)) return;
       const itemOpts = incrementOptions(key, opts);
       for (const field of COUNTER_OWNER_FIELDS) {
         if (defined((item as any)[field])) {

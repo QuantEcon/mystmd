@@ -63,9 +63,12 @@ export type NumberingItem = {
    *
    * Slot-owner-wins for counter mechanics: `start`, `format`, `continue`,
    * `reset_on_part`, and `scope` are read from the slot owner. Setting
-   * those on an aliased kind emits a validator warning and is dropped.
-   * Cross-family aliasing and cycles are detected at config-load time
-   * and degrade to per-kind behaviour with a warning.
+   * those on an aliased proof-family kind emits a validator warning and
+   * is dropped. Cross-family aliasing and cycles are detected at
+   * transform time (in `myst-transforms/src/enumerate.ts` when the
+   * resolved-counter map is built) and degrade to per-kind behaviour
+   * with a warning — owner-fields on cross-family entries are left
+   * intact since the alias itself is ignored.
    */
   counter?: string;
 };

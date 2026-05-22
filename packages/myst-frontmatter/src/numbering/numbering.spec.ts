@@ -156,6 +156,34 @@ describe('validateNumbering — counter aliasing (#34)', () => {
     }
   });
 
+  it('preserves owner-fields on a cross-family key (alias is ignored, not the rest of the entry)', () => {
+    // Regression for the Copilot review on PR #40: a user typo like
+    // `figure.counter: proof:theorem` is a cross-family alias the
+    // engine refuses to honor. The validator must NOT silently drop
+    // `figure.start`/`figure.scope` etc. just because `counter` is
+    // set — otherwise valid figure config disappears.
+    const o = opts();
+    const out = validateNumbering(
+      {
+        figure: {
+          counter: 'proof:theorem',
+          start: 5,
+          scope: 'section',
+        },
+      },
+      o,
+    );
+    // counter field is kept (engine emits the family warning), and
+    // figure-owned fields stay intact.
+    expect(out?.figure?.counter).toBe('proof:theorem');
+    expect(out?.figure?.start).toBe(5);
+    expect(out?.figure?.scope).toBe('heading_2');
+    // No owner-field drop warnings should have fired.
+    const warns = o.messages.warnings ?? [];
+    expect(warns.some((m: any) => m.message.includes("'start'"))).toBe(false);
+    expect(warns.some((m: any) => m.message.includes("'scope'"))).toBe(false);
+  });
+
   it('does NOT drop label or template on an aliased kind (rendering stays per-kind)', () => {
     const out = validateNumbering(
       {
