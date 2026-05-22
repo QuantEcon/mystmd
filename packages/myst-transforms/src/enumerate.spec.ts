@@ -628,6 +628,242 @@ describe('Book-mode auto-prefix (§3.4(6,7))', () => {
     expect(state.getTarget('fig:2')?.node.enumerator).toBe('3.2.1');
   });
 
+  // ---------------------------------------------------------------------
+  // #34: shared counters across proof:* kinds (LaTeX
+  // `\newtheorem{name}[other]{Heading}` parity). `proof:lemma.counter:
+  // theorem` makes lemma step the theorem counter slot. Combined with
+  // #28's `scope: section`, this produces the LaTeX-PDF-canonical
+  // chapter.section.index enumerators (see book-dp1 Vol I §1.2).
+  // ---------------------------------------------------------------------
+
+  test('book-dp1 table: theorem/lemma/proposition share the theorem slot under scope=section (#34)', () => {
+    // Verbatim transcription of the LaTeX-PDF expected enumerators from
+    // book-dp1 Vol I ch_intro §1.2 and §2.1 (issue body):
+    //   t-nsl       → Theorem 1.2.1
+    //   l-rsnb      → Lemma 1.2.2
+    //   t-bfpt      → Theorem 1.2.3
+    //   l-rxrn      → Lemma 1.2.4
+    //   p-iccm (§2) → Proposition 2.1.1
+    //   t-hartgrob  → Theorem 2.1.3   (gap is intentional — the LaTeX
+    //                                   PDF shows 2.1.2 going to another
+    //                                   theorem-family env in the book,
+    //                                   so a third increment of the
+    //                                   shared slot lands on 3)
+    const tree = u('root', [
+      // ch 1 §1.1 (placeholder to advance the section counter to 2)
+      u('heading', { identifier: 's11', depth: 2 }),
+      // ch 1 §1.2 — the section the issue body cites
+      u('heading', { identifier: 's12', depth: 2 }),
+      u('proof', { kind: 'theorem', identifier: 't-nsl' }),
+      u('proof', { kind: 'lemma', identifier: 'l-rsnb' }),
+      u('proof', { kind: 'theorem', identifier: 't-bfpt' }),
+      u('proof', { kind: 'lemma', identifier: 'l-rxrn' }),
+    ]);
+    const state = new ReferenceState('ch1.md', {
+      frontmatter: {
+        numbering: {
+          book: { enabled: true },
+          all: { enabled: true },
+          title: { enabled: true },
+          heading_1: { enabled: true },
+          heading_2: { enabled: true },
+          proof: { scope: 'section' },
+          'proof:lemma': { counter: 'theorem' },
+          'proof:proposition': { counter: 'theorem' },
+          'proof:corollary': { counter: 'theorem' },
+        },
+      },
+      vfile: new VFile(),
+    });
+    enumerateTargetsTransform(tree, { state });
+    expect(state.getTarget('t-nsl')?.node.enumerator).toBe('1.2.1');
+    expect(state.getTarget('l-rsnb')?.node.enumerator).toBe('1.2.2');
+    expect(state.getTarget('t-bfpt')?.node.enumerator).toBe('1.2.3');
+    expect(state.getTarget('l-rxrn')?.node.enumerator).toBe('1.2.4');
+
+    // ch 2 §2.1 — separate state to mirror per-page processing
+    const tree2 = u('root', [
+      u('heading', { identifier: 's21', depth: 2 }),
+      u('proof', { kind: 'proposition', identifier: 'p-iccm' }),
+      // simulate the missing "2.1.2" slot from the book — a third
+      // theorem-family env exists in the source between p-iccm and
+      // t-hartgrob, so the shared counter advances twice more
+      u('proof', { kind: 'lemma', identifier: 'l-gap' }),
+      u('proof', { kind: 'theorem', identifier: 't-hartgrob' }),
+    ]);
+    const state2 = new ReferenceState('ch2.md', {
+      frontmatter: {
+        numbering: {
+          book: { enabled: true },
+          all: { enabled: true },
+          title: { enabled: true },
+          heading_1: { enabled: true, start: 2 },
+          heading_2: { enabled: true },
+          proof: { scope: 'section' },
+          'proof:lemma': { counter: 'theorem' },
+          'proof:proposition': { counter: 'theorem' },
+        },
+      },
+      vfile: new VFile(),
+    });
+    enumerateTargetsTransform(tree2, { state: state2 });
+    expect(state2.getTarget('p-iccm')?.node.enumerator).toBe('2.1.1');
+    expect(state2.getTarget('l-gap')?.node.enumerator).toBe('2.1.2');
+    expect(state2.getTarget('t-hartgrob')?.node.enumerator).toBe('2.1.3');
+  });
+
+  test('aliased kind keeps its own template/label for rendering (#34)', () => {
+    // Slot-owner-wins applies only to counter *mechanics*. The
+    // enumerator wrap (the `Lemma %s` template) stays per-kind so
+    // cross-refs and render output read correctly while the slot is
+    // shared.
+    const tree = u('root', [
+      u('proof', { kind: 'theorem', identifier: 't1' }),
+      u('proof', { kind: 'lemma', identifier: 'l1' }),
+    ]);
+    const state = new ReferenceState('ch1.md', {
+      frontmatter: {
+        numbering: {
+          book: { enabled: true },
+          all: { enabled: true },
+          title: { enabled: true },
+          heading_1: { enabled: true },
+          'proof:theorem': { enumerator: 'T %s' },
+          'proof:lemma': { counter: 'theorem', enumerator: 'L %s' },
+        },
+      },
+      vfile: new VFile(),
+    });
+    enumerateTargetsTransform(tree, { state });
+    expect(state.getTarget('t1')?.node.enumerator).toBe('T 1.1');
+    expect(state.getTarget('l1')?.node.enumerator).toBe('L 1.2');
+  });
+
+  test('shared slot resets together on scope change (#34)', () => {
+    // Both theorem and lemma share the theorem slot; crossing into a
+    // new section resets the slot exactly once. If lemma had its own
+    // `lastScopeKeyByKind` entry, the second crossing would re-fire
+    // the reset and clobber the counter to 0.
+    const tree = u('root', [
+      u('heading', { identifier: 's1', depth: 2 }),
+      u('proof', { kind: 'theorem', identifier: 't1' }),
+      u('proof', { kind: 'lemma', identifier: 'l1' }),
+      u('heading', { identifier: 's2', depth: 2 }),
+      u('proof', { kind: 'theorem', identifier: 't2' }),
+      u('proof', { kind: 'lemma', identifier: 'l2' }),
+    ]);
+    const state = new ReferenceState('ch1.md', {
+      frontmatter: {
+        numbering: {
+          book: { enabled: true },
+          all: { enabled: true },
+          title: { enabled: true },
+          heading_1: { enabled: true },
+          heading_2: { enabled: true },
+          proof: { scope: 'section' },
+          'proof:lemma': { counter: 'theorem' },
+        },
+      },
+      vfile: new VFile(),
+    });
+    enumerateTargetsTransform(tree, { state });
+    expect(state.getTarget('t1')?.node.enumerator).toBe('1.1.1');
+    expect(state.getTarget('l1')?.node.enumerator).toBe('1.1.2');
+    // crossing into §1.2 — single reset, then theorem=1, lemma=2
+    expect(state.getTarget('t2')?.node.enumerator).toBe('1.2.1');
+    expect(state.getTarget('l2')?.node.enumerator).toBe('1.2.2');
+  });
+
+  test('transitive resolution: a → b → c flattens to c (#34)', () => {
+    // proposition aliases to lemma; lemma aliases to theorem. All
+    // three step the theorem slot.
+    const tree = u('root', [
+      u('proof', { kind: 'theorem', identifier: 't1' }),
+      u('proof', { kind: 'lemma', identifier: 'l1' }),
+      u('proof', { kind: 'proposition', identifier: 'p1' }),
+      u('proof', { kind: 'theorem', identifier: 't2' }),
+    ]);
+    const state = new ReferenceState('ch1.md', {
+      frontmatter: {
+        numbering: {
+          book: { enabled: true },
+          all: { enabled: true },
+          title: { enabled: true },
+          heading_1: { enabled: true },
+          'proof:lemma': { counter: 'theorem' },
+          'proof:proposition': { counter: 'lemma' },
+        },
+      },
+      vfile: new VFile(),
+    });
+    enumerateTargetsTransform(tree, { state });
+    expect(state.getTarget('t1')?.node.enumerator).toBe('1.1');
+    expect(state.getTarget('l1')?.node.enumerator).toBe('1.2');
+    expect(state.getTarget('p1')?.node.enumerator).toBe('1.3');
+    expect(state.getTarget('t2')?.node.enumerator).toBe('1.4');
+  });
+
+  test('cycle: a → b → a falls back to per-kind with warning (#34)', () => {
+    // Cycle is a config error. Both kinds degrade to per-kind
+    // counters and a warning is emitted.
+    const tree = u('root', [
+      u('proof', { kind: 'theorem', identifier: 't1' }),
+      u('proof', { kind: 'lemma', identifier: 'l1' }),
+      u('proof', { kind: 'theorem', identifier: 't2' }),
+    ]);
+    const vfile = new VFile();
+    const state = new ReferenceState('ch1.md', {
+      frontmatter: {
+        numbering: {
+          book: { enabled: true },
+          all: { enabled: true },
+          title: { enabled: true },
+          heading_1: { enabled: true },
+          'proof:theorem': { counter: 'lemma' },
+          'proof:lemma': { counter: 'theorem' },
+        },
+      },
+      vfile,
+    });
+    enumerateTargetsTransform(tree, { state });
+    // Both kinds counted independently — theorem 1, 2; lemma 1.
+    expect(state.getTarget('t1')?.node.enumerator).toBe('1.1');
+    expect(state.getTarget('l1')?.node.enumerator).toBe('1.1');
+    expect(state.getTarget('t2')?.node.enumerator).toBe('1.2');
+    expect(vfile.messages.some((m) => m.message.includes('cycle'))).toBe(true);
+  });
+
+  test('cross-family alias is ignored with warning (#34)', () => {
+    // `counter:` is restricted to the proof family. Aliasing a figure
+    // to the theorem slot is dropped + warned; figure continues with
+    // its own counter.
+    const tree = u('root', [
+      u('container', { kind: 'figure', identifier: 'f1' }),
+      u('container', { kind: 'figure', identifier: 'f2' }),
+    ]);
+    const vfile = new VFile();
+    const state = new ReferenceState('ch1.md', {
+      frontmatter: {
+        numbering: {
+          book: { enabled: true },
+          all: { enabled: true },
+          title: { enabled: true },
+          heading_1: { enabled: true },
+          figure: { counter: 'proof:theorem' },
+        },
+      },
+      vfile,
+    });
+    enumerateTargetsTransform(tree, { state });
+    expect(state.getTarget('f1')?.node.enumerator).toBe('1.1');
+    expect(state.getTarget('f2')?.node.enumerator).toBe('1.2');
+    expect(
+      vfile.messages.some(
+        (m) => m.message.includes('proof-family') && m.message.includes('figure'),
+      ),
+    ).toBe(true);
+  });
+
   test('subfigures inherit the chapter-prefixed parent enumerator', () => {
     const tree = u('root', [
       u('container', { kind: 'figure', identifier: 'fig-p' }, [

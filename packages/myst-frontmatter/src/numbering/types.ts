@@ -49,6 +49,28 @@ export type NumberingItem = {
    * wins. `numbering.all.scope` is the project-wide default.
    */
   scope?: NumberingScope;
+  /**
+   * Shared-counter alias (#34, LaTeX `\newtheorem{name}[other]{Heading}`
+   * parity). When set, this kind steps the *other* kind's counter slot
+   * instead of its own. The aliased kind keeps its own `label`/`template`
+   * for rendering — only counter mechanics are shared.
+   *
+   * Currently restricted to the proof family: `proof:lemma.counter:
+   * theorem` makes lemma share the theorem counter, so an interleaved
+   * `Lemma` between two `Theorem`s advances the next theorem number.
+   * Bare names within the proof family are normalized to the
+   * fully-qualified form (`theorem` → `proof:theorem`).
+   *
+   * Slot-owner-wins for counter mechanics: `start`, `format`, `continue`,
+   * `reset_on_part`, and `scope` are read from the slot owner. Setting
+   * those on an aliased proof-family kind emits a validator warning and
+   * is dropped. Cross-family aliasing and cycles are detected at
+   * transform time (in `myst-transforms/src/enumerate.ts` when the
+   * resolved-counter map is built) and degrade to per-kind behaviour
+   * with a warning — owner-fields on cross-family entries are left
+   * intact since the alias itself is ignored.
+   */
+  counter?: string;
 };
 
 /**

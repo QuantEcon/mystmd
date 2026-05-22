@@ -79,6 +79,94 @@ function isProofFamilyKind(kind: string): boolean {
 }
 
 /**
+ * Build the resolved-kind alias map for `counter:` sharing (#34, LaTeX
+ * `\newtheorem{name}[other]{Heading}` parity).
+ *
+ * Reads every `numbering[kind].counter` value, normalizes it to the
+ * fully-qualified form (already done by the frontmatter validator but
+ * tolerated here for defensiveness), and computes the *transitive*
+ * resolution so chains like `a→b→c` flatten to `a→c`, `b→c`. Cycles are
+ * detected and broken: the offending edges are dropped (no alias) and a
+ * warning is emitted, so output remains deterministic rather than
+ * oscillating between the cycle members.
+ *
+ * Constraints enforced here, not in the validator:
+ *  - **Family check**: aliasing is only honored within the proof family
+ *    (`proof:*` / `prf:*`). Cross-family targets are dropped + warned.
+ *    The validator can't easily distinguish runtime directive families
+ *    from generic kind names, but this engine already has
+ *    `isProofFamilyKind` colocated with the rest of the family logic.
+ *  - **Cycle break**: `a→b→a` drops both edges (returning self-resolution
+ *    for both kinds), rather than picking an arbitrary member as the
+ *    slot owner.
+ *
+ * Kinds without an alias are absent from the returned map; callers
+ * default to the kind itself (see `effectiveCounterKind`). The map is
+ * built once per `ReferenceState` and reused across every
+ * `incrementCount` call — there is no recursive lookup in the hot path.
+ */
+function buildResolvedCounterMap(numbering: Numbering, vfile?: VFile): Record<string, string> {
+  const rawAliases: Record<string, string> = {};
+  for (const [kind, item] of Object.entries(numbering)) {
+    if (!item?.counter) continue;
+    if (!isProofFamilyKind(kind)) {
+      if (vfile) {
+        fileWarn(
+          vfile,
+          `numbering.${kind}.counter is only supported for proof-family kinds (proof:*, prf:*); ignoring`,
+          { source: TRANSFORM_NAME, ruleId: RuleId.validPageFrontmatter },
+        );
+      }
+      continue;
+    }
+    const target = item.counter.includes(':') ? item.counter : `proof:${item.counter}`;
+    if (!isProofFamilyKind(target)) {
+      if (vfile) {
+        fileWarn(
+          vfile,
+          `numbering.${kind}.counter target "${item.counter}" must be a proof-family kind; ignoring`,
+          { source: TRANSFORM_NAME, ruleId: RuleId.validPageFrontmatter },
+        );
+      }
+      continue;
+    }
+    rawAliases[kind] = target;
+  }
+  const resolved: Record<string, string> = {};
+  for (const start of Object.keys(rawAliases)) {
+    const path: string[] = [start];
+    let cur: string = rawAliases[start];
+    let cycled = false;
+    while (rawAliases[cur]) {
+      if (path.includes(cur)) {
+        cycled = true;
+        if (vfile) {
+          fileWarn(
+            vfile,
+            `numbering.counter cycle detected: ${[...path, cur].join(' → ')}; aliasing ignored on this chain`,
+            { source: TRANSFORM_NAME, ruleId: RuleId.validPageFrontmatter },
+          );
+        }
+        break;
+      }
+      path.push(cur);
+      cur = rawAliases[cur];
+    }
+    if (cycled) continue; // self-resolution (no alias) for cycle members
+    if (cur !== start) resolved[start] = cur;
+  }
+  return resolved;
+}
+
+/**
+ * Look up the counter slot that `kind` actually steps. Defaults to the
+ * kind itself when no alias is configured — the common case.
+ */
+function effectiveCounterKind(resolved: Record<string, string>, kind: string): string {
+  return resolved[kind] ?? kind;
+}
+
+/**
  * Resolve a kind's effective auto-prefix scope depth (#27).
  *
  * Lookup order, most-specific first:
@@ -510,8 +598,19 @@ export class ReferenceState implements IReferenceStateResolver {
    * next increment of the same kind sees a different prefix, the main
    * counter resets. Empty on fresh pages — counter reset across pages
    * is governed by `targetCounts` carry-over, not this map.
+   *
+   * Keyed on the *resolved* counter kind (#34), so aliased kinds share
+   * the slot owner's scope-key entry. Otherwise an alias chain would
+   * trigger double resets at scope boundaries.
    */
   lastScopeKeyByKind: Record<string, string>;
+  /**
+   * Resolved `counter:` alias map (#34). Built once at construction
+   * from the page's numbering frontmatter. Lookups go through
+   * `effectiveCounterKind(this.resolvedCounters, kind)`. Kinds without
+   * an alias are absent from the map and default to themselves.
+   */
+  resolvedCounters: Record<string, string>;
 
   constructor(
     filePath: string,
@@ -552,6 +651,7 @@ export class ReferenceState implements IReferenceStateResolver {
     this.dataUrl = opts?.dataUrl;
     this.title = opts?.frontmatter?.title;
     this.lastScopeKeyByKind = {};
+    this.resolvedCounters = buildResolvedCounterMap(this.numbering, this.vfile);
   }
 
   addTarget(node: TargetNodes, hidden?: boolean) {
@@ -617,16 +717,25 @@ export class ReferenceState implements IReferenceStateResolver {
       return enumerator;
     }
     const countKind = kind === TargetKind.subequation ? TargetKind.equation : kind;
-    // Ensure target kind is instantiated
-    this.targetCounts[countKind] ??= { main: 0, sub: 0 };
-    const kindFormat = this.numbering[countKind]?.format;
+    // #34: when `numbering[countKind].counter` is set (proof-family
+    // only, e.g. `proof:lemma → proof:theorem`), every counter mechanic
+    // — target slot, scope-key tracking, format lookup, continue,
+    // scope depth — reads from the slot owner. Rendering (the
+    // enumerator wrap template) stays per-kind so an aliased lemma
+    // still renders "Lemma %s" while sharing the theorem counter slot.
+    // For non-aliased kinds and the subequation→equation mapping,
+    // `slotKind` equals `countKind` and behavior is unchanged.
+    const slotKind = effectiveCounterKind(this.resolvedCounters, countKind);
+    // Ensure target slot is instantiated
+    this.targetCounts[slotKind] ??= { main: 0, sub: 0 };
+    const kindFormat = this.numbering[slotKind]?.format;
     // §3.2(e) auto-prefix: in book mode, prepend the active chapter or
     // appendix enumerator (this.enumerator — the page's H1 number / letter)
     // so figures render "3.1", "A.2", etc. Pages in front/back matter have
     // no this.enumerator, so the flat global counter is used automatically.
     // Per-kind `continue: true` (§3.4(6)) opts out and keeps the counter
     // flat across pages.
-    const continueKind = this.numbering[countKind]?.continue || this.numbering.all?.continue;
+    const continueKind = this.numbering[slotKind]?.continue || this.numbering.all?.continue;
     let autoPrefix = '';
     if (
       this.enumerator &&
@@ -637,9 +746,9 @@ export class ReferenceState implements IReferenceStateResolver {
       // #27: scope > 1 means "go deeper than the chapter prefix" — e.g.
       // `Theorem 5.1.2` from chapter 5, section 1, second theorem. The
       // counter must also reset on each scope boundary (e.g. new heading_2),
-      // so we track the last-seen scope key per kind and reset main/sub
+      // so we track the last-seen scope key per slot and reset main/sub
       // when it changes. Scope == 1 keeps today's behaviour exactly.
-      const scopeDepth = effectiveScopeDepth(this.numbering, countKind);
+      const scopeDepth = effectiveScopeDepth(this.numbering, slotKind);
       if (scopeDepth > 1) {
         const scopePrefix = formatHeadingPrefix(
           this.targetCounts.heading,
@@ -648,42 +757,46 @@ export class ReferenceState implements IReferenceStateResolver {
         );
         autoPrefix = scopePrefix ? `${scopePrefix}.` : '';
         // Reset only on a real scope *change* — i.e. we've already seen
-        // this kind at a different scope key. Resetting on *first*
-        // encounter would clobber `numbering[kind].start` seeded by
+        // this slot at a different scope key. Resetting on *first*
+        // encounter would clobber `numbering[slotKind].start` seeded by
         // `initializeTargetCounts`, so e.g. `figure: { start: 5, scope:
         // section }` would silently render `5.1.1` instead of `5.1.5`.
-        const prevScopeKey = this.lastScopeKeyByKind[countKind];
+        // #34: keying on `slotKind` (not `countKind`) means aliased
+        // kinds share the slot owner's scope-key entry; otherwise a
+        // chain like `lemma→theorem` would trigger double resets on
+        // each scope crossing.
+        const prevScopeKey = this.lastScopeKeyByKind[slotKind];
         if (prevScopeKey !== undefined && prevScopeKey !== scopePrefix) {
-          this.targetCounts[countKind] = { main: 0, sub: 0 };
+          this.targetCounts[slotKind] = { main: 0, sub: 0 };
         }
-        this.lastScopeKeyByKind[countKind] = scopePrefix;
+        this.lastScopeKeyByKind[slotKind] = scopePrefix;
       } else {
         autoPrefix = `${this.enumerator}.`;
       }
     }
     if (node.subcontainer || kind === TargetKind.subequation) {
-      this.targetCounts[countKind].sub += 1;
+      this.targetCounts[slotKind].sub += 1;
       // Will restart counting if there are more than 26 subequations/figures
       const letter = String.fromCharCode(
-        ((this.targetCounts[countKind].sub - 1) % 26) + 'a'.charCodeAt(0),
+        ((this.targetCounts[slotKind].sub - 1) % 26) + 'a'.charCodeAt(0),
       );
       if (node.subcontainer) {
         node.parentEnumerator = this.resolveEnumerator(
-          autoPrefix + formatCounter(this.targetCounts[countKind].main, kindFormat),
+          autoPrefix + formatCounter(this.targetCounts[slotKind].main, kindFormat),
           this.numbering[countKind]?.enumerator,
         );
         enumerator = letter;
       } else {
         enumerator = this.resolveEnumerator(
-          autoPrefix + formatCounter(this.targetCounts[countKind].main, kindFormat) + letter,
+          autoPrefix + formatCounter(this.targetCounts[slotKind].main, kindFormat) + letter,
           this.numbering[countKind]?.enumerator,
         );
       }
     } else {
-      this.targetCounts[kind].main += 1;
-      this.targetCounts[kind].sub = 0;
+      this.targetCounts[slotKind].main += 1;
+      this.targetCounts[slotKind].sub = 0;
       enumerator = this.resolveEnumerator(
-        autoPrefix + formatCounter(this.targetCounts[kind].main, kindFormat),
+        autoPrefix + formatCounter(this.targetCounts[slotKind].main, kindFormat),
         this.numbering[kind]?.enumerator,
       );
     }

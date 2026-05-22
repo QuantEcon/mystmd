@@ -37,7 +37,47 @@ const NUMBERING_ITEM_KEYS = [
   'label',
   'reset_on_part',
   'scope',
+  'counter',
 ];
+
+/**
+ * Counter-mechanics fields that are read from the slot owner when a kind
+ * is aliased via `counter:` (#34). Setting these on an aliased kind has
+ * no effect — the slot's owner wins — so the validator warns and drops
+ * them to keep the rendered output consistent with the LaTeX
+ * `\newtheorem{name}[other]{Heading}` semantics this models.
+ *
+ * `label` and `template` (the "{Heading}" arg) are intentionally absent:
+ * they remain per-kind so an aliased `lemma` still renders "Lemma 1.2.2"
+ * while sharing the theorem counter slot.
+ */
+const COUNTER_OWNER_FIELDS = ['start', 'format', 'continue', 'reset_on_part', 'scope'] as const;
+
+/**
+ * Is this kind a proof-family kind for the purposes of `counter:`
+ * aliasing (#34)? Mirrors `isProofFamilyKind` in
+ * `myst-transforms/src/enumerate.ts` — both files need to agree on the
+ * family membership rule but neither owns it conceptually, so each
+ * keeps a local copy rather than introducing a shared dependency.
+ */
+function isProofFamilyKindForCounter(kind: string): boolean {
+  return kind === 'proof' || kind.startsWith('proof:') || kind.startsWith('prf:');
+}
+
+/**
+ * Normalize a bare proof-family `counter:` target (`theorem`) to its
+ * fully-qualified form (`proof:theorem`). The key — not the value — is
+ * always fully qualified in the numbering object, so authors who write
+ * `proof:lemma: { counter: theorem }` (the LaTeX-natural form) and
+ * authors who write `counter: proof:theorem` (the verbose form) both
+ * get the same resolution. Cross-family targets are returned as-is so
+ * the engine's family check can warn on them.
+ */
+function normalizeCounterTarget(keyKind: string, target: string): string {
+  if (target.includes(':')) return target;
+  if (isProofFamilyKindForCounter(keyKind)) return `proof:${target}`;
+  return target;
+}
 
 const COUNTER_FORMATS: CounterFormat[] = ['arabic', 'alph', 'Alph', 'roman', 'Roman'];
 
@@ -222,6 +262,13 @@ export function validateNumberingItem(
       }
     }
   }
+  if (defined(value.counter)) {
+    const counter = validateString(value.counter, incrementOptions('counter', opts));
+    if (defined(counter)) {
+      output.counter = counter;
+      output.enabled = output.enabled ?? true;
+    }
+  }
   if (Object.keys(output).length === 0) return undefined;
   return output;
 }
@@ -337,6 +384,38 @@ export function validateNumbering(input: any, opts: ValidationOptions): Numberin
           output[key] = { ...headings, ...item };
         } else {
           output[key] = item;
+        }
+      }
+    });
+  // #34: post-process `counter:` aliases — normalize bare proof-family
+  // targets to their fully-qualified form, and warn (then drop) any
+  // counter-mechanics fields set on aliased kinds. Cycle detection and
+  // cross-family enforcement happen at runtime in
+  // `myst-transforms/src/enumerate.ts` where node-attached warnings are
+  // natural; here we only handle the per-entry concerns the validator
+  // already has full local knowledge of.
+  //
+  // The owner-field drop is gated on the *key* being a proof-family
+  // kind. Cross-family entries (`figure.counter: proof:theorem`) keep
+  // both their `counter` field (so the engine can emit its family
+  // warning) and all their owner-fields (`figure.start`, `figure.scope`,
+  // etc.) intact — otherwise a typo'd alias would silently delete
+  // valid configuration the engine then refuses to honor.
+  Object.entries(output)
+    .filter(([key]) => !NUMBERING_OPTIONS.includes(key))
+    .forEach(([key, item]) => {
+      if (!item?.counter) return;
+      const normalized = normalizeCounterTarget(key, item.counter);
+      if (normalized !== item.counter) item.counter = normalized;
+      if (!isProofFamilyKindForCounter(key)) return;
+      const itemOpts = incrementOptions(key, opts);
+      for (const field of COUNTER_OWNER_FIELDS) {
+        if (defined((item as any)[field])) {
+          validationWarning(
+            `'${field}' is read from the slot owner ('${item.counter}') when 'counter' is set; ignoring on '${key}'`,
+            itemOpts,
+          );
+          delete (item as any)[field];
         }
       }
     });
