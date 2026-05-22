@@ -105,10 +105,7 @@ function isProofFamilyKind(kind: string): boolean {
  * built once per `ReferenceState` and reused across every
  * `incrementCount` call — there is no recursive lookup in the hot path.
  */
-function buildResolvedCounterMap(
-  numbering: Numbering,
-  vfile?: VFile,
-): Record<string, string> {
+function buildResolvedCounterMap(numbering: Numbering, vfile?: VFile): Record<string, string> {
   const rawAliases: Record<string, string> = {};
   for (const [kind, item] of Object.entries(numbering)) {
     if (!item?.counter) continue;
