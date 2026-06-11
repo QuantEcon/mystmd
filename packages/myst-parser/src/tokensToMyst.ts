@@ -107,11 +107,25 @@ const defaultMdast: Record<string, TokenHandlerSpec> = {
   ordered_list: {
     type: 'list',
     getAttrs(token, tokens, index) {
+      // The fancy-lists rule records the start on the list token; the default
+      // markdown-it rule leaves it on the first list item's info
+      const startAttr = token.attrGet('start');
       const info = tokens[index + 1]?.info;
-      const start = Number(tokens[index + 1]?.info);
+      const start = Number(startAttr ?? info);
+      // Marker numbering style and delimiter, e.g. `(i)` is lower-roman/parens.
+      // Plain CommonMark lists (`1.` and `1)`) keep an unchanged AST: style and
+      // delimiter are only recorded for the fancy-list extension forms
+      const { style, delimiter } = token.meta ?? {};
+      const fancyStyle = style && style !== 'decimal' ? style : undefined;
+      const fancyDelimiter =
+        delimiter && delimiter !== 'period' && (fancyStyle || delimiter === 'parens')
+          ? delimiter
+          : undefined;
       return {
         ordered: true,
-        start: isNaN(start) || !info ? 1 : start,
+        start: isNaN(start) || !(startAttr || info) ? 1 : start,
+        ...(fancyStyle ? { style: fancyStyle } : {}),
+        ...(fancyDelimiter ? { delimiter: fancyDelimiter } : {}),
         spread: false,
       };
     },

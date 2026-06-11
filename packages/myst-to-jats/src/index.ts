@@ -35,6 +35,7 @@ import type {
   FootnoteReference,
   Heading,
   AlgorithmLine,
+  List as ListExt,
   ListItem,
   InlineMath,
   Image,
@@ -292,6 +293,14 @@ type Handlers = {
   inlineExpression: Handler<GenericNode>;
 };
 
+// https://jats.nlm.nih.gov/archiving/tag-library/1.3/attribute/list-type.html
+const LIST_STYLE_TO_JATS_TYPE: Record<string, string> = {
+  'lower-alpha': 'alpha-lower',
+  'upper-alpha': 'alpha-upper',
+  'lower-roman': 'roman-lower',
+  'upper-roman': 'roman-upper',
+};
+
 const handlers: Handlers = {
   text(node, state) {
     state.text(node.value);
@@ -340,7 +349,10 @@ const handlers: Handlers = {
   },
   list(node, state) {
     // https://jats.nlm.nih.gov/archiving/tag-library/1.3/element/list.html
-    state.renderInline(node, 'list', { 'list-type': node.ordered ? 'order' : 'bullet' });
+    const listType = node.ordered
+      ? (LIST_STYLE_TO_JATS_TYPE[(node as ListExt).style ?? ''] ?? 'order')
+      : 'bullet';
+    state.renderInline(node, 'list', { 'list-type': listType });
   },
   listItem(node, state) {
     state.openNode('list-item');

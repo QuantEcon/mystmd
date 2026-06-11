@@ -76,6 +76,15 @@ const tabItem = `
 
 const INDENT = '  ';
 
+// Typst enum numbering counter symbols for each ordered-list numbering style
+const LIST_STYLE_TO_TYPST_SYMBOL: Record<string, string> = {
+  decimal: '1',
+  'lower-alpha': 'a',
+  'upper-alpha': 'A',
+  'lower-roman': 'i',
+  'upper-roman': 'I',
+};
+
 const linkHandler = (node: any, state: ITypstSerializer) => {
   const href = node.url;
   state.write('#link("');
@@ -186,15 +195,34 @@ const handlers: Record<string, Handler> = {
   },
   list(node, state) {
     const setStart = node.ordered && node.start && node.start !== 1;
+    const setNumbering = node.ordered && (node.style || node.delimiter);
+    const settings: string[] = [];
+    const resets: string[] = [];
+    if (setNumbering) {
+      // Reproduce the source marker notation, e.g. `(i)` → numbering: "(i)"
+      const symbol = LIST_STYLE_TO_TYPST_SYMBOL[node.style ?? 'decimal'];
+      const numbering =
+        node.delimiter === 'parens'
+          ? `(${symbol})`
+          : node.delimiter === 'paren'
+            ? `${symbol})`
+            : `${symbol}.`;
+      settings.push(`numbering: "${numbering}"`);
+      resets.push('numbering: "1."');
+    }
     if (setStart) {
-      state.write(`#set enum(start: ${node.start})`);
+      settings.push(`start: ${node.start}`);
+      resets.push('start: 1');
+    }
+    if (settings.length) {
+      state.write(`#set enum(${settings.join(', ')})`);
     }
     state.data.list ??= { env: [] };
     state.data.list.env.push(node.ordered ? '+' : '-');
-    state.renderChildren(node, setStart ? 1 : 2);
+    state.renderChildren(node, settings.length ? 1 : 2);
     state.data.list.env.pop();
-    if (setStart) {
-      state.write('#set enum(start: 1)\n\n');
+    if (settings.length) {
+      state.write(`#set enum(${resets.join(', ')})\n\n`);
     }
   },
   listItem(node, state) {

@@ -734,3 +734,36 @@ cases:
                     - type: text
                       value: My Legend
     jats: <fig id="myfigure"><caption><p>My Caption</p><p>My Legend</p><p><supplementary-material id="myfigure-source" specific-use="notebook"><label>Figure 1 - Notebook.</label><caption><title>Analysis for <xref ref-type="fig" rid="myfigure">Figure 1</xref>.</title><p>See methods from <xref ref-type="custom" custom-type="notebook-code" rid="nb-cell-0">cell</xref>.</p></caption></supplementary-material></p></caption><code id="nb-cell-0-code" language="python" executable="yes">print('abc')</code><alternatives><media specific-use="stream" mimetype="text" mime-subtype="plain" xlink:href="files/a.txt"/></alternatives><alternatives><media specific-use="text" mimetype="text" mime-subtype="plain" xlink:href="files/b.txt"/><media specific-use="web" mimetype="text" mime-subtype="html" xlink:href="files/b.html"/></alternatives></fig>
+  - title: Fancy list styles map to JATS list-type
+    tree:
+      type: root
+      children:
+        - type: list
+          ordered: true
+          start: 1
+          style: lower-roman
+          delimiter: parens
+          spread: false
+          children:
+            - type: listItem
+              spread: true
+              children:
+                - type: text
+                  value: one
+            - type: listItem
+              spread: true
+              children:
+                - type: text
+                  value: two
+        - type: list
+          ordered: true
+          start: 3
+          style: upper-alpha
+          spread: false
+          children:
+            - type: listItem
+              spread: true
+              children:
+                - type: text
+                  value: three
+    jats: <list list-type="roman-lower"><list-item><p>one</p></list-item><list-item><p>two</p></list-item></list><list list-type="alpha-upper"><list-item><p>three</p></list-item></list>

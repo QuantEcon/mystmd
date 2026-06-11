@@ -23,4 +23,30 @@ describe('mystToHtml', () => {
     const html = mystToHtml(u('root', [u('math', 'y = a x + b')]));
     expect(html).toBe('<div class="math-display">y = a x + b</div>');
   });
+  it('Renders fancy ordered lists with a type attribute and delimiter class', () => {
+    const html = mystToHtml(
+      u('root', [
+        u('list', { ordered: true, start: 1, style: 'lower-roman', delimiter: 'parens' }, [
+          u('listItem', [u('text', 'one')]),
+        ]),
+      ]),
+    );
+    expect(html).toBe('<ol type="i" class="delimiter-parens">\n<li>\none\n</li>\n</ol>');
+  });
+  it('Renders fancy ordered lists with start and paren delimiter', () => {
+    const html = mystToHtml(
+      u('root', [
+        u('list', { ordered: true, start: 4, style: 'upper-alpha', delimiter: 'paren' }, [
+          u('listItem', [u('text', 'four')]),
+        ]),
+      ]),
+    );
+    expect(html).toBe('<ol start="4" type="A" class="delimiter-paren">\n<li>\nfour\n</li>\n</ol>');
+  });
+  it('Renders plain ordered lists without list attributes', () => {
+    const html = mystToHtml(
+      u('root', [u('list', { ordered: true, start: 1 }, [u('listItem', [u('text', 'plain')])])]),
+    );
+    expect(html).toBe('<ol>\n<li>\nplain\n</li>\n</ol>');
+  });
 });

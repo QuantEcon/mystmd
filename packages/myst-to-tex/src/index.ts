@@ -113,6 +113,15 @@ const createAcronymDefinitions = (tree: Root): Record<string, [string, string]> 
       .filter((x) => x.length > 0), // remove empty
   );
 
+// enumitem counter formats for each ordered-list numbering style
+const LIST_STYLE_TO_TEX_COUNTER: Record<string, string> = {
+  decimal: '\\arabic*',
+  'lower-alpha': '\\alph*',
+  'upper-alpha': '\\Alph*',
+  'lower-roman': '\\roman*',
+  'upper-roman': '\\Roman*',
+};
+
 const handlers: Record<string, Handler> = {
   text(node, state) {
     state.text(node.value);
@@ -234,9 +243,23 @@ const handlers: Record<string, Handler> = {
         state.ensureNewLine();
       });
     } else {
-      state.renderEnvironment(node, node.ordered ? 'enumerate' : 'itemize', {
-        parameters: node.ordered && node.start !== 1 ? 'resume' : undefined,
-      });
+      let parameters: string | undefined;
+      if (node.ordered && (node.style || node.delimiter)) {
+        // Reproduce the source marker notation, e.g. `(i)` → `label={(\roman*)}`
+        state.usePackages('enumitem');
+        const counter = LIST_STYLE_TO_TEX_COUNTER[node.style ?? 'decimal'];
+        const label =
+          node.delimiter === 'parens'
+            ? `(${counter})`
+            : node.delimiter === 'paren'
+              ? `${counter})`
+              : `${counter}.`;
+        parameters = `label={${label}}`;
+        if (node.start && node.start !== 1) parameters += `,start=${node.start}`;
+      } else if (node.ordered && node.start !== 1) {
+        parameters = 'resume';
+      }
+      state.renderEnvironment(node, node.ordered ? 'enumerate' : 'itemize', { parameters });
     }
   },
   listItem(node, state) {

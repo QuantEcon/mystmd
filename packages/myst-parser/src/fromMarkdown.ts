@@ -5,6 +5,7 @@ import type { DirectiveSpec, GenericNode, GenericParent, RoleSpec } from 'myst-c
 import type { Text } from 'myst-spec';
 import type { VFile } from 'vfile';
 import type { MathExtensionOptions } from './math.js';
+import type { FancyListsOptions } from './fancyLists.js';
 
 const UNHIDDEN_TOKENS = new Set([
   'parsed_directive_open',
@@ -54,6 +55,7 @@ export type AllOptions = {
     citations?: boolean;
     deflist?: boolean;
     tasklist?: boolean;
+    fancyLists?: boolean | FancyListsOptions;
     tables?: boolean;
     blocks?: boolean;
     strikethrough?: boolean;

@@ -1,61 +1,32 @@
-title: myst-to-typst lists
+title: myst-to-tex lists
 cases:
-  - title: important list
-    mdast:
-      type: root
-      children:
-        - type: list
-          children:
-            - type: listItem
-              children:
-                - type: text
-                  value: This is a list
-                - type: list
-                  ordered: true
-                  children:
-                    - type: listItem
-                      children:
-                        - type: text
-                          value: My other, nested
-                    - type: listItem
-                      children:
-                        - type: text
-                          value: bullet point list!
-    typst: |-
-      - This is a list
-        + My other, nested
-        + bullet point list!
-  - title: List with new lines
-    mdast:
-      type: root
-      children:
-        - type: list
-          children:
-            - type: listItem
-              spread: true
-              children:
-                - type: text
-                  value: |-
-                    A list
-                    with a new line
-            - type: listItem
-              spread: true
-              children:
-                - type: text
-                  value: |
-                    And math
-                - type: inlineMath
-                  value: Ax=b
-    typst: |-
-      - A list with a new line
-      - And math $A x = b$
-  - title: lower-roman list
+  - title: ordered list
     mdast:
       type: root
       children:
         - type: list
           ordered: true
           start: 1
+          children:
+            - type: listItem
+              children:
+                - type: text
+                  value: one
+            - type: listItem
+              children:
+                - type: text
+                  value: two
+    latex: |-
+      \begin{enumerate}
+      \item one
+      \item two
+      \end{enumerate}
+  - title: lower-roman list
+    mdast:
+      type: root
+      children:
+        - type: list
+          ordered: true
           style: lower-roman
           children:
             - type: listItem
@@ -66,11 +37,11 @@ cases:
               children:
                 - type: text
                   value: two
-    typst: |-
-      #set enum(numbering: "i.")
-      + one
-      + two
-      #set enum(numbering: "1.")
+    latex: |-
+      \begin{enumerate}[label={\roman*.}]
+      \item one
+      \item two
+      \end{enumerate}
   - title: parenthesized lower-roman list with start
     mdast:
       type: root
@@ -89,18 +60,17 @@ cases:
               children:
                 - type: text
                   value: five
-    typst: |-
-      #set enum(numbering: "(i)", start: 4)
-      + four
-      + five
-      #set enum(numbering: "1.", start: 1)
+    latex: |-
+      \begin{enumerate}[label={(\roman*)},start=4]
+      \item four
+      \item five
+      \end{enumerate}
   - title: upper-alpha list with paren delimiter
     mdast:
       type: root
       children:
         - type: list
           ordered: true
-          start: 1
           style: upper-alpha
           delimiter: paren
           children:
@@ -112,8 +82,29 @@ cases:
               children:
                 - type: text
                   value: two
-    typst: |-
-      #set enum(numbering: "A)")
-      + one
-      + two
-      #set enum(numbering: "1.")
+    latex: |-
+      \begin{enumerate}[label={\Alph*)}]
+      \item one
+      \item two
+      \end{enumerate}
+  - title: parenthesized decimal list
+    mdast:
+      type: root
+      children:
+        - type: list
+          ordered: true
+          delimiter: parens
+          children:
+            - type: listItem
+              children:
+                - type: text
+                  value: one
+            - type: listItem
+              children:
+                - type: text
+                  value: two
+    latex: |-
+      \begin{enumerate}[label={(\arabic*)}]
+      \item one
+      \item two
+      \end{enumerate}
