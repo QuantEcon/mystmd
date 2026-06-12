@@ -132,3 +132,34 @@ upstream_candidates:
       upstream story pairs naturally with a small jupyter-book/myst-theme
       PR mapping list `style` to the <ol type> attribute (tracked in
       QuantEcon/mystmd#51) — mention it in the upstream PR description.
+
+  - id: cite-code-span
+    title: Citation scanner respects inline code-span boundaries
+    description: |
+      The citation rule's bracket branch regex-scans raw bracket text,
+      so a backticked `@`-token (e.g. [wrap it in `@tf.function`])
+      became a broken cite node that swallowed the code formatting.
+      Adds CommonMark code-span range detection within the bracket and
+      backs off when a matched `@` falls inside one.
+    status: pending
+    commits:
+      - sha: 00740bc5
+        local_pr: 53
+        title: "Citation scanner respects inline code-span boundaries"
+    depends_on: []
+    upstream:
+      pr: null
+      branch: null
+      merged_sha: null
+    notes: |
+      Upstream context documented in QuantEcon/mystmd#54. Key pitch for
+      the upstream PR: the escaping direction floated in
+      jupyter-book/mystmd#1618 cannot cover this shape — CommonMark
+      makes backslashes literal inside code spans, so a backticked `@`
+      cannot be escaped; code spans also bind tighter than brackets in
+      CommonMark's own precedence. Complementary to (not competing
+      with) #1618, which is the [@handle](url) link shape. Precedent:
+      upstream merged the same kind of context-narrowing in
+      jupyter-book/mystmd#2684 (URLs, their #2538) and #2891
+      (@mention + HTML). The code-span shape is unreported upstream
+      as of 2026-06-12.
