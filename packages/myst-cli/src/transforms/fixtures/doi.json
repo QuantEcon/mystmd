@@ -1,0 +1,646 @@
+{
+  "priestley": {
+    "csl": {
+      "indexed": {
+        "date-parts": [
+          [
+            2026,
+            6,
+            11
+          ]
+        ],
+        "date-time": "2026-06-11T10:47:21Z",
+        "timestamp": 1781174841843,
+        "version": "3.54.1"
+      },
+      "reference-count": 0,
+      "publisher": "American Meteorological Society",
+      "issue": "2",
+      "content-domain": {
+        "domain": [],
+        "crossmark-restriction": false
+      },
+      "published-print": {
+        "date-parts": [
+          [
+            1972,
+            2
+          ]
+        ]
+      },
+      "DOI": "10.1175/1520-0493(1972)100<0081:otaosh>2.3.co;2",
+      "type": "journal-article",
+      "created": {
+        "date-parts": [
+          [
+            2007,
+            5,
+            3
+          ]
+        ],
+        "date-time": "2007-05-03T17:51:11Z",
+        "timestamp": 1178214671000
+      },
+      "page": "81-92",
+      "source": "Crossref",
+      "is-referenced-by-count": 4848,
+      "title": "On the Assessment of Surface Heat Flux and Evaporation Using Large-Scale Parameters",
+      "prefix": "10.1175",
+      "volume": "100",
+      "author": [
+        {
+          "given": "C. H. B.",
+          "family": "PRIESTLEY",
+          "sequence": "first",
+          "affiliation": [],
+          "role": [
+            {
+              "vocabulary": "crossref",
+              "role": "author"
+            }
+          ]
+        },
+        {
+          "given": "R. J.",
+          "family": "TAYLOR",
+          "sequence": "additional",
+          "affiliation": [],
+          "role": [
+            {
+              "vocabulary": "crossref",
+              "role": "author"
+            }
+          ]
+        }
+      ],
+      "member": "12",
+      "container-title": "Monthly Weather Review",
+      "original-title": [],
+      "language": "en",
+      "deposited": {
+        "date-parts": [
+          [
+            2020,
+            12,
+            22
+          ]
+        ],
+        "date-time": "2020-12-22T12:37:04Z",
+        "timestamp": 1608640624000
+      },
+      "score": 1,
+      "resource": {
+        "primary": {
+          "URL": "http://journals.ametsoc.org/doi/10.1175/1520-0493(1972)100<0081:OTAOSH>2.3.CO;2"
+        }
+      },
+      "subtitle": [],
+      "short-title": [],
+      "issued": {
+        "date-parts": [
+          [
+            1972,
+            2
+          ]
+        ]
+      },
+      "references-count": 0,
+      "journal-issue": {
+        "issue": "2",
+        "published-print": {
+          "date-parts": [
+            [
+              1972,
+              2
+            ]
+          ]
+        }
+      },
+      "alternative-id": [
+        "10.1175/1520-0493(1972)100<0081:OTAOSH>2.3.CO;2"
+      ],
+      "URL": "http://dx.doi.org/10.1175/1520-0493(1972)100<0081:OTAOSH>2.3.CO;2",
+      "relation": {},
+      "ISSN": [
+        "0027-0644",
+        "1520-0493"
+      ],
+      "subject": [],
+      "container-title-short": "Mon. Wea. Rev.",
+      "published": {
+        "date-parts": [
+          [
+            1972,
+            2
+          ]
+        ]
+      }
+    },
+    "bibtex": "@article{PRIESTLEY_1972, title={On the Assessment of Surface Heat Flux and Evaporation Using Large-Scale Parameters}, volume={100}, ISSN={1520-0493}, url={http://dx.doi.org/10.1175/1520-0493(1972)100<0081:OTAOSH>2.3.CO;2}, DOI={10.1175/1520-0493(1972)100<0081:otaosh>2.3.co;2}, number={2}, journal={Monthly Weather Review}, publisher={American Meteorological Society}, author={PRIESTLEY, C. H. B. and TAYLOR, R. J.}, year={1972}, month=Feb, pages={81\u201392} }"
+  },
+  "bartels": {
+    "csl": {
+      "indexed": {
+        "date-parts": [
+          [
+            2026,
+            6,
+            11
+          ]
+        ],
+        "date-time": "2026-06-11T22:49:02Z",
+        "timestamp": 1781218142015,
+        "version": "3.54.1"
+      },
+      "reference-count": 37,
+      "publisher": "Wiley",
+      "issue": "12",
+      "license": [
+        {
+          "start": {
+            "date-parts": [
+              [
+                2015,
+                9,
+                1
+              ]
+            ],
+            "date-time": "2015-09-01T00:00:00Z",
+            "timestamp": 1441065600000
+          },
+          "content-version": "tdm",
+          "delay-in-days": 6574,
+          "URL": "http://doi.wiley.com/10.1002/tdm_license_1.1"
+        }
+      ],
+      "content-domain": {
+        "domain": [],
+        "crossmark-restriction": false
+      },
+      "published-print": {
+        "date-parts": [
+          [
+            1997,
+            9
+          ]
+        ]
+      },
+      "DOI": "10.1002/(sici)1096-987x(199709)18:12<1450::aid-jcc3>3.0.co;2-i",
+      "type": "journal-article",
+      "created": {
+        "date-parts": [
+          [
+            2002,
+            9,
+            10
+          ]
+        ],
+        "date-time": "2002-09-10T22:41:36Z",
+        "timestamp": 1031697696000
+      },
+      "page": "1450-1462",
+      "source": "Crossref",
+      "is-referenced-by-count": 185,
+      "title": "Multidimensional adaptive umbrella sampling: Applications to main chain and side chain peptide conformations",
+      "prefix": "10.1002",
+      "volume": "18",
+      "author": [
+        {
+          "given": "Christian",
+          "family": "Bartels",
+          "sequence": "first",
+          "affiliation": [],
+          "role": [
+            {
+              "vocabulary": "crossref",
+              "role": "author"
+            }
+          ]
+        },
+        {
+          "given": "Martin",
+          "family": "Karplus",
+          "sequence": "additional",
+          "affiliation": [],
+          "role": [
+            {
+              "vocabulary": "crossref",
+              "role": "author"
+            }
+          ]
+        }
+      ],
+      "member": "311",
+      "reference": [
+        {
+          "key": "10.1002/(SICI)1096-987X(199709)18:12<1450::AID-JCC3>3.0.CO;2-I-BIB1",
+          "doi-asserted-by": "crossref",
+          "DOI": "10.1002/9780470141205",
+          "volume-title": "Proteins: A Theoretical Perspective of Dynamics, Structure, and Thermodynamics",
+          "author": "Brooks",
+          "year": "1988",
+          "unstructured": "and Proteins: A Theoretical Perspective of Dynamics, Structure, and Thermodynamics, Wiley, New York, 1988."
+        },
+        {
+          "key": "10.1002/(SICI)1096-987X(199709)18:12<1450::AID-JCC3>3.0.CO;2-I-BIB2",
+          "doi-asserted-by": "crossref",
+          "DOI": "10.1017/CBO9781139167864",
+          "volume-title": "Dynamics of Proteins and Nucleic Acids",
+          "author": "McCammon",
+          "year": "1987",
+          "unstructured": "and Dynamics of Proteins and Nucleic Acids, Cambridge University Press, Cambridge, U.K., 1987."
+        },
+        {
+          "key": "10.1002/(SICI)1096-987X(199709)18:12<1450::AID-JCC3>3.0.CO;2-I-BIB3",
+          "doi-asserted-by": "crossref",
+          "first-page": "7612",
+          "DOI": "10.1063/1.461335",
+          "volume": "95",
+          "author": "Lazaridis",
+          "year": "1991",
+          "journal-title": "J. Chem. Phys."
+        },
+        {
+          "key": "10.1002/(SICI)1096-987X(199709)18:12<1450::AID-JCC3>3.0.CO;2-I-BIB4",
+          "doi-asserted-by": "crossref",
+          "first-page": "187",
+          "DOI": "10.1016/0021-9991(77)90121-8",
+          "volume": "23",
+          "author": "Torrie",
+          "year": "1977",
+          "journal-title": "J. Comput. Phys."
+        },
+        {
+          "key": "10.1002/(SICI)1096-987X(199709)18:12<1450::AID-JCC3>3.0.CO;2-I-BIB5",
+          "doi-asserted-by": "crossref",
+          "first-page": "169",
+          "DOI": "10.1007/978-1-4684-2553-6_5",
+          "volume-title": "Statistical Mechanics, Part A: Equilibrium Techniques",
+          "author": "Valleau",
+          "year": "1977",
+          "unstructured": "and In Statistical Mechanics, Part A: Equilibrium Techniques, Ed., Plenum Press, New York, 1977, p. 169."
+        },
+        {
+          "key": "10.1002/(SICI)1096-987X(199709)18:12<1450::AID-JCC3>3.0.CO;2-I-BIB6",
+          "doi-asserted-by": "crossref",
+          "first-page": "4035",
+          "DOI": "10.1073/pnas.79.13.4035",
+          "volume": "79",
+          "author": "Northrup",
+          "year": "1982",
+          "journal-title": "Proc. Natl. Acad. Sci. USA"
+        },
+        {
+          "key": "10.1002/(SICI)1096-987X(199709)18:12<1450::AID-JCC3>3.0.CO;2-I-BIB7",
+          "doi-asserted-by": "crossref",
+          "first-page": "237",
+          "DOI": "10.1016/0021-9991(87)90054-4",
+          "volume": "68",
+          "author": "Mezei",
+          "year": "1987",
+          "journal-title": "J. Comput. Phys."
+        },
+        {
+          "key": "10.1002/(SICI)1096-987X(199709)18:12<1450::AID-JCC3>3.0.CO;2-I-BIB8",
+          "author": "Beutler",
+          "year": "1994",
+          "unstructured": "Ph.D. thesis, ETH, Z\u00fcrich, 1994."
+        },
+        {
+          "key": "10.1002/(SICI)1096-987X(199709)18:12<1450::AID-JCC3>3.0.CO;2-I-BIB9",
+          "doi-asserted-by": "crossref",
+          "first-page": "1391",
+          "DOI": "10.1002/bip.360240802",
+          "volume": "24",
+          "author": "Paine",
+          "year": "1985",
+          "journal-title": "Biopolymers"
+        },
+        {
+          "key": "10.1002/(SICI)1096-987X(199709)18:12<1450::AID-JCC3>3.0.CO;2-I-BIB10",
+          "doi-asserted-by": "crossref",
+          "first-page": "6690",
+          "DOI": "10.1063/1.463947",
+          "volume": "97",
+          "author": "Hooft",
+          "year": "1992",
+          "journal-title": "J. Chem. Phys."
+        },
+        {
+          "key": "10.1002/(SICI)1096-987X(199709)18:12<1450::AID-JCC3>3.0.CO;2-I-BIB11",
+          "author": "Ferrenberg",
+          "year": "1989",
+          "unstructured": "Ph.D. thesis, Carnegie-Mellon University, Pittsburgh, PA, 1989."
+        },
+        {
+          "key": "10.1002/(SICI)1096-987X(199709)18:12<1450::AID-JCC3>3.0.CO;2-I-BIB12",
+          "doi-asserted-by": "crossref",
+          "first-page": "1011",
+          "DOI": "10.1002/jcc.540130812",
+          "volume": "13",
+          "author": "Kumar",
+          "year": "1992",
+          "journal-title": "J. Comput. Chem."
+        },
+        {
+          "key": "10.1002/(SICI)1096-987X(199709)18:12<1450::AID-JCC3>3.0.CO;2-I-BIB13",
+          "doi-asserted-by": "crossref",
+          "first-page": "4509",
+          "DOI": "10.1021/j100119a043",
+          "volume": "97",
+          "author": "Boczko",
+          "year": "1993",
+          "journal-title": "J. Phys. Chem."
+        },
+        {
+          "key": "10.1002/(SICI)1096-987X(199709)18:12<1450::AID-JCC3>3.0.CO;2-I-BIB14",
+          "doi-asserted-by": "crossref",
+          "first-page": "211",
+          "DOI": "10.1103/PhysRevLett.71.211",
+          "volume": "71",
+          "author": "Lee",
+          "year": "1993",
+          "journal-title": "Phys. Rev. Lett."
+        },
+        {
+          "key": "10.1002/(SICI)1096-987X(199709)18:12<1450::AID-JCC3>3.0.CO;2-I-BIB15",
+          "doi-asserted-by": "crossref",
+          "first-page": "9886",
+          "DOI": "10.1073/pnas.92.21.9886",
+          "volume": "92",
+          "author": "Kidera",
+          "year": "1995",
+          "journal-title": "Proc. Natl. Acad. Sci. USA"
+        },
+        {
+          "key": "10.1002/(SICI)1096-987X(199709)18:12<1450::AID-JCC3>3.0.CO;2-I-BIB16",
+          "doi-asserted-by": "crossref",
+          "first-page": "4940",
+          "DOI": "10.1021/j100069a028",
+          "volume": "98",
+          "author": "Hao",
+          "year": "1994",
+          "journal-title": "J. Phys. Chem."
+        },
+        {
+          "key": "10.1002/(SICI)1096-987X(199709)18:12<1450::AID-JCC3>3.0.CO;2-I-BIB17",
+          "doi-asserted-by": "crossref",
+          "first-page": "1083",
+          "DOI": "10.1142/S0129183192000713",
+          "volume": "C3",
+          "author": "Berg",
+          "year": "1992",
+          "journal-title": "Int. J Modern Phys."
+        },
+        {
+          "key": "10.1002/(SICI)1096-987X(199709)18:12<1450::AID-JCC3>3.0.CO;2-I-BIB18",
+          "doi-asserted-by": "crossref",
+          "first-page": "9",
+          "DOI": "10.1103/PhysRevLett.68.9",
+          "volume": "68",
+          "author": "Berg",
+          "year": "1992",
+          "journal-title": "Phys. Rev. Lett."
+        },
+        {
+          "key": "10.1002/(SICI)1096-987X(199709)18:12<1450::AID-JCC3>3.0.CO;2-I-BIB19",
+          "doi-asserted-by": "crossref",
+          "first-page": "1333",
+          "DOI": "10.1002/jcc.540141110",
+          "volume": "14",
+          "author": "Hansmann",
+          "year": "1993",
+          "journal-title": "J. Comput. Chem."
+        },
+        {
+          "key": "10.1002/(SICI)1096-987X(199709)18:12<1450::AID-JCC3>3.0.CO;2-I-BIB20",
+          "doi-asserted-by": "crossref",
+          "first-page": "415",
+          "DOI": "10.1016/0378-4371(94)90342-5",
+          "volume": "212",
+          "author": "Hansmann",
+          "year": "1994",
+          "journal-title": "Physica A"
+        },
+        {
+          "key": "10.1002/(SICI)1096-987X(199709)18:12<1450::AID-JCC3>3.0.CO;2-I-BIB21",
+          "doi-asserted-by": "crossref",
+          "first-page": "1776",
+          "DOI": "10.1063/1.462133",
+          "volume": "96",
+          "author": "Lyubartsev",
+          "year": "1992",
+          "journal-title": "J. Chem. Phys."
+        },
+        {
+          "key": "10.1002/(SICI)1096-987X(199709)18:12<1450::AID-JCC3>3.0.CO;2-I-BIB22",
+          "author": "Bartels",
+          "unstructured": "and manuscript in preparation."
+        },
+        {
+          "key": "10.1002/(SICI)1096-987X(199709)18:12<1450::AID-JCC3>3.0.CO;2-I-BIB23",
+          "author": "Dunbrack",
+          "year": "1993",
+          "unstructured": "Ph.D. thesis, Harvard University, Cambridge, MA, 1993."
+        },
+        {
+          "key": "10.1002/(SICI)1096-987X(199709)18:12<1450::AID-JCC3>3.0.CO;2-I-BIB24",
+          "doi-asserted-by": "crossref",
+          "first-page": "543",
+          "DOI": "10.1006/jmbi.1993.1170",
+          "volume": "230",
+          "author": "Dunbrack",
+          "year": "1993",
+          "journal-title": "J. Mol. Biol."
+        },
+        {
+          "key": "10.1002/(SICI)1096-987X(199709)18:12<1450::AID-JCC3>3.0.CO;2-I-BIB25",
+          "doi-asserted-by": "crossref",
+          "first-page": "262",
+          "DOI": "10.1002/prot.340030408",
+          "volume": "3",
+          "author": "Anderson",
+          "year": "1988",
+          "journal-title": "Proteins Struct. Funct. Genet."
+        },
+        {
+          "key": "10.1002/(SICI)1096-987X(199709)18:12<1450::AID-JCC3>3.0.CO;2-I-BIB26",
+          "doi-asserted-by": "crossref",
+          "first-page": "3864",
+          "DOI": "10.1021/j100188a054",
+          "volume": "96",
+          "author": "Tobias",
+          "year": "1992",
+          "journal-title": "J. Phys. Chem."
+        },
+        {
+          "key": "10.1002/(SICI)1096-987X(199709)18:12<1450::AID-JCC3>3.0.CO;2-I-BIB27",
+          "volume-title": "Numerical Recipes in Fortran, The Art of Scientific Computing",
+          "author": "Press",
+          "year": "1986",
+          "unstructured": "and Numerical Recipes in Fortran, The Art of Scientific Computing, Cambridge University Press, Cambridge, U.K., 1986."
+        },
+        {
+          "key": "10.1002/(SICI)1096-987X(199709)18:12<1450::AID-JCC3>3.0.CO;2-I-BIB28",
+          "volume-title": "Taschenbuch der Mathematik",
+          "author": "Bronstein",
+          "year": "1989",
+          "unstructured": "and Taschenbuch der Mathematik, Verlag Harri Deutsch, Thun, Switzerland 1989."
+        },
+        {
+          "key": "10.1002/(SICI)1096-987X(199709)18:12<1450::AID-JCC3>3.0.CO;2-I-BIB29",
+          "volume-title": "Einf\u00fchrung in die Wahrscheinlichkeitstheorie und Statistik",
+          "author": "Krengel",
+          "year": "1991",
+          "unstructured": "Einf\u00fchrung in die Wahrscheinlichkeitstheorie und Statistik, Vieweg, Braunschweig/Wiesbaden, Germany, 1991."
+        },
+        {
+          "key": "10.1002/(SICI)1096-987X(199709)18:12<1450::AID-JCC3>3.0.CO;2-I-BIB30",
+          "doi-asserted-by": "crossref",
+          "first-page": "187",
+          "DOI": "10.1002/jcc.540040211",
+          "volume": "4",
+          "author": "Brooks",
+          "year": "1983",
+          "journal-title": "J. Comput. Chem."
+        },
+        {
+          "key": "10.1002/(SICI)1096-987X(199709)18:12<1450::AID-JCC3>3.0.CO;2-I-BIB31",
+          "first-page": "a143",
+          "volume": "6",
+          "author": "MacKerell",
+          "year": "1992",
+          "journal-title": "FASEB J."
+        },
+        {
+          "key": "10.1002/(SICI)1096-987X(199709)18:12<1450::AID-JCC3>3.0.CO;2-I-BIB32",
+          "author": "MacKerell",
+          "unstructured": "et al., manuscript in preparation."
+        },
+        {
+          "key": "10.1002/(SICI)1096-987X(199709)18:12<1450::AID-JCC3>3.0.CO;2-I-BIB33",
+          "doi-asserted-by": "crossref",
+          "first-page": "327",
+          "DOI": "10.1016/0021-9991(77)90098-5",
+          "volume": "23",
+          "author": "Ryckaert",
+          "year": "1977",
+          "journal-title": "J. Comput. Phys."
+        },
+        {
+          "key": "10.1002/(SICI)1096-987X(199709)18:12<1450::AID-JCC3>3.0.CO;2-I-BIB34",
+          "doi-asserted-by": "crossref",
+          "first-page": "308",
+          "DOI": "10.1016/0009-2614(95)00304-M",
+          "volume": "237",
+          "author": "Beutler",
+          "year": "1995",
+          "journal-title": "Chem. Phys. Lett."
+        },
+        {
+          "key": "10.1002/(SICI)1096-987X(199709)18:12<1450::AID-JCC3>3.0.CO;2-I-BIB35",
+          "doi-asserted-by": "crossref",
+          "first-page": "1339",
+          "DOI": "10.1002/jcc.540161104",
+          "volume": "16",
+          "author": "Kumar",
+          "year": "1995",
+          "journal-title": "J. Comput. Chem."
+        },
+        {
+          "key": "10.1002/(SICI)1096-987X(199709)18:12<1450::AID-JCC3>3.0.CO;2-I-BIB36",
+          "doi-asserted-by": "crossref",
+          "first-page": "2637",
+          "DOI": "10.1021/jp951713k",
+          "volume": "100",
+          "author": "Beutler",
+          "year": "1996",
+          "journal-title": "J. Phys. Chem."
+        },
+        {
+          "key": "10.1002/(SICI)1096-987X(199709)18:12<1450::AID-JCC3>3.0.CO;2-I-BIB37",
+          "doi-asserted-by": "crossref",
+          "first-page": "1269",
+          "DOI": "10.1002/(SICI)1096-987X(19960730)17:10<1269::AID-JCC7>3.0.CO;2-M",
+          "volume": "17",
+          "author": "Kumar",
+          "year": "1996",
+          "journal-title": "J. Comput. Chem."
+        }
+      ],
+      "container-title": "Journal of Computational Chemistry",
+      "original-title": [],
+      "language": "en",
+      "link": [
+        {
+          "URL": "https://api.wiley.com/onlinelibrary/tdm/v1/articles/10.1002%2F(SICI)1096-987X(199709)18:12%3C1450::AID-JCC3%3E3.0.CO;2-I",
+          "content-type": "unspecified",
+          "content-version": "vor",
+          "intended-application": "text-mining"
+        },
+        {
+          "URL": "https://onlinelibrary.wiley.com/doi/full/10.1002/(SICI)1096-987X(199709)18:12%3C1450::AID-JCC3%3E3.0.CO;2-I",
+          "content-type": "unspecified",
+          "content-version": "vor",
+          "intended-application": "similarity-checking"
+        }
+      ],
+      "deposited": {
+        "date-parts": [
+          [
+            2021,
+            7,
+            1
+          ]
+        ],
+        "date-time": "2021-07-01T10:35:47Z",
+        "timestamp": 1625135747000
+      },
+      "score": 1,
+      "resource": {
+        "primary": {
+          "URL": "https://onlinelibrary.wiley.com/doi/10.1002/(SICI)1096-987X(199709)18:12<1450::AID-JCC3>3.0.CO;2-I"
+        }
+      },
+      "subtitle": [],
+      "short-title": [],
+      "issued": {
+        "date-parts": [
+          [
+            1997,
+            9
+          ]
+        ]
+      },
+      "references-count": 37,
+      "journal-issue": {
+        "issue": "12",
+        "published-print": {
+          "date-parts": [
+            [
+              1997,
+              9
+            ]
+          ]
+        }
+      },
+      "URL": "http://dx.doi.org/10.1002/(SICI)1096-987X(199709)18:12<1450::AID-JCC3>3.0.CO;2-I",
+      "relation": {},
+      "ISSN": [
+        "0192-8651",
+        "1096-987X"
+      ],
+      "subject": [],
+      "container-title-short": "J. Comput. Chem.",
+      "published": {
+        "date-parts": [
+          [
+            1997,
+            9
+          ]
+        ]
+      }
+    },
+    "bibtex": "@article{Bartels_1997, title={Multidimensional adaptive umbrella sampling: Applications to main chain and side chain peptide conformations}, volume={18}, ISSN={1096-987X}, url={http://dx.doi.org/10.1002/(SICI)1096-987X(199709)18:12<1450::AID-JCC3>3.0.CO;2-I}, DOI={10.1002/(sici)1096-987x(199709)18:12<1450::aid-jcc3>3.0.co;2-i}, number={12}, journal={Journal of Computational Chemistry}, publisher={Wiley}, author={Bartels, Christian and Karplus, Martin}, year={1997}, month=Sept, pages={1450\u20131462} }"
+  }
+}
