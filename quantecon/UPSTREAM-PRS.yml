@@ -69,6 +69,9 @@ upstream_candidates:
       - sha: a63d53f1
         local_pr: 40
         title: "feat(book): shared counters across proof:* kinds (#34)"
+      - sha: 73854511
+        local_pr: 56
+        title: "Code numbering: honour scope in book mode and template in captions"
     depends_on: []
     upstream:
       pr: null
@@ -82,7 +85,12 @@ upstream_candidates:
       direct follow-up to #28's section-scope work — it closes the
       residual counter-share gap so interleaved theorem/lemma/proposition
       enumerators match the LaTeX PDF (LaTeX `\newtheorem{lemma}[theorem]`
-      parity). Naturally part of the same upstream story.
+      parity). Naturally part of the same upstream story. #56 extends
+      AUTO_PREFIX_KINDS to the `code` kind and makes caption nouns follow
+      `numbering[kind].template` — the scope half depends on the bundle's
+      machinery so the squash cannot ship standalone, though the
+      caption-template half is generic and could be split out at
+      cherry-pick time if upstream wants it sooner.
 
   - id: book-parts
     title: Book parts dividers
@@ -163,3 +171,27 @@ upstream_candidates:
       jupyter-book/mystmd#2684 (URLs, their #2538) and #2891
       (@mention + HTML). The code-span shape is unreported upstream
       as of 2026-06-12.
+
+  - id: proof-unnumbered
+    title: prf:proof defaults to enumerated false (amsthm convention)
+    description: |
+      The bare proof / prf:proof directive defaults `enumerated: false`,
+      matching LaTeX amsthm \begin{proof}; theorem-like kinds keep
+      `enumerated: true` and `enumerated: true` opts a proof back in.
+      Removes phantom enumerators that consumed counter slots without
+      ever rendering.
+    status: pending
+    commits:
+      - sha: 75e07a9a
+        local_pr: 57
+        title: "prf:proof defaults to enumerated: false (amsthm convention)"
+    depends_on: []
+    upstream:
+      pr: null
+      branch: null
+      merged_sha: null
+    notes: |
+      Self-contained; myst-ext-proof was byte-identical to upstream/main
+      before this commit, so the cherry-pick is clean. Mild behavior
+      change for any upstream user who relied on numbered bare proofs —
+      call out the `enumerated: true` opt-in in the upstream PR.
