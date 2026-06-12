@@ -68,6 +68,26 @@ You can use bullet points and numbered lists as you would in standard Markdown. 
 
 For numbered lists, you can start following lines with any number, meaning they don't have to be in numerical order, and this will not change the rendered output. The exception is the first number, which if it is not `1.` this will change the start number of the list.
 
+(fancy-lists)=
+### Alphabetic and roman-numeral lists
+
+Following [Pandoc's `fancy_lists` extension](https://pandoc.org/MANUAL.html#extension-fancy_lists), ordered-list markers may also use letters or roman numerals, with a period, a parenthesis, or enclosing parentheses as the delimiter. The numbering style and start number are inferred from the first marker, and a `#` may be used in place of any subsequent numeral.
+
+```{myst}
+i. introduction
+ii. motivation
+
+(a) first
+(#) second
+
+C)  third letter
+#)  fourth
+```
+
+A list whose first marker is `i.` or `I.` is numbered with roman numerals; any other single letter starts an alphabetic list (`C)` above is the letter C, starting the list at 3). Changing the marker style — including the delimiter — starts a new list, and a single uppercase letter with a period (e.g. `B.`) must be followed by two spaces to count as a list marker, so initials in running text are not mistaken for lists.
+
+The numbering style and delimiter are exported faithfully to LaTeX (via `enumitem` labels) and Typst, and recorded in HTML as the `<ol type="...">` attribute with a `delimiter-paren`/`delimiter-parens` class.
+
 ## Task Lists
 
 You can use GitHub Flavoured Markdown to create task lists, these may be read only or editable depending on the use case or the theme used.

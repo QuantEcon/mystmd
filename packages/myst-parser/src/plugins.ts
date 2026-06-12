@@ -9,6 +9,8 @@ export { mystPlugin, citationsPlugin } from 'markdown-it-myst';
 export { mystBlockPlugin, colonFencePlugin } from 'markdown-it-myst-extras';
 export type { MathExtensionOptions } from './math.js';
 export { plugin as mathPlugin } from './math.js';
+export type { FancyListsOptions } from './fancyLists.js';
+export { fancyListsPlugin } from './fancyLists.js';
 
 /** Markdown-it plugin to convert the front-matter token to a renderable token, for previews */
 export function convertFrontMatter(md: MarkdownIt) {

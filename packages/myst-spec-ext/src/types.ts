@@ -12,6 +12,7 @@ import type {
   Image as SpecImage,
   Admonition as SpecAdmonition,
   Code as SpecCode,
+  List as SpecList,
   ListItem as SpecListItem,
   Container as SpecContainer,
   InlineMath as SpecInlineMath,
@@ -147,6 +148,24 @@ export type Code = SpecCode & {
 
 export type ListItem = SpecListItem & {
   checked?: boolean;
+};
+
+/** Numbering style for ordered-list markers, named after CSS `list-style-type` values */
+export type ListNumberingStyle =
+  | 'decimal'
+  | 'lower-alpha'
+  | 'upper-alpha'
+  | 'lower-roman'
+  | 'upper-roman';
+
+/** Delimiter following (or wrapping) an ordered-list marker: `1.`, `1)` or `(1)` */
+export type ListDelimiterStyle = 'period' | 'paren' | 'parens';
+
+export type List = SpecList & {
+  /** Marker numbering style; omitted for plain decimal lists */
+  style?: ListNumberingStyle;
+  /** Marker delimiter; omitted for plain period delimiters */
+  delimiter?: ListDelimiterStyle;
 };
 
 export type CiteKind = 'narrative' | 'parenthetical';

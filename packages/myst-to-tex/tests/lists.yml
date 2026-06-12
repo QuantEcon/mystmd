@@ -1,0 +1,146 @@
+title: myst-to-tex lists
+cases:
+  - title: ordered list
+    mdast:
+      type: root
+      children:
+        - type: list
+          ordered: true
+          start: 1
+          children:
+            - type: listItem
+              children:
+                - type: text
+                  value: one
+            - type: listItem
+              children:
+                - type: text
+                  value: two
+    latex: |-
+      \begin{enumerate}
+      \item one
+      \item two
+      \end{enumerate}
+  - title: lower-roman list
+    mdast:
+      type: root
+      children:
+        - type: list
+          ordered: true
+          style: lower-roman
+          children:
+            - type: listItem
+              children:
+                - type: text
+                  value: one
+            - type: listItem
+              children:
+                - type: text
+                  value: two
+    latex: |-
+      \begin{enumerate}[label={\roman*.}]
+      \item one
+      \item two
+      \end{enumerate}
+  - title: parenthesized lower-roman list with start
+    mdast:
+      type: root
+      children:
+        - type: list
+          ordered: true
+          start: 4
+          style: lower-roman
+          delimiter: parens
+          children:
+            - type: listItem
+              children:
+                - type: text
+                  value: four
+            - type: listItem
+              children:
+                - type: text
+                  value: five
+    latex: |-
+      \begin{enumerate}[label={(\roman*)},start=4]
+      \item four
+      \item five
+      \end{enumerate}
+  - title: upper-alpha list with paren delimiter
+    mdast:
+      type: root
+      children:
+        - type: list
+          ordered: true
+          style: upper-alpha
+          delimiter: paren
+          children:
+            - type: listItem
+              children:
+                - type: text
+                  value: one
+            - type: listItem
+              children:
+                - type: text
+                  value: two
+    latex: |-
+      \begin{enumerate}[label={\Alph*)}]
+      \item one
+      \item two
+      \end{enumerate}
+  - title: parenthesized decimal list
+    mdast:
+      type: root
+      children:
+        - type: list
+          ordered: true
+          delimiter: parens
+          children:
+            - type: listItem
+              children:
+                - type: text
+                  value: one
+            - type: listItem
+              children:
+                - type: text
+                  value: two
+    latex: |-
+      \begin{enumerate}[label={(\arabic*)}]
+      \item one
+      \item two
+      \end{enumerate}
+  - title: ordered list with start
+    mdast:
+      type: root
+      children:
+        - type: list
+          ordered: true
+          start: 5
+          children:
+            - type: listItem
+              children:
+                - type: text
+                  value: five
+            - type: listItem
+              children:
+                - type: text
+                  value: six
+    latex: |-
+      \begin{enumerate}[start=5]
+      \item five
+      \item six
+      \end{enumerate}
+  - title: ordered list without start metadata
+    mdast:
+      type: root
+      children:
+        - type: list
+          ordered: true
+          children:
+            - type: listItem
+              children:
+                - type: text
+                  value: one
+    latex: |-
+      \begin{enumerate}
+      \item one
+      \end{enumerate}

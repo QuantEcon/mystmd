@@ -138,6 +138,27 @@ const table: Handler = (h, node) => {
   return defaultHandlers.table(h, node);
 };
 
+const LIST_STYLE_TO_HTML_TYPE: Record<string, string> = {
+  'lower-alpha': 'a',
+  'upper-alpha': 'A',
+  'lower-roman': 'i',
+  'upper-roman': 'I',
+};
+
+const list: Handler = (h, node) => {
+  if (node.ordered && (node.style || node.delimiter)) {
+    node.data = {
+      hProperties: {
+        type: LIST_STYLE_TO_HTML_TYPE[node.style] || undefined,
+        // The delimiter has no HTML attribute; expose a CSS hook, e.g. `(i)` markers
+        class:
+          node.delimiter && node.delimiter !== 'period' ? `delimiter-${node.delimiter}` : undefined,
+      },
+    };
+  }
+  return defaultHandlers.list(h, node);
+};
+
 const code: Handler = (h, node) => {
   const value = node.value ? node.value + '\n' : '';
   const props: Properties = {};
@@ -190,6 +211,7 @@ export const mystToHast: Plugin<[Options?], string, GenericParent> =
         heading,
         crossReference,
         code,
+        list,
         table,
         iframe,
         bibliography,
