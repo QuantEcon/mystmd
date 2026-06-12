@@ -1033,10 +1033,12 @@ export const enumerateTargetsPlugin: Plugin<[StateOptions], GenericParent, Gener
 function getCaptionLabel(kind?: Container['kind'], subcontainer?: boolean, numbering?: Numbering) {
   if (subcontainer && (kind === 'equation' || kind === 'subequation')) return `(%s)`;
   if (subcontainer) return `({subEnumerator})`;
-  if (!kind) return 'Figure %s:';
   // The caption noun follows the configured template, matching what
-  // cross-references render (e.g. `numbering.code.template: "Listing %s"`)
-  const template = numbering?.[kind]?.template ?? getDefaultNumberedReferenceTemplate(kind);
+  // cross-references render (e.g. `numbering.code.template: "Listing %s"`);
+  // containers without a kind are figures (matching kindFromNode)
+  const effectiveKind = kind || 'figure';
+  const template =
+    numbering?.[effectiveKind]?.template ?? getDefaultNumberedReferenceTemplate(effectiveKind);
   return `${template}:`;
 }
 
@@ -1056,7 +1058,11 @@ export function addContainerCaptionNumbersTransform(
   containers
     .filter((container: Container) => container.enumerator)
     .forEach((container: Container) => {
-      const target = opts.state.getTarget(container.identifier)?.node;
+      // Resolve the providing page state once: it serves both the target
+      // lookup and the numbering selection below. Single-page states do not
+      // resolve without a page argument but carry the numbering directly.
+      const stateProvider = opts.state.resolveStateProvider(container.identifier);
+      const target = (stateProvider ?? opts.state).getTarget(container.identifier)?.node;
       if (!target?.enumerator) return;
       // Only look for direct caption children
       let para = select(
@@ -1080,11 +1086,8 @@ export function addContainerCaptionNumbersTransform(
           html_id: (container as any).html_id,
           enumerator: target.enumerator,
         };
-        // Page-level resolvers need the identifier's page; a single-page
-        // ReferenceState carries the numbering directly
         const numbering =
-          opts.state.resolveStateProvider(container.identifier)?.numbering ??
-          (opts.state as { numbering?: Numbering }).numbering;
+          stateProvider?.numbering ?? (opts.state as { numbering?: Numbering }).numbering;
         fillReferenceEnumerators(
           file,
           captionNumber,

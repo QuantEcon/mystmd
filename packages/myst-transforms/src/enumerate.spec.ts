@@ -1286,6 +1286,21 @@ describe('code numbering (#47)', () => {
     expect(captionParagraph.children[0].type).toBe('captionNumber');
     expect(toText(captionParagraph.children[0])).toBe('Listing 1.1:');
   });
+  test('kind-less containers honour the figure template', () => {
+    const tree = u('root', [
+      u('container', { identifier: 'fig-1' }, [
+        u('caption', [u('paragraph', [u('text', 'My figure')])]),
+      ]),
+    ]);
+    const state = new ReferenceState('main.md', {
+      frontmatter: { numbering: { all: { enabled: true }, figure: { template: 'Fig. %s' } } },
+      vfile: new VFile(),
+    });
+    enumerateTargetsTransform(tree, { state });
+    addContainerCaptionNumbersTransform(tree, new VFile(), { state });
+    const captionParagraph = (tree as any).children[0].children[0].children[0];
+    expect(toText(captionParagraph.children[0])).toBe('Fig. 1:');
+  });
   test('caption noun falls back to the default without a template', () => {
     const tree = u('root', [
       u('container', { kind: 'code', identifier: 'list-1' }, [
