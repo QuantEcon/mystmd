@@ -91,3 +91,10 @@ merged_features:
     local_pr: 50
     merge_sha: 1fd33e3f
     tag: null
+
+  - id: 9
+    name: cite-code-span
+    description: Citation scanner respects inline code-span boundaries — backticked @-tokens in brackets are code, not cite keys
+    local_pr: 53
+    merge_sha: 00740bc5
+    tag: null
