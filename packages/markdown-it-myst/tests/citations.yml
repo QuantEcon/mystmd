@@ -381,3 +381,93 @@ cases:
           - type: text
             content: '.'
       - type: paragraph_close
+  - title: at-token inside a code span is not a citation
+    md: '**[NEW: wrap it in `@tf.function` for speed]**'
+    tokens:
+      - type: paragraph_open
+      - type: inline
+        children:
+          - type: text
+            content: ''
+          - type: strong_open
+          - type: text
+            content: '[NEW: wrap it in '
+          - type: code_inline
+            content: '@tf.function'
+          - type: text
+            content: ' for speed]'
+          - type: strong_close
+          - type: text
+            content: ''
+      - type: paragraph_close
+  - title: citation with a code-span suffix keeps citing
+    md: '[see @smith2021 and `@tf.function`]'
+    tokens:
+      - type: paragraph_open
+      - type: inline
+        children:
+          - type: cite_group_open
+            content: '['
+          - type: cite
+            content: 'see @smith2021 and `@tf.function`'
+            col: [1, 34]
+            meta:
+              label: smith2021
+              kind: parenthetical
+              suffix:
+                - content: 'and `@tf.function`'
+          - type: cite_group_close
+            content: ']'
+      - type: paragraph_close
+  - title: code-span at-token next to a real key degrades to in-text cite
+    md: '[@real; `@code`]'
+    tokens:
+      - type: paragraph_open
+      - type: inline
+        children:
+          - type: text
+            content: '['
+          - type: cite
+            content: '@real'
+            col: [1, 6]
+            meta:
+              label: real
+              kind: narrative
+          - type: text
+            content: '; '
+          - type: code_inline
+            content: '@code'
+          - type: text
+            content: ']'
+      - type: paragraph_close
+  - title: double-backtick code span guards at-token
+    md: 'wrap [`` `@x` `` here] please'
+    tokens:
+      - type: paragraph_open
+      - type: inline
+        children:
+          - type: text
+            content: 'wrap ['
+          - type: code_inline
+            content: '`@x`'
+          - type: text
+            content: ' here] please'
+      - type: paragraph_close
+  - title: escaped backtick does not open a code span
+    md: 'see [prefix \` @smith2021]'
+    tokens:
+      - type: paragraph_open
+      - type: inline
+        children:
+          - type: text
+            content: 'see '
+          - type: cite_group_open
+            content: '['
+          - type: cite
+            content: 'prefix \` @smith2021'
+            meta:
+              label: smith2021
+              kind: parenthetical
+          - type: cite_group_close
+            content: ']'
+      - type: paragraph_close
