@@ -63,13 +63,14 @@ const BARTELS_1997_CSL_JSON = [
 function mockDOISession(): ISession {
   const fetch = async (input: URL | RequestInfo, init?: RequestInit) => {
     // Throws on malformed URLs, like real fetch would
-    const url = new URL(typeof input === 'string' ? input : (input as Request).url ?? input);
+    const url = new URL(typeof input === 'string' ? input : ((input as Request).url ?? input));
     const doiPath = decodeURIComponent(url.pathname).toLowerCase();
-    const fixture = doiPath.includes('10.1175') || doiPath.includes('cr3qwn')
-      ? fixtures.priestley
-      : doiPath.includes('10.1002')
-        ? fixtures.bartels
-        : undefined;
+    const fixture =
+      doiPath.includes('10.1175') || doiPath.includes('cr3qwn')
+        ? fixtures.priestley
+        : doiPath.includes('10.1002')
+          ? fixtures.bartels
+          : undefined;
     if (!fixture) return { ok: false } as Response;
     const accept = new Headers(init?.headers as HeadersInit).get('Accept') ?? '';
     if (accept.includes('csl+json')) {
