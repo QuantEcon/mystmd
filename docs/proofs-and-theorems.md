@@ -5,7 +5,7 @@ description: MyST supports creating and referencing algorithms, axioms, conjectu
 thumbnail: ./thumbnails/proof.png
 ---
 
-All proof directives can be included using the `prf:kind` pattern, where the proof directives are shown in [](#proof-list). The directive is enumerated by default and can take in an optional title argument which is shown in brackets after the proof.
+All proof directives can be included using the `prf:kind` pattern, where the proof directives are shown in [](#proof-list). The directive is enumerated by default — except the bare proof directive (`proof` / `prf:proof`), which is unnumbered by default to match the LaTeX `amsthm` convention (opt in with `:enumerated: true`) — and can take in an optional title argument which is shown in brackets after the proof.
 
 :::{note} Same as Sphinx Proof 🎉
 :class: dropdown

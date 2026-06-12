@@ -27,7 +27,7 @@ describe('proof directive', () => {
             {
               type: 'proof',
               kind: 'proof',
-              enumerated: true,
+              enumerated: false,
               children: [
                 {
                   type: 'admonitionTitle',
@@ -87,5 +87,33 @@ describe('proof directive', () => {
       directives: [proofDirective],
     });
     expect(output).toEqual(expected);
+  });
+  it.each([
+    ['proof', false],
+    ['prf:proof', false],
+    ['prf:theorem', true],
+    ['prf:lemma', true],
+    ['prf:algorithm', true],
+  ])('%s defaults enumerated: %s', (name, enumerated) => {
+    const output = mystParse('```{' + name + '}\ncontent\n```', {
+      directives: [proofDirective],
+    });
+    const proof = (output as any).children[0].children[0];
+    expect(proof.type).toBe('proof');
+    expect(proof.enumerated).toBe(enumerated);
+  });
+  it('prf:proof can opt back in with enumerated: true', () => {
+    const output = mystParse('```{prf:proof}\n:enumerated: true\ncontent\n```', {
+      directives: [proofDirective],
+    });
+    const proof = (output as any).children[0].children[0];
+    expect(proof.enumerated).toBe(true);
+  });
+  it('nonumber still disables numbering on theorem kinds', () => {
+    const output = mystParse('```{prf:theorem}\n:nonumber: true\ncontent\n```', {
+      directives: [proofDirective],
+    });
+    const proof = (output as any).children[0].children[0];
+    expect(proof.enumerated).toBe(false);
   });
 });

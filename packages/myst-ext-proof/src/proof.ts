@@ -51,7 +51,10 @@ export const proofDirective: DirectiveSpec = {
     if (data.options?.nonumber !== undefined) {
       enumerated = !data.options.nonumber as boolean;
     } else {
-      enumerated = (data.options?.enumerated as boolean) ?? true;
+      // amsthm convention: the bare proof environment is unnumbered by
+      // default; theorem-like kinds are numbered. Opt in with `enumerated: true`
+      const isBareProof = data.name === 'proof' || data.name === 'prf:proof';
+      enumerated = (data.options?.enumerated as boolean) ?? !isBareProof;
     }
     const proof = {
       type: 'proof',
