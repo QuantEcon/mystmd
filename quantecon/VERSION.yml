@@ -119,3 +119,10 @@ merged_features:
     local_pr: 62
     merge_sha: e2bac528
     tag: null
+
+  - id: 13
+    name: ipynb-attachment-fixes
+    description: ipynb attachment embedding — preserve image titles, resolve files/ output-folder URLs, async image reads
+    local_pr: 64
+    merge_sha: a34ab190
+    tag: null

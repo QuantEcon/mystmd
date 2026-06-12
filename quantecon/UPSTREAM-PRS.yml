@@ -34,13 +34,19 @@ upstream_candidates:
       - sha: a045d57d
         local_pr: 16
         title: "feat(ipynb): CommonMark ipynb export + image attachment embedding"
+      - sha: a34ab190
+        local_pr: 64
+        title: "ipynb attachments: preserve image titles, resolve files/ output URLs"
     depends_on: []
     upstream:
       pr: null
       branch: null      # set when the upstream/<topic> branch is pushed
       merged_sha: null
     notes: |
-      Self-contained; can ship upstream any time.
+      Self-contained; can ship upstream any time. #64 is a follow-up
+      fixing the attachment-embedding edge cases from the original
+      review (image titles, files/ output-folder resolution, async
+      reads) — cherry-pick it in the same upstream PR.
 
   - id: book-mode-with-section-scope
     title: Book-style numbering (with LaTeX-style section scope and counter sharing)
