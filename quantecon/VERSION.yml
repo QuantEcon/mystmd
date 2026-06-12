@@ -84,3 +84,10 @@ merged_features:
     local_pr: 42
     merge_sha: 95494e41
     tag: qe-v7
+
+  - id: 8
+    name: fancy-lists
+    description: Pandoc-style fancy ordered lists — alpha/roman/(i) markers parsed with style+delimiter through HTML/TeX/Typst/JATS exporters
+    local_pr: 50
+    merge_sha: 1fd33e3f
+    tag: null
