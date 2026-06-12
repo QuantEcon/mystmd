@@ -110,12 +110,13 @@ upstream_candidates:
   - id: fancy-lists
     title: Pandoc-style fancy ordered lists
     description: |
-      Parses Pandoc fancy_lists ordered-list markers (a., B), iv., (i))
-      with inferred style/start; `list` nodes carry `style`/`delimiter`
-      (myst-spec-ext) rendered by the HTML/TeX/Typst/JATS exporters.
-      Plain CommonMark lists keep a byte-identical AST (conformance
-      suite unchanged). Vendored markdown-it-fancy-lists (MIT) extended
-      with the (i) TwoParens form.
+      Parses Pandoc fancy_lists ordered-list markers — `a.`, `B)`,
+      `iv.`, `(i)` — with inferred style/start; `list` nodes carry
+      `style`/`delimiter` (myst-spec-ext) rendered by the
+      HTML/TeX/Typst/JATS exporters. Plain CommonMark lists keep a
+      byte-identical AST (conformance suite unchanged). Vendored
+      markdown-it-fancy-lists (MIT) extended with the `(i)` TwoParens
+      form.
     status: pending
     commits:
       - sha: 1fd33e3f
