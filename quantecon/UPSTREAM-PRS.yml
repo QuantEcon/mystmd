@@ -106,3 +106,29 @@ upstream_candidates:
       upstream PR). Could alternatively fold into `book-mode-with-section-scope`
       to ship the complete book UX as one upstream PR — decide at upstream
       time based on maintainer preference.
+
+  - id: fancy-lists
+    title: Pandoc-style fancy ordered lists
+    description: |
+      Parses Pandoc fancy_lists ordered-list markers — `a.`, `B)`,
+      `iv.`, `(i)` — with inferred style/start; `list` nodes carry
+      `style`/`delimiter` (myst-spec-ext) rendered by the
+      HTML/TeX/Typst/JATS exporters. Plain CommonMark lists keep a
+      byte-identical AST (conformance suite unchanged). Vendored
+      markdown-it-fancy-lists (MIT) extended with the `(i)` TwoParens
+      form.
+    status: pending
+    commits:
+      - sha: 1fd33e3f
+        local_pr: 50
+        title: "Fancy ordered lists: alphabetic, roman, and parenthesized markers"
+    depends_on: []
+    upstream:
+      pr: null
+      branch: null
+      merged_sha: null
+    notes: |
+      Independent of book-mode work; can ship upstream any time. The
+      upstream story pairs naturally with a small jupyter-book/myst-theme
+      PR mapping list `style` to the <ol type> attribute (tracked in
+      QuantEcon/mystmd#51) — mention it in the upstream PR description.
