@@ -53,6 +53,7 @@ const AUTO_PREFIX_KINDS = new Set<string>([
   'subequation',
   'table',
   'exercise',
+  'code',
 ]);
 
 /**
@@ -1029,11 +1030,13 @@ export const enumerateTargetsPlugin: Plugin<[StateOptions], GenericParent, Gener
     enumerateTargetsTransform(tree, opts);
   };
 
-function getCaptionLabel(kind?: Container['kind'], subcontainer?: boolean) {
+function getCaptionLabel(kind?: Container['kind'], subcontainer?: boolean, numbering?: Numbering) {
   if (subcontainer && (kind === 'equation' || kind === 'subequation')) return `(%s)`;
   if (subcontainer) return `({subEnumerator})`;
   if (!kind) return 'Figure %s:';
-  const template = getDefaultNumberedReferenceTemplate(kind);
+  // The caption noun follows the configured template, matching what
+  // cross-references render (e.g. `numbering.code.template: "Listing %s"`)
+  const template = numbering?.[kind]?.template ?? getDefaultNumberedReferenceTemplate(kind);
   return `${template}:`;
 }
 
@@ -1077,10 +1080,15 @@ export function addContainerCaptionNumbersTransform(
           html_id: (container as any).html_id,
           enumerator: target.enumerator,
         };
+        // Page-level resolvers need the identifier's page; a single-page
+        // ReferenceState carries the numbering directly
+        const numbering =
+          opts.state.resolveStateProvider(container.identifier)?.numbering ??
+          (opts.state as { numbering?: Numbering }).numbering;
         fillReferenceEnumerators(
           file,
           captionNumber,
-          getCaptionLabel(container.kind, container.subcontainer),
+          getCaptionLabel(container.kind, container.subcontainer, numbering),
           target,
         );
         // The caption number is in the paragraph, it needs a link to the figure container

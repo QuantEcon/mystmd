@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'vitest';
 import {
   addChildrenFromTargetNode,
+  addContainerCaptionNumbersTransform,
   MultiPageReferenceResolver,
   ReferenceState,
   enumerateTargetsTransform,
@@ -1211,5 +1212,94 @@ describe('initializeTargetCounts', () => {
       heading: [4, null, 0, 0, 1, 0],
       figure: { main: 4, sub: 0 },
     });
+  });
+});
+
+// ---------------------------------------------------------------------
+// #47: code (enumerable code-block) numbering — scope + caption noun.
+// ---------------------------------------------------------------------
+
+describe('code numbering (#47)', () => {
+  const numbering = {
+    book: { enabled: true },
+    all: { enabled: true },
+    title: { enabled: true },
+    heading_1: { enabled: true },
+    code: { scope: 'chapter', template: 'Listing %s' },
+  };
+  test('code containers pick up the chapter prefix in book mode', () => {
+    const tree = u('root', [
+      u('container', { kind: 'code', identifier: 'list-1' }),
+      u('container', { kind: 'code', identifier: 'list-2' }),
+    ]);
+    const ch1 = new ReferenceState('ch1.md', {
+      frontmatter: { numbering },
+      vfile: new VFile(),
+    });
+    enumerateTargetsTransform(tree, { state: ch1 });
+    expect(ch1.getTarget('list-1')?.node.enumerator).toBe('1.1');
+    expect(ch1.getTarget('list-2')?.node.enumerator).toBe('1.2');
+    // next chapter: counter resets, prefix advances
+    const tree2 = u('root', [u('container', { kind: 'code', identifier: 'list-3' })]);
+    const ch2 = new ReferenceState('ch2.md', {
+      frontmatter: { numbering },
+      previousCounts: ch1.targetCounts,
+      vfile: new VFile(),
+    });
+    enumerateTargetsTransform(tree2, { state: ch2 });
+    expect(ch2.getTarget('list-3')?.node.enumerator).toBe('2.1');
+  });
+  test('code containers honour section scope', () => {
+    const tree = u('root', [
+      u('heading', { identifier: 's1', depth: 2 }),
+      u('container', { kind: 'code', identifier: 'list-1' }),
+      u('heading', { identifier: 's2', depth: 2 }),
+      u('container', { kind: 'code', identifier: 'list-2' }),
+    ]);
+    const state = new ReferenceState('ch1.md', {
+      frontmatter: {
+        numbering: {
+          ...numbering,
+          heading_2: { enabled: true },
+          code: { scope: 'section', template: 'Listing %s' },
+        },
+      },
+      vfile: new VFile(),
+    });
+    enumerateTargetsTransform(tree, { state });
+    expect(state.getTarget('list-1')?.node.enumerator).toBe('1.1.1');
+    expect(state.getTarget('list-2')?.node.enumerator).toBe('1.2.1');
+  });
+  test('caption noun follows the configured template', () => {
+    const tree = u('root', [
+      u('container', { kind: 'code', identifier: 'list-1' }, [
+        u('caption', [u('paragraph', [u('text', 'My listing')])]),
+      ]),
+    ]);
+    const state = new ReferenceState('ch1.md', {
+      frontmatter: { numbering },
+      vfile: new VFile(),
+    });
+    enumerateTargetsTransform(tree, { state });
+    addContainerCaptionNumbersTransform(tree, new VFile(), { state });
+    const captionParagraph = (tree as any).children[0].children[0].children[0];
+    expect(captionParagraph.children[0].type).toBe('captionNumber');
+    expect(toText(captionParagraph.children[0])).toBe('Listing 1.1:');
+  });
+  test('caption noun falls back to the default without a template', () => {
+    const tree = u('root', [
+      u('container', { kind: 'code', identifier: 'list-1' }, [
+        u('caption', [u('paragraph', [u('text', 'My listing')])]),
+      ]),
+    ]);
+    const state = new ReferenceState('main.md', {
+      frontmatter: { numbering: { all: { enabled: true } } },
+      vfile: new VFile(),
+    });
+    enumerateTargetsTransform(tree, { state });
+    addContainerCaptionNumbersTransform(tree, new VFile(), { state });
+    const captionParagraph = (tree as any).children[0].children[0].children[0];
+    // the default template uses a non-breaking space ('Program\u00a0%s')
+    expect(toText(captionParagraph.children[0])).toBe('Program\u00a01:');
   });
 });
