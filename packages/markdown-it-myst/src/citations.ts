@@ -83,8 +83,21 @@ export const citationsPlugin: PluginWithOptions = (md) => {
       const charAfter = state.src.codePointAt(end + 1);
       if (end > 0 && charAfter != 0x28 && charAfter != 0x5b) {
         const str = state.src.slice(state.pos + 1, end);
-        const parts = str.split(';').map((x) => x.match(regexes.citation));
+        const rawParts = str.split(';');
+        const parts = rawParts.map((x) => x.match(regexes.citation));
         if (parts.indexOf(null) >= 0) return false;
+        // Code spans bind tighter than citation brackets: an `@` inside
+        // `...` is literal code, not a citation key
+        const codeSpans = codeSpanRanges(str);
+        if (codeSpans.length) {
+          let partOffset = 0;
+          for (let i = 0; i < parts.length; i++) {
+            const x = parts[i] as RegExpMatchArray;
+            const atPos = partOffset + (x[1]?.length ?? 0) + (x[2]?.length ?? 0);
+            if (codeSpans.some(([from, to]) => atPos >= from && atPos < to)) return false;
+            partOffset += rawParts[i].length + 1; // +1 for the splitting semicolon
+          }
+        }
         let curCol = state.pos + 1;
         const cites = (parts as RegExpMatchArray[]).map(
           (x): Citation & { content: string; col: number[] } => {
@@ -129,6 +142,47 @@ export const citationsPlugin: PluginWithOptions = (md) => {
 
 function trimBraces(label: string): string {
   return label.replace(/^\{(.*)\}$/, '$1');
+}
+
+/**
+ * Ranges `[start, end)` of inline code spans within `str`, following
+ * CommonMark backtick-run matching: a span opened by a run of N backticks
+ * closes only at the next run of exactly N backticks; unmatched runs are
+ * literal text, and backslash-escaped backticks do not open a span.
+ */
+function codeSpanRanges(str: string): [number, number][] {
+  const ranges: [number, number][] = [];
+  let pos = 0;
+  while (pos < str.length) {
+    const char = str[pos];
+    if (char === '\\') {
+      pos += 2;
+      continue;
+    }
+    if (char !== '`') {
+      pos += 1;
+      continue;
+    }
+    const open = pos;
+    while (pos < str.length && str[pos] === '`') pos += 1;
+    const runLength = pos - open;
+    // Find a closing run of exactly the same length
+    let scan = pos;
+    while (scan < str.length) {
+      if (str[scan] !== '`') {
+        scan += 1;
+        continue;
+      }
+      const closeStart = scan;
+      while (scan < str.length && str[scan] === '`') scan += 1;
+      if (scan - closeStart === runLength) {
+        ranges.push([open, scan]);
+        pos = scan;
+        break;
+      }
+    }
+  }
+  return ranges;
 }
 
 // Skip parsing when inside link text or label.
