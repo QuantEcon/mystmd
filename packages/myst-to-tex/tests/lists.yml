@@ -108,3 +108,39 @@ cases:
       \item one
       \item two
       \end{enumerate}
+  - title: ordered list with start
+    mdast:
+      type: root
+      children:
+        - type: list
+          ordered: true
+          start: 5
+          children:
+            - type: listItem
+              children:
+                - type: text
+                  value: five
+            - type: listItem
+              children:
+                - type: text
+                  value: six
+    latex: |-
+      \begin{enumerate}[start=5]
+      \item five
+      \item six
+      \end{enumerate}
+  - title: ordered list without start metadata
+    mdast:
+      type: root
+      children:
+        - type: list
+          ordered: true
+          children:
+            - type: listItem
+              children:
+                - type: text
+                  value: one
+    latex: |-
+      \begin{enumerate}
+      \item one
+      \end{enumerate}

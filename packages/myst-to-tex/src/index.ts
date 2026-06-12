@@ -256,8 +256,11 @@ const handlers: Record<string, Handler> = {
               : `${counter}.`;
         parameters = `label={${label}}`;
         if (node.start && node.start !== 1) parameters += `,start=${node.start}`;
-      } else if (node.ordered && node.start !== 1) {
-        parameters = 'resume';
+      } else if (node.ordered && node.start && node.start !== 1) {
+        // `start` is explicit in the AST; `resume` would only continue a
+        // preceding enumerate's counter, which is wrong for arbitrary starts
+        state.usePackages('enumitem');
+        parameters = `start=${node.start}`;
       }
       state.renderEnvironment(node, node.ordered ? 'enumerate' : 'itemize', { parameters });
     }
