@@ -12,6 +12,8 @@ type TestCase = {
   cwd: string;
   env?: Record<string, any>;
   timeout?: number;
+  /** vitest retries for known-environmental cases (e.g. Jupyter kernel timing) */
+  retry?: number;
   command: string;
   expectFailure?: boolean;
   outputs: {
@@ -42,39 +44,45 @@ const only = '';
 const TIMEOUT = 35000; // Long-ish to allow for the execution tests
 describe.concurrent('End-to-end cli export tests', { timeout: TIMEOUT }, () => {
   const cases = loadCases('exports.yml');
-  test.each(
-    cases.filter((c) => !only || c.title === only).map((c): [string, TestCase] => [c.title, c]),
-  )('%s', async (_, { cwd, env, command, expectFailure, outputs, timeout }) => {
-    // Clean expected outputs if they already exist
-    await Promise.all(
-      outputs.map(async (output) => {
-        if (fs.existsSync(resolve(output.path))) {
-          await exec(`rm ${resolve(output.path)}`, { cwd: resolve(cwd) });
+  // Not test.each: per-case vitest options (retry for known-environmental
+  // cases like Jupyter kernel timing; each attempt gets a fresh timeout)
+  cases
+    .filter((c) => !only || c.title === only)
+    .forEach(({ title, cwd, env, command, expectFailure, outputs, timeout, retry }) => {
+      test(title, { retry: retry ?? 0 }, async () => {
+        // Clean expected outputs if they already exist
+        await Promise.all(
+          outputs.map(async (output) => {
+            if (fs.existsSync(resolve(output.path))) {
+              await exec(`rm ${resolve(output.path)}`, { cwd: resolve(cwd) });
+            }
+          }),
+        );
+        // Run CLI command and assert non-zero exit when expectFailure is set
+        const run = exec(command, { cwd: resolve(cwd), env: { ...process.env, ...env }, timeout });
+        if (expectFailure) {
+          await expect(run).rejects.toThrow();
+        } else {
+          await run;
         }
-      }),
-    );
-    // Run CLI command and assert non-zero exit when expectFailure is set
-    const run = exec(command, { cwd: resolve(cwd), env: { ...process.env, ...env }, timeout });
-    if (expectFailure) {
-      await expect(run).rejects.toThrow();
-    } else {
-      await run;
-    }
-    // Expect correct output
-    outputs.forEach((output) => {
-      expect(fs.existsSync(resolve(output.path))).toBeTruthy();
-      if (!output.content) return;
-      if (path.extname(output.content) === '.json') {
-        expect(
-          JSON.parse(cleanHashes(fs.readFileSync(resolve(output.path), { encoding: 'utf-8' }))),
-        ).toMatchObject(
-          JSON.parse(cleanHashes(fs.readFileSync(resolve(output.content), { encoding: 'utf-8' }))),
-        );
-      } else {
-        expect(cleanHashes(fs.readFileSync(resolve(output.path), { encoding: 'utf-8' }))).toEqual(
-          cleanHashes(fs.readFileSync(resolve(output.content), { encoding: 'utf-8' })),
-        );
-      }
+        // Expect correct output
+        outputs.forEach((output) => {
+          expect(fs.existsSync(resolve(output.path))).toBeTruthy();
+          if (!output.content) return;
+          if (path.extname(output.content) === '.json') {
+            expect(
+              JSON.parse(cleanHashes(fs.readFileSync(resolve(output.path), { encoding: 'utf-8' }))),
+            ).toMatchObject(
+              JSON.parse(
+                cleanHashes(fs.readFileSync(resolve(output.content), { encoding: 'utf-8' })),
+              ),
+            );
+          } else {
+            expect(
+              cleanHashes(fs.readFileSync(resolve(output.path), { encoding: 'utf-8' })),
+            ).toEqual(cleanHashes(fs.readFileSync(resolve(output.content), { encoding: 'utf-8' })));
+          }
+        });
+      });
     });
-  });
 });
