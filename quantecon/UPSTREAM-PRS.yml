@@ -156,7 +156,7 @@ upstream_candidates:
       the upstream PR: the escaping direction floated in
       jupyter-book/mystmd#1618 cannot cover this shape — CommonMark
       makes backslashes literal inside code spans, so a backticked `@`
-      is un-escapable; code spans also bind tighter than brackets in
+      cannot be escaped; code spans also bind tighter than brackets in
       CommonMark's own precedence. Complementary to (not competing
       with) #1618, which is the [@handle](url) link shape. Precedent:
       upstream merged the same kind of context-narrowing in
