@@ -126,10 +126,19 @@ async function collectImageData(
         };
         return;
       } catch (err) {
-        // try the next candidate
+        // Missing files fall through to the next candidate quietly;
+        // other failures (EACCES, EISDIR, ...) are surfaced. Embedding
+        // stays best-effort either way — the image is left as a path.
+        if ((err as NodeJS.ErrnoException).code !== 'ENOENT') {
+          session.log.warn(
+            `Could not read image for attachment embedding: ${filePath} (${(err as NodeJS.ErrnoException).code})`,
+          );
+        }
       }
     }
-    session.log.debug(`Image not found for attachment embedding: ${url}`);
+    session.log.debug(
+      `Image not found for attachment embedding: ${url} (tried: ${candidates.join(', ')})`,
+    );
   });
   await Promise.all(tasks);
 
