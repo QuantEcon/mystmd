@@ -56,7 +56,12 @@ export async function runIpynbExport(
   if ((exportOptions as any).images === 'attachment') {
     ipynbOpts.images = 'attachment';
     // Collect image data from the AST — read files and base64-encode
-    ipynbOpts.imageData = collectImageData(session, mdast, article.file);
+    ipynbOpts.imageData = await collectImageData(
+      session,
+      mdast,
+      article.file,
+      path.dirname(output),
+    );
   }
   const mdOut = writeIpynb(vfile, mdast as any, frontmatter, ipynbOpts);
   logMessagesFromVFile(session, mdOut);
@@ -77,17 +82,24 @@ export async function runIpynbExport(
  * the serialized markdown to use `attachment:` references.
  *
  * Remote URLs (http/https) and data URIs are skipped — only local files are embedded.
+ *
+ * URLs are resolved against the source file's folder first; if not found
+ * there, against the export output folder — `finalizeMdast` rewrites
+ * generated images (e.g. executed notebook outputs) to `files/...` web
+ * paths under the output folder, so those only exist at the output side.
  */
-function collectImageData(
+async function collectImageData(
   session: ISession,
   mdast: any,
   sourceFile: string,
-): Record<string, ImageData> {
+  outputFolder: string,
+): Promise<Record<string, ImageData>> {
   const imageData: Record<string, ImageData> = {};
   const imageNodes = selectAll('image', mdast) as any[];
   const sourcePath = session.sourcePath();
+  const seen = new Set<string>();
 
-  for (const img of imageNodes) {
+  const tasks = imageNodes.map(async (img) => {
     const url = img.url ?? img.urlSource;
     if (
       !url ||
@@ -95,29 +107,40 @@ function collectImageData(
       url.startsWith('https://') ||
       url.startsWith('data:')
     ) {
-      continue;
+      return;
     }
-    if (imageData[url]) continue; // already processed
+    if (seen.has(url)) return; // already processed
+    seen.add(url);
 
     const sourceFolder = getSourceFolder(url, sourceFile, sourcePath);
     const relativeUrl = url.replace(/^[/\\]+/, '');
-    const filePath = path.join(sourceFolder, relativeUrl);
+    const candidates = [path.join(sourceFolder, relativeUrl), path.join(outputFolder, relativeUrl)];
 
-    try {
-      if (!fs.existsSync(filePath)) {
-        session.log.debug(`Image not found for attachment embedding: ${filePath}`);
-        continue;
+    for (const filePath of candidates) {
+      try {
+        const buffer = await fs.promises.readFile(filePath);
+        const mimeType = (mime.lookup(filePath) || 'application/octet-stream') as string;
+        imageData[url] = {
+          mime: mimeType,
+          data: buffer.toString('base64'),
+        };
+        return;
+      } catch (err) {
+        // Missing files fall through to the next candidate quietly;
+        // other failures (EACCES, EISDIR, ...) are surfaced. Embedding
+        // stays best-effort either way — the image is left as a path.
+        if ((err as NodeJS.ErrnoException).code !== 'ENOENT') {
+          session.log.warn(
+            `Could not read image for attachment embedding: ${filePath} (${(err as NodeJS.ErrnoException).code})`,
+          );
+        }
       }
-      const buffer = fs.readFileSync(filePath);
-      const mimeType = (mime.lookup(filePath) || 'application/octet-stream') as string;
-      imageData[url] = {
-        mime: mimeType,
-        data: buffer.toString('base64'),
-      };
-    } catch (err) {
-      session.log.debug(`Failed to read image for attachment: ${filePath}`);
     }
-  }
+    session.log.debug(
+      `Image not found for attachment embedding: ${url} (tried: ${candidates.join(', ')})`,
+    );
+  });
+  await Promise.all(tasks);
 
   return imageData;
 }

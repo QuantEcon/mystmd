@@ -62,9 +62,9 @@ export function embedImagesAsAttachments(
   // Handles escaped brackets in alt text and escaped parentheses in URLs.
   // The escaped sequences (\] and \)) must appear BEFORE the single-char
   // alternatives so the regex engine matches them as pairs first.
-  const imgRegex = /!\[((?:\\\]|[^\]])*)\]\(((?:\\\)|[^)\s])+)(?:\s+"[^"]*")?\)/g;
+  const imgRegex = /!\[((?:\\\]|[^\]])*)\]\(((?:\\\)|[^)\s])+)(\s+"[^"]*")?\)/g;
 
-  const updatedMd = md.replace(imgRegex, (fullMatch, alt, url) => {
+  const updatedMd = md.replace(imgRegex, (fullMatch, alt, url, title) => {
     // Unescape markdown characters that mdast-util-to-markdown might have added
     const unescapedUrl = url.replace(/\\([()[\]])/g, '$1');
 
@@ -87,7 +87,8 @@ export function embedImagesAsAttachments(
     usedNames.add(name);
 
     attachments[name] = { [data.mime]: data.data };
-    return `![${alt}](attachment:${name})`;
+    // Preserve an optional image title: ![alt](url "title")
+    return `![${alt}](attachment:${name}${title ?? ''})`;
   });
 
   if (Object.keys(attachments).length > 0) {

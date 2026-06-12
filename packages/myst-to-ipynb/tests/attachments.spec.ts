@@ -42,6 +42,18 @@ describe('embedImagesAsAttachments', () => {
     });
   });
 
+  test('preserves an optional image title', () => {
+    const md = '![Chart](/_static/chart.png "My chart title")';
+    const imageData = {
+      '/_static/chart.png': { mime: 'image/png', data: 'AAAA' },
+    };
+    const result = embedImagesAsAttachments(md, imageData);
+    expect(result.md).toBe('![Chart](attachment:chart.png "My chart title")');
+    expect(result.attachments).toEqual({
+      'chart.png': { 'image/png': 'AAAA' },
+    });
+  });
+
   test('skips images not in imageData', () => {
     const md = '![A](/a.png)\n\n![B](/b.png)';
     const imageData = {
