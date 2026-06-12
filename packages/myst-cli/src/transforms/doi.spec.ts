@@ -61,7 +61,7 @@ const BARTELS_1997_CSL_JSON = [
  * "strange characters" coverage of the original live tests.
  */
 function mockDOISession(): ISession {
-  const fetch = async (input: URL | RequestInfo, init?: RequestInit) => {
+  const mockFetch = async (input: URL | RequestInfo, init?: RequestInit) => {
     // Throws on malformed URLs, like real fetch would
     const url = new URL(typeof input === 'string' ? input : ((input as Request).url ?? input));
     const doiPath = decodeURIComponent(url.pathname).toLowerCase();
@@ -86,7 +86,11 @@ function mockDOISession(): ISession {
       json: async () => JSON.parse(fixture.bibtex),
     } as Response;
   };
-  return { log: new Session().log, fetch } as unknown as ISession;
+  // A real Session keeps the stub aligned with the full ISession surface;
+  // only fetch is overridden
+  const session = new Session();
+  session.fetch = mockFetch as ISession['fetch'];
+  return session;
 }
 
 // Set TEST_LIVE_DOI=1 to run the same cases against live doi.org (e.g. to
@@ -94,7 +98,7 @@ function mockDOISession(): ISession {
 const sessions: { name: string; makeSession: () => ISession }[] = [
   { name: 'recorded', makeSession: mockDOISession },
 ];
-if (process.env.TEST_LIVE_DOI) {
+if (process.env.TEST_LIVE_DOI === '1') {
   sessions.push({ name: 'live doi.org', makeSession: () => new Session() });
 }
 
