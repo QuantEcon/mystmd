@@ -112,3 +112,10 @@ merged_features:
     local_pr: 57
     merge_sha: 75e07a9a
     tag: qe-v8
+
+  - id: 12
+    name: ci-deflake
+    description: DOI resolver tests use recorded doi.org fixtures (TEST_LIVE_DOI=1 for live); Jupyter execution e2e tests get targeted vitest retry
+    local_pr: 62
+    merge_sha: e2bac528
+    tag: null

@@ -195,3 +195,26 @@ upstream_candidates:
       before this commit, so the cherry-pick is clean. Mild behavior
       change for any upstream user who relied on numbered bare proofs —
       call out the `enumerated: true` opt-in in the upstream PR.
+
+  - id: ci-deflake
+    title: Deflake DOI resolver and Jupyter execution tests
+    description: |
+      DOI resolver tests run against recorded doi.org content-negotiation
+      fixtures via a fetch-overridden Session (TEST_LIVE_DOI=1 re-enables
+      the live variants); the e2e export runner supports per-case vitest
+      retry, applied only to the two Jupyter kernel-timing cases.
+    status: pending
+    commits:
+      - sha: e2bac528
+        local_pr: 62
+        title: "Deflake CI: record DOI fixtures, retry Jupyter execution e2e tests"
+    depends_on: []
+    upstream:
+      pr: null
+      branch: null
+      merged_sha: null
+    notes: |
+      Strong upstream candidate: the flaky tests are upstream's own
+      (their #2823 already patched live-DOI data drift once), and the
+      touched files were byte-identical to upstream/main before this
+      commit, so the cherry-pick is clean. Self-contained.
