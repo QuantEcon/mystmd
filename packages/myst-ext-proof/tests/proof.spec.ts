@@ -91,7 +91,9 @@ describe('proof directive', () => {
   it.each([
     ['proof', false],
     ['prf:proof', false],
+    ['proof:proof', false],
     ['prf:theorem', true],
+    ['proof:theorem', true],
     ['prf:lemma', true],
     ['prf:algorithm', true],
   ])('%s defaults enumerated: %s', (name, enumerated) => {
@@ -115,5 +117,25 @@ describe('proof directive', () => {
     });
     const proof = (output as any).children[0].children[0];
     expect(proof.enumerated).toBe(false);
+  });
+
+  it('parses proof directive without prf: prefix', async () => {
+    const content = '```{proof} Proof Title\nProof content\n```';
+    const output = mystParse(content, {
+      directives: [proofDirective],
+    });
+    const proof = (output as any).children[0].children[0];
+    expect(proof.type).toEqual('proof');
+    expect(proof.kind).toEqual(undefined);
+  });
+
+  it('parses proof:theorem the same as prf:theorem', async () => {
+    const content = '```{proof:theorem} Theorem Title\nTheorem content\n```';
+    const output = mystParse(content, {
+      directives: [proofDirective],
+    });
+    const theorem = (output as any).children[0].children[0];
+    expect(theorem.type).toEqual('proof');
+    expect(theorem.kind).toEqual('theorem');
   });
 });

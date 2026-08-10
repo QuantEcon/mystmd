@@ -1,7 +1,7 @@
 import type { KernelSpec } from 'myst-frontmatter';
 import type { Kernel, KernelMessage, SessionManager } from '@jupyterlab/services';
 import type { IOutput } from '@jupyterlab/nbformat';
-import type { IExpressionResult } from 'myst-common';
+import type { IExpressionResult } from 'myst-spec';
 import type { Logger } from 'myst-cli-utils';
 import type { VFile } from 'vfile';
 import path from 'node:path';
@@ -27,10 +27,15 @@ export async function createKernelConnection(
   vfile: VFile,
   log?: Logger,
 ): Promise<ISessionConnectionWithKernel | undefined> {
+  // Jupyter Server API paths are `/`-delimited, but `path.relative` returns
+  // native separators (backslashes on Windows).
+  // With a windows path, jupyter_server silently fall back to the server root.
+  // Normalize to a forward-slash path so kernels start in same location on all platforms.
+  const sessionPath = path.relative(basePath, vfile.path).split(path.sep).join('/');
   const sessionOpts = {
-    type: 'notebook',
-    path: path.relative(basePath, vfile.path),
+    path: sessionPath,
     name: path.basename(vfile.path),
+    type: 'console',
     kernel: {
       name: kernelspec.name,
     },
@@ -76,7 +81,9 @@ function IOPubAsOutput(msg: KernelMessage.IIOPubMessage): IOutput {
  */
 export async function executeCodeCell(kernel: Kernel.IKernelConnection, code: string) {
   const future = kernel.requestExecute({
-    code: code,
+    code,
+    allow_stdin: false,
+    stop_on_error: false,
   });
 
   const outputs: IOutput[] = [];
@@ -131,7 +138,7 @@ export async function executeCodeCell(kernel: Kernel.IKernelConnection, code: st
       }
     }
   };
-  let status: 'abort' | 'error' | 'ok' | undefined;
+  let status: KernelMessage.IExecuteReplyMsg['content']['status'] | undefined;
   future.onReply = (msg: KernelMessage.IExecuteReplyMsg) => {
     status = msg.content.status;
   };
@@ -153,6 +160,8 @@ export async function evaluateInlineExpression(kernel: Kernel.IKernelConnection,
     user_expressions: {
       expr: expr,
     },
+    allow_stdin: false,
+    stop_on_error: false,
   });
   let result: IExpressionResult | undefined;
   future.onReply = (msg: KernelMessage.IExecuteReplyMsg) => {

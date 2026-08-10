@@ -1,25 +1,13 @@
 import type { DirectiveSpec, DirectiveData, GenericNode } from 'myst-common';
 import { addCommonDirectiveOptions, commonDirectiveOptions } from 'myst-directives';
+import { PROOF_KINDS } from './types.js';
+
+// e.g. 'prf:theorem' (legacy, kept for backward compatibility) and 'proof:theorem' (preferred)
+const KIND_ALIASES = PROOF_KINDS.flatMap((kind) => [`prf:${kind}`, `proof:${kind}`]);
 
 export const proofDirective: DirectiveSpec = {
   name: 'proof',
-  alias: [
-    'prf:proof',
-    'prf:theorem',
-    'prf:axiom',
-    'prf:lemma',
-    'prf:definition',
-    'prf:criterion',
-    'prf:remark',
-    'prf:conjecture',
-    'prf:corollary',
-    'prf:algorithm',
-    'prf:example',
-    'prf:property',
-    'prf:observation',
-    'prf:proposition',
-    'prf:assumption',
-  ],
+  alias: KIND_ALIASES,
   arg: {
     type: 'myst',
   },
@@ -53,12 +41,13 @@ export const proofDirective: DirectiveSpec = {
     } else {
       // amsthm convention: the bare proof environment is unnumbered by
       // default; theorem-like kinds are numbered. Opt in with `enumerated: true`
-      const isBareProof = data.name === 'proof' || data.name === 'prf:proof';
+      // Covers all three spellings: `proof`, `prf:proof`, `proof:proof`
+      const isBareProof = data.name.replace(/^(prf|proof):/, '') === 'proof';
       enumerated = (data.options?.enumerated as boolean) ?? !isBareProof;
     }
     const proof = {
       type: 'proof',
-      kind: data.name !== 'proof' ? data.name.replace('prf:', '') : undefined,
+      kind: data.name !== 'proof' ? data.name.replace(/^(prf|proof):/, '') : undefined,
       enumerated,
       children: children as any[],
     };
