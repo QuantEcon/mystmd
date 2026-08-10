@@ -48,6 +48,14 @@ upstream_candidates:
       review (image titles, files/ output-folder resolution, async
       reads) — cherry-pick it in the same upstream PR.
 
+      Cherry-pick caveat: `packages/myst-to-ipynb/package.json` needs
+      `myst-spec`, `myst-spec-ext`, `unified` and `@types/js-yaml`
+      declared. Both squash commits predate upstream's isolated-linker
+      switch (jupyter-book/mystmd#2987) and relied on hoisting; the
+      declarations were added in the 2026-08-10 sync merge, so they are
+      *not* carried by either sha. Add them on the upstream branch after
+      cherry-picking, or the package will not build upstream.
+
   - id: book-mode-with-section-scope
     title: Book-style numbering (with LaTeX-style section scope and counter sharing)
     description: |
