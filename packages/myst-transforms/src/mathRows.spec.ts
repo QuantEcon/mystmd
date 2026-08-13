@@ -45,6 +45,15 @@ describe('scanMathRows', () => {
     expect(scan?.rows[1].nonumber).toBe(true);
     expect(scan?.rows[2].tag).toBe('A1');
   });
+  test('reads a tag with nested brace groups in full', () => {
+    const scan = scanMathRows(
+      '\\begin{align}a &= b \\tag{\\text{A}} \\\\ c &= d \\tag*{(\\text{B}.1)}\\end{align}',
+    );
+    expect(scan?.rows[0].tag).toBe('\\text{A}');
+    expect(scan?.rows[0].tagStar).toBeUndefined();
+    expect(scan?.rows[1].tag).toBe('(\\text{B}.1)');
+    expect(scan?.rows[1].tagStar).toBe(true);
+  });
   test('captures the alignat argument', () => {
     const scan = scanMathRows('\\begin{alignat}{2}a &= b \\\\ c &= d\\end{alignat}');
     expect(scan?.env).toBe('alignat');
@@ -148,6 +157,20 @@ describe('per-row numbering end to end', () => {
     expect(node.rows.rows[0].enumerator).toBe('A');
     expect(node.rows.rows[1].enumerator).toBe('1');
     expect(state.getTarget('eq-cd')?.node.enumerator).toBe('1');
+  });
+
+  test('nested-brace tags survive scanning and enumeration intact', () => {
+    const file = new VFile();
+    const tree = pageWithMath([
+      '\\begin{align}\na &= b \\tag{\\text{A}} \\\\\nc &= d\n\\end{align}',
+    ]);
+    mathLabelTransform(tree, file);
+    const state = new ReferenceState('page.md', { vfile: file, frontmatter: {} as any });
+    enumerateTargetsTransform(tree, { state });
+    const node = (tree.children as any[])[0];
+    expect(node.rows.rows[0].tag).toBe('\\text{A}');
+    expect(node.rows.rows[0].enumerator).toBe('\\text{A}');
+    expect(node.rows.rows[1].enumerator).toBe('1');
   });
 
   test('book-mode enumerators flow into the rows', () => {

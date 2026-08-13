@@ -108,7 +108,20 @@ function splitRows(body: string): RawRow[] | undefined {
 
 const LABEL_PATTERN = /\\label\{([^}]+)\}/g;
 const NONUMBER_PATTERN = /\\(?:nonumber|notag)(?![a-zA-Z])/;
-const TAG_PATTERN = /\\tag(\*?)\{([^}]*)\}/;
+const TAG_START_PATTERN = /\\tag(\*?)\s*(?=\{)/;
+
+/**
+ * Find a per-row `\tag{...}` / `\tag*{...}` and read its full balanced brace
+ * group — tag content may itself contain groups (e.g. `\tag{\text{A}}`), so a
+ * regex capture up to the first `}` would truncate it.
+ */
+function findTag(tex: string): { tag: string; star: boolean } | undefined {
+  const match = tex.match(TAG_START_PATTERN);
+  if (!match || match.index == null) return undefined;
+  const group = readBraceGroup(tex, match.index + match[0].length);
+  if (!group) return undefined;
+  return { tag: group.slice(1, -1), star: match[1] === '*' };
+}
 
 export type ScannedMathRow = MathRow & {
   /** Raw (un-normalized) `\label{...}` values found in the row. */
@@ -156,13 +169,13 @@ export function scanMathRows(value: string): ScannedMathRows | undefined {
     // which are hard errors inside amsmath environments in LaTeX
     const tex = (labels.length ? raw.tex.replace(LABEL_PATTERN, '') : raw.tex).trim();
     if (labels.length) labelsStripped = true;
-    const tagMatch = raw.tex.match(TAG_PATTERN);
+    const tagMatch = findTag(raw.tex);
     const row: ScannedMathRow = {
       tex,
       sep: raw.sep,
       nonumber: NONUMBER_PATTERN.test(raw.tex) || undefined,
-      tag: tagMatch ? tagMatch[2] : undefined,
-      tagStar: tagMatch?.[1] === '*' || undefined,
+      tag: tagMatch?.tag,
+      tagStar: tagMatch?.star || undefined,
     };
     if (labels.length) row.labels = labels;
     return row;
