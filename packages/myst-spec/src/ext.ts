@@ -76,11 +76,50 @@ export type InlineMath = SpecInlineMath &
     typst?: string;
   };
 
+/**
+ * One `\\`-delimited row of a row-numbering amsmath environment
+ * (align/gather/alignat). Rows are numbered individually, following
+ * amsmath semantics: `\nonumber`/`\notag` suppresses the row's number
+ * (the counter does not advance) and `\tag{...}` replaces it (the
+ * counter does not advance either).
+ */
+export type MathRow = {
+  /** Row source with `\label{...}` stripped; `\nonumber`/`\notag`/`\tag{...}` are retained. */
+  tex: string;
+  /** The row separator that followed this row, e.g. `\\`, `\\*` or `\\[2em]`. Absent on the final row. */
+  sep?: string;
+  /** `\nonumber` or `\notag` was present on this row. */
+  nonumber?: boolean;
+  /** Content of a per-row `\tag{...}` or `\tag*{...}`. */
+  tag?: string;
+  tagStar?: boolean;
+  identifier?: string;
+  label?: string;
+  html_id?: string;
+  /** The row's equation number, filled during enumeration. */
+  enumerator?: string;
+};
+
+/**
+ * Per-row structure of a row-numbering amsmath environment, extracted from
+ * the math node's value. Present only when the value is a multi-row
+ * `align`/`gather`/`alignat` environment.
+ */
+export type MathRows = {
+  env: 'align' | 'gather' | 'alignat';
+  starred?: boolean;
+  /** Mandatory argument for alignat, e.g. `{2}`. */
+  envArg?: string;
+  rows: MathRow[];
+};
+
 export type Math = SpecMath & {
   kind?: 'subequation';
   tight?: 'before' | 'after' | boolean;
   /** Typst-specific math content. If not provided, LaTeX content will be converted to Typst. */
   typst?: string;
+  /** Per-row numbering structure for align/gather/alignat environments. */
+  rows?: MathRows;
 };
 
 export type MathGroup = Target & {

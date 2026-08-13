@@ -25,7 +25,9 @@ export {
   mathLabelTransform,
   mathNestingTransform,
   renderEquation,
+  renderRowNumberedMathTransform,
 } from './math.js';
+export { scanMathRows, buildRowTex } from './mathRows.js';
 export {
   inlineMathSimplificationPlugin,
   inlineMathSimplificationTransform,

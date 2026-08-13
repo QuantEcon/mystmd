@@ -86,6 +86,8 @@ export type {
   ListNumberingStyle,
   Math,
   MathGroup,
+  MathRow,
+  MathRows,
   Output,
   Outputs,
   Raw,

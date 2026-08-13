@@ -64,6 +64,26 @@ export function withRecursiveCommands(
   return withRecursiveCommands(state, newPlugins);
 }
 
+/**
+ * For row-numbered environments (align/gather/alignat), per-row `\label{...}`s
+ * are stripped from the value during transforms; re-emit them here so LaTeX
+ * numbers and anchors each row natively (amsmath already implements the
+ * per-row semantics that `node.rows` captures).
+ */
+function valueWithRowLabels(node: any): string {
+  const rows = node.rows?.rows;
+  if (!rows?.some((row: any) => row.label)) return node.value;
+  const env = `${node.rows.env}${node.rows.starred ? '*' : ''}`;
+  const body = rows
+    .map((row: any, index: number) => {
+      const tex = row.label ? `${row.tex} \\label{${row.label}}` : row.tex;
+      const sep = index < rows.length - 1 ? ` ${row.sep ?? '\\\\'}` : '';
+      return `${tex}${sep}`;
+    })
+    .join('\n');
+  return `\\begin{${env}}${node.rows.envArg ?? ''}\n${body}\n\\end{${env}}`;
+}
+
 const math: Handler = (node, state) => {
   const { label, enumerated } = node;
   const tightBefore = node.tight === true || node.tight === 'before';
@@ -83,9 +103,8 @@ const math: Handler = (node, state) => {
     // Check if the node is an AMSMath environment, if so, render it directly
     const isAmsMath = isTopLevelAmsmathEnvironment(node.value);
     if (isAmsMath) {
-      // TODO: labels may be stripped previously in the transform, we may need to back that out
       state.ensureNewLine();
-      state.write(node.value);
+      state.write(valueWithRowLabels(node));
       state.ensureNewLine(true);
     } else {
       // Otherwise enclose the math environment by equation + label

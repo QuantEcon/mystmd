@@ -33,6 +33,8 @@ import type {
   ListNumberingStyle as SpecListNumberingStyle,
   Math as SpecMath,
   MathGroup as SpecMathGroup,
+  MathRow as SpecMathRow,
+  MathRows as SpecMathRows,
   Output as SpecOutput,
   Outputs as SpecOutputs,
   Raw as SpecRaw,
@@ -118,6 +120,10 @@ export type ListNumberingStyle = SpecListNumberingStyle;
 export type Math = SpecMath;
 /** @deprecated Use `MathGroup` from `myst-spec` instead */
 export type MathGroup = SpecMathGroup;
+/** @deprecated Use `MathRow` from `myst-spec` instead */
+export type MathRow = SpecMathRow;
+/** @deprecated Use `MathRows` from `myst-spec` instead */
+export type MathRows = SpecMathRows;
 /** @deprecated Use `Output` from `myst-spec` instead */
 export type Output = SpecOutput;
 /** @deprecated Use `Outputs` from `myst-spec` instead */
