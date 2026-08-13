@@ -32,7 +32,7 @@
 # Doing it in this order means anyone who `cat`s VERSION.yml at tag
 # `qe-v<N+1>` sees a self-consistent file (qe_version matches the tag).
 
-qe_version: qe-v8
+qe_version: qe-v9
 upstream_base: 1.10.1
 
 merged_features:
@@ -118,18 +118,18 @@ merged_features:
     description: DOI resolver tests use recorded doi.org fixtures (TEST_LIVE_DOI=1 for live); Jupyter execution e2e tests get targeted vitest retry
     local_pr: 62
     merge_sha: e2bac528
-    tag: null
+    tag: qe-v9
 
   - id: 13
     name: ipynb-attachment-fixes
     description: ipynb attachment embedding — preserve image titles, resolve files/ output-folder URLs, async image reads
     local_pr: 64
     merge_sha: a34ab190
-    tag: null
+    tag: qe-v9
 
   - id: 14
     name: per-row-equation-numbering
     description: align/gather/alignat rows numbered per-row (amsmath \nonumber/\tag/\label semantics, alignment axis preserved); includes katex ^0.15.2 → ^0.16.21 bump
     local_pr: 81
     merge_sha: 756a4d5d
-    tag: null
+    tag: qe-v9
