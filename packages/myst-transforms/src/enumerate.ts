@@ -657,6 +657,10 @@ export class ReferenceState implements IReferenceStateResolver {
 
   addTarget(node: TargetNodes, hidden?: boolean) {
     if (!isTargetIdentifierNode(node)) return;
+    if (node.type === 'math' && (node as MathNode).rows) {
+      this.addMathRowTargets(node as MathNode & { html_id?: string }, hidden);
+      return;
+    }
     const kind = kindFromNode(node);
     const numberNode = !hidden && shouldEnumerateNode(node, kind, this.numbering, this.offset);
     if (numberNode) {
@@ -685,6 +689,75 @@ export class ReferenceState implements IReferenceStateResolver {
   resolveEnumerator(val: any, enumerator?: string): string {
     const prefix = enumerator ?? this.numbering.enumerator?.enumerator;
     return prefix ? prefix.replace(/%s/g, String(val)) : String(val);
+  }
+
+  /**
+   * Per-row numbering for align/gather/alignat environments (amsmath
+   * semantics, #73). Each `\\` row advances the equation counter and takes
+   * its own number; `\nonumber` rows take none; `\tag{...}` rows display the
+   * tag without advancing the counter. Row labels become individual reference
+   * targets that resolve to the row's number.
+   *
+   * The block node itself takes no `enumerator` — per-row numbers are
+   * rendered into the equation HTML as explicit tags (see
+   * `renderRowNumberedMathTransform`), so a block-level enumerator would
+   * display a duplicate number next to the environment.
+   */
+  addMathRowTargets(node: MathNode & { html_id?: string }, hidden?: boolean) {
+    const info = node.rows;
+    if (!info) return;
+    const kind = TargetKind.equation;
+    const numberRows =
+      !hidden &&
+      !info.starred &&
+      shouldEnumerateNode(node as TargetNodes, kind, this.numbering, this.offset);
+    let firstEnumerator: string | undefined;
+    info.rows.forEach((row) => {
+      if (row.tag) {
+        row.enumerator = row.tag;
+      } else if (numberRows && !row.nonumber) {
+        // Synthetic node: incrementCount writes the enumerator onto it
+        const counter = { type: 'math' } as TargetNodes;
+        row.enumerator = this.incrementCount(counter, kind);
+      }
+      if (row.enumerator && firstEnumerator == null) firstEnumerator = row.enumerator;
+    });
+    const anchorIdentifier = node.identifier ?? info.rows.find((row) => row.identifier)?.identifier;
+    if (!node.html_id && anchorIdentifier) {
+      node.html_id = createHtmlId(anchorIdentifier);
+    }
+    const registerRowTarget = (
+      identifier: string | undefined,
+      label: string | undefined,
+      enumerator: string | undefined,
+    ) => {
+      if (!identifier) return;
+      if (this.targets[identifier] || this.identifiers.includes(identifier)) {
+        if (!this.vfile) return;
+        fileWarn(this.vfile, `Duplicate identifier in file "${identifier}"`, {
+          node,
+          source: TRANSFORM_NAME,
+          ruleId: RuleId.identifierIsUnique,
+        });
+        return;
+      }
+      this.targets[identifier] = {
+        node: {
+          type: 'math',
+          identifier,
+          label,
+          html_id: node.html_id,
+          enumerator,
+        } as TargetNodes,
+        kind,
+      };
+    };
+    // A block-level label (e.g. from a math directive) resolves to the first
+    // numbered row, which is what `\eqref` against the environment would show
+    registerRowTarget(node.identifier, node.label, firstEnumerator);
+    info.rows.forEach((row) => {
+      registerRowTarget(row.identifier, row.label, row.enumerator);
+    });
   }
 
   /**

@@ -613,7 +613,7 @@
         "doi-utils": "^2.0.5",
         "jats-tags": "^1.0.8",
         "jats-utils": "^1.0.8",
-        "katex": "^0.15.2",
+        "katex": "^0.16.21",
         "myst-common": "^1.9.2",
         "myst-frontmatter": "^1.9.2",
         "myst-spec": "^0.0.5",
@@ -630,7 +630,6 @@
       },
       "devDependencies": {
         "@types/js-yaml": "^4.0.5",
-        "@types/katex": "^0.14.0",
         "@types/mdast": "^3.0.10",
         "jats-xml": "^1.1.7",
         "js-yaml": "^4.1.0",
@@ -715,7 +714,7 @@
         "hast-util-to-mdast": "^8.3.1",
         "intersphinx": "^1.0.2",
         "js-yaml": "^4.1.0",
-        "katex": "^0.15.2",
+        "katex": "^0.16.21",
         "mdast-util-find-and-replace": "^2.1.0",
         "myst-common": "^1.10.0",
         "myst-frontmatter": "^1.10.0",
@@ -738,7 +737,6 @@
       },
       "devDependencies": {
         "@types/js-yaml": "^4.0.5",
-        "@types/katex": "^0.14.0",
         "@types/mdast": "^3.0.12",
       },
     },
@@ -1079,8 +1077,6 @@
     "@types/json5": ["@types/json5@0.0.29", "", {}, "sha512-dRLjCWHYg4oaA77cxO64oO+7JwCwnIzkZPdrrC71jQmQtlhM556pwKo5bUzqvZndkVbeFLIIi+9TC40JNF5hNQ=="],
 
     "@types/jsonfile": ["@types/jsonfile@6.1.1", "", { "dependencies": { "@types/node": "*" } }, "sha512-GSgiRCVeapDN+3pqA35IkQwasaCh/0YFH5dEF6S88iDvEn901DjOeH3/QPY+XYP1DFzDZPvIvfeEgk+7br5png=="],
-
-    "@types/katex": ["@types/katex@0.14.0", "", {}, "sha512-+2FW2CcT0K3P+JMR8YG846bmDwplKUTsWgT2ENwdQ1UdVfRk3GQrh6Mi4sTopy30gI8Uau5CEqHTDZ6YvWIUPA=="],
 
     "@types/linkify-it": ["@types/linkify-it@3.0.2", "", {}, "sha512-HZQYqbiFVWufzCwexrvh694SOim8z2d+xJl5UNamcvQFejLY/2YUtzXHYi3cHdI7PMlS8ejH2slRAOJQ32aNbA=="],
 
@@ -1920,7 +1916,7 @@
 
     "jtex": ["jtex@workspace:packages/jtex"],
 
-    "katex": ["katex@0.15.6", "", { "dependencies": { "commander": "^8.0.0" }, "bin": "cli.js" }, "sha512-UpzJy4yrnqnhXvRPhjEuLA4lcPn6eRngixW7Q3TJErjg3Aw2PuLFBzTkdUb89UtumxjhHTqL3a5GDGETMSwgJA=="],
+    "katex": ["katex@0.16.47", "", { "dependencies": { "commander": "^8.3.0" }, "bin": { "katex": "cli.js" } }, "sha512-Eeo8Ys1doU1z+x8AZsPpQu+p/QcZBI5PeOo7QGQdy2x2m0MU/hYagBbGOmXwr5KVbEfVuWv9LpnQWeehogurjg=="],
 
     "keyv": ["keyv@4.5.2", "", { "dependencies": { "json-buffer": "3.0.1" } }, "sha512-5MHbFaKn8cNSmVW7BYnijeAVlE4cYA/SVkifVgrh7yotnfhKmjuXpDKjrABLnT0SfHWV21P8ow07OGfRrNDg8g=="],
 

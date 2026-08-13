@@ -13,6 +13,7 @@ import {
   resolveLinksAndCitationsTransform,
   resolveReferencesTransform,
   mathPlugin,
+  renderRowNumberedMathTransform,
   codePlugin,
   keysTransform,
   linksTransform,
@@ -494,6 +495,9 @@ export async function postProcessMdast(
   resolveReferencesTransform(mdast, vfile, { state, transformers });
   await transformMystXRefs(session, vfile, mdast, frontmatter);
   await embedTransform(session, mdast, file, dependencies, state);
+  // Re-render row-numbered math (align/gather) now that enumeration has
+  // assigned per-row enumerators; the numbers render as per-row \tag{...}s
+  renderRowNumberedMathTransform(mdast, vfile, { macros: frontmatter.math });
   const pipe = unified();
   session.plugins?.transforms.forEach((t) => {
     if (t.stage !== 'project') return;

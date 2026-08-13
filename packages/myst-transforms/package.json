@@ -27,7 +27,7 @@
     "hast-util-from-html": "^2.0.1",
     "intersphinx": "^1.0.2",
     "js-yaml": "^4.1.0",
-    "katex": "^0.15.2",
+    "katex": "^0.16.21",
     "hast-util-to-mdast": "^8.3.1",
     "mdast-util-find-and-replace": "^2.1.0",
     "myst-common": "^1.10.0",
@@ -51,7 +51,6 @@
   },
   "devDependencies": {
     "@types/js-yaml": "^4.0.5",
-    "@types/katex": "^0.14.0",
     "@types/mdast": "^3.0.12"
   }
 }

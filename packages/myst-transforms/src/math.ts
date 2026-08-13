@@ -1,7 +1,7 @@
 import type { Plugin } from 'unified';
 import type { VFile } from 'vfile';
 import katex from 'katex';
-import 'katex/contrib/mhchem/mhchem.js';
+import 'katex/contrib/mhchem';
 import type { InlineMath, Node } from 'myst-spec';
 import type { Math } from 'myst-spec-ext';
 import { selectAll } from 'unist-util-select';
@@ -9,6 +9,7 @@ import type { GenericParent } from 'myst-common';
 import { RuleId, copyNode, fileError, fileWarn, normalizeLabel } from 'myst-common';
 import type { PageFrontmatter } from 'myst-frontmatter';
 import { unnestTransform } from './unnest.js';
+import { buildRowTex, scanMathRows } from './mathRows.js';
 
 const TRANSFORM_NAME = 'myst-transforms:math';
 
@@ -74,6 +75,80 @@ function labelMathNodes(file: VFile, node: Math | InlineMath) {
     });
   }
   node.value = value.replace(LABEL, '').trim();
+}
+
+/**
+ * Extract per-row numbering structure from row-numbering amsmath environments
+ * (align/gather/alignat), following amsmath semantics: each `\\` row takes its
+ * own number, `\nonumber`/`\notag` suppresses a row's number, `\tag{...}`
+ * replaces it, and a per-row `\label{...}` anchors that row.
+ *
+ * Per-row labels are stripped from the value (mirroring `labelMathNodes`) and
+ * recorded on `node.rows`; enumerators are assigned later during enumeration,
+ * and the HTML is re-rendered with injected `\tag`s after that.
+ *
+ * Single-row environments keep block-level numbering semantics (identical in
+ * amsmath), so existing anchors and rendering are unchanged for them.
+ */
+function extractMathRows(file: VFile, node: Math) {
+  const scan = scanMathRows(node.value);
+  if (!scan) return;
+  scan.rows.forEach((row) => {
+    const rawLabels = row.labels;
+    delete row.labels;
+    if (!rawLabels?.length) return;
+    if (rawLabels.length > 1) {
+      fileWarn(
+        file,
+        `Math row has multiple labels ["${rawLabels.join('", "')}"] - using "${rawLabels[0]}"`,
+        { node, source: TRANSFORM_NAME, ruleId: RuleId.mathLabelLifted },
+      );
+    }
+    const normalized = normalizeLabel(rawLabels[0]);
+    if (!normalized) return;
+    row.identifier = normalized.identifier;
+    row.label = normalized.label;
+    row.html_id = normalized.html_id;
+  });
+  const { labelsStripped, ...info } = scan;
+  if (labelsStripped) node.value = buildRowTex(info);
+  if (info.rows.length < 2) {
+    const row = info.rows[0];
+    if (!row) return;
+    if (row.identifier) {
+      if (node.label) {
+        fileWarn(
+          file,
+          `Math node is already labeled "${node.label}" - ignoring inline "\\label{${row.label}}"`,
+          { node, source: TRANSFORM_NAME, ruleId: RuleId.mathLabelLifted },
+        );
+      } else {
+        node.identifier = row.identifier;
+        node.label = row.label;
+        (node as any).html_id = row.html_id;
+      }
+    }
+    if (
+      (info.starred || row.nonumber) &&
+      node.enumerated == null &&
+      !node.identifier &&
+      !row.identifier
+    ) {
+      // amsmath: starred environments and \nonumber rows are unnumbered
+      node.enumerated = false;
+    } else if (row.tag && !(node as any).enumerator) {
+      // amsmath: \tag replaces the number without advancing the counter
+      (node as any).enumerator = row.tag;
+    }
+    return;
+  }
+  if (info.starred) {
+    // Starred environments are unnumbered; rows only matter if they carry
+    // explicit tags or labels (amsmath allows \tag in starred forms).
+    if (node.enumerated == null && !node.identifier) node.enumerated = false;
+    if (!info.rows.some((row) => row.tag || row.identifier)) return;
+  }
+  node.rows = info;
 }
 
 function removeSimpleEquationEnv(file: VFile, node: Math | InlineMath) {
@@ -192,7 +267,16 @@ function tryRender(file: VFile, node: Node, value: string, opts?: Options): Rend
 }
 
 export function renderEquation(file: VFile, node: Math | InlineMath, opts?: Options) {
-  let value = node.value;
+  // Row-numbered environments render as the starred (unnumbered) form with
+  // explicit per-row `\tag{...}`s injected for enumerated rows. This keeps the
+  // shared alignment axis while showing amsmath-style per-row numbers, and
+  // avoids KaTeX's automatic CSS-counter numbering (which cannot express
+  // book-mode enumerators). Before enumeration runs, rows have no enumerators
+  // yet and this renders the plain starred environment.
+  let value =
+    node.type === 'math' && node.rows
+      ? buildRowTex(node.rows, { starred: true, injectTags: true })
+      : node.value;
   if (!value) {
     const message = 'No input for math node';
     fileWarn(file, message, {
@@ -293,10 +377,16 @@ export function mathNestingTransform(
 }
 
 export function mathLabelTransform(tree: GenericParent, file: VFile) {
+  // Subequation members (mathGroup children) are numbered as lettered
+  // sub-equations; they do not participate in per-row numbering.
+  const subequations = new Set(selectAll('mathGroup > math', tree));
   const nodes = selectAll('math,inlineMath', tree) as (Math | InlineMath)[];
   nodes.forEach((node) => {
     transformMathValue(file, node);
     removeSimpleEquationEnv(file, node);
+    if (node.type === 'math' && !subequations.has(node)) {
+      extractMathRows(file, node);
+    }
     labelMathNodes(file, node);
   });
 }
@@ -312,6 +402,23 @@ export function subequationTransform(tree: GenericParent, file: VFile) {
 export function mathTransform(tree: GenericParent, file: VFile, opts?: Options) {
   const nodes = selectAll('math,inlineMath', tree) as (Math | InlineMath)[];
   nodes.forEach((node) => {
+    renderEquation(file, node, opts);
+  });
+}
+
+/**
+ * Re-render row-numbered math (align/gather/alignat) after enumeration has
+ * assigned per-row enumerators, injecting them as explicit `\tag{...}`s so the
+ * numbers appear at each row with the alignment axis preserved.
+ *
+ * The initial `mathTransform` runs before enumeration, so row-numbered nodes
+ * are first rendered without numbers; this transform must run after
+ * `enumerateTargetsTransform`.
+ */
+export function renderRowNumberedMathTransform(tree: GenericParent, file: VFile, opts?: Options) {
+  const nodes = selectAll('math', tree) as Math[];
+  nodes.forEach((node) => {
+    if (!node.rows?.rows?.some((row) => row.enumerator && !row.tag)) return;
     renderEquation(file, node, opts);
   });
 }
