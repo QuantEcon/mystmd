@@ -415,11 +415,7 @@ export function mathTransform(tree: GenericParent, file: VFile, opts?: Options) 
  * are first rendered without numbers; this transform must run after
  * `enumerateTargetsTransform`.
  */
-export function renderRowNumberedMathTransform(
-  tree: GenericParent,
-  file: VFile,
-  opts?: Options,
-) {
+export function renderRowNumberedMathTransform(tree: GenericParent, file: VFile, opts?: Options) {
   const nodes = selectAll('math', tree) as Math[];
   nodes.forEach((node) => {
     if (!node.rows?.rows?.some((row) => row.enumerator && !row.tag)) return;

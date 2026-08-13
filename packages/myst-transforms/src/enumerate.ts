@@ -722,8 +722,7 @@ export class ReferenceState implements IReferenceStateResolver {
       }
       if (row.enumerator && firstEnumerator == null) firstEnumerator = row.enumerator;
     });
-    const anchorIdentifier =
-      node.identifier ?? info.rows.find((row) => row.identifier)?.identifier;
+    const anchorIdentifier = node.identifier ?? info.rows.find((row) => row.identifier)?.identifier;
     if (!node.html_id && anchorIdentifier) {
       node.html_id = createHtmlId(anchorIdentifier);
     }
@@ -756,7 +755,9 @@ export class ReferenceState implements IReferenceStateResolver {
     // A block-level label (e.g. from a math directive) resolves to the first
     // numbered row, which is what `\eqref` against the environment would show
     registerRowTarget(node.identifier, node.label, firstEnumerator);
-    info.rows.forEach((row) => registerRowTarget(row.identifier, row.label, row.enumerator));
+    info.rows.forEach((row) => {
+      registerRowTarget(row.identifier, row.label, row.enumerator);
+    });
   }
 
   /**
