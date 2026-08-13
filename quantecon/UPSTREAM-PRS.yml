@@ -210,6 +210,49 @@ upstream_candidates:
       change for any upstream user who relied on numbered bare proofs —
       call out the `enumerated: true` opt-in in the upstream PR.
 
+  - id: per-row-equation-numbering
+    title: Per-row equation numbering for align/gather/alignat (amsmath semantics)
+    description: |
+      Each `\\` row of a non-starred align/gather/alignat advances the
+      equation counter and takes its own number, rendered as per-row
+      KaTeX `\tag{...}`s with the shared alignment axis preserved.
+      `\nonumber`/`\notag` suppresses a row's number, `\tag{...}`
+      replaces it without advancing the counter, a per-row `\label{...}`
+      becomes that row's reference target, and starred environments are
+      unnumbered. LaTeX export re-emits per-row labels so PDF numbering
+      and anchors match HTML. Includes the katex ^0.15.2 → ^0.16.21
+      bump (KaTeX 0.16.0 added the per-row \tag machinery this needs).
+    status: pending
+    commits:
+      - sha: 756a4d5d
+        local_pr: 81
+        title: "Number align/gather/alignat rows per-row (amsmath semantics)"
+    depends_on: []
+    upstream:
+      pr: null
+      branch: null
+      merged_sha: null
+    notes: |
+      Fork issues QuantEcon/mystmd#73 (feature analysis) and #80 (katex
+      bump rationale) carry the full background. No upstream issue
+      tracks this as of 2026-08-13; the strongest upstream pitch is
+      that myst-to-tex passes align through verbatim, so PDF export
+      already numbers per-row while HTML numbers per-block — mystmd
+      disagrees with itself across its own outputs. The katex bump is
+      independently useful upstream (same ^0.15.2 pin there); 0.16.x
+      keeps the 0.15-era CSS class vocabulary so the katex@0.15.2
+      stylesheet myst-theme hardcodes still applies — the 0.18 line
+      renames CSS classes and must be a coordinated markup+CSS move
+      (see quantecon-theme.mystmd#118).
+
+      Cherry-pick caveat: the enumerate.ts changes (addMathRowTargets)
+      sit textually inside fork-modified book-mode code and call the
+      fork's incrementCount. The feature is logically independent of
+      book mode, but expect context conflicts cherry-picking onto
+      upstream/main — plan for a small rework against upstream's
+      enumerate.ts rather than a clean replay, or bundle after
+      book-mode-with-section-scope.
+
   - id: ci-deflake
     title: Deflake DOI resolver and Jupyter execution tests
     description: |
