@@ -253,6 +253,43 @@ upstream_candidates:
       enumerate.ts rather than a clean replay, or bundle after
       book-mode-with-section-scope.
 
+  - id: heading-attributes
+    title: Pandoc-style heading attribute blocks ({#id .class .unnumbered})
+    description: |
+      Wires the inline-attribute tokenizer (upstream's own #1822, used
+      by roles and directives) to ATX/setext headings via a markdown-it
+      core rule. `.unnumbered` / `{-}` / `enumerated=false` map to
+      `enumerated: false`, which the enumerate transform already honors:
+      the heading keeps its target and TOC entry, renders no number,
+      and does not advance the counter — LaTeX \section* semantics.
+      `#id` becomes the heading label/identifier, `.class` lands on the
+      node. A trailing brace block parses as attributes only when its
+      entire content is recognized vocabulary, so prose braces and
+      escaped \{ stay literal; opt out with
+      `extensions.headingAttributes: false`.
+    status: pending
+    commits:
+      - sha: a40f0cb0
+        local_pr: 89
+        title: "Heading attribute blocks: {#id .class .unnumbered} on ATX/setext headings"
+    depends_on: []
+    upstream:
+      pr: null
+      branch: null
+      merged_sha: null
+    notes: |
+      Strong standalone candidate: completes upstream's existing
+      inline-attribute mechanism rather than inventing fork syntax,
+      uses pandoc's own heading-attribute notation (so pandoc- and
+      LaTeX-converted content arrives already carrying the marker),
+      and touches no fork-modified code paths — enumerate.ts is
+      untouched, so the cherry-pick onto upstream/main should be
+      clean. Fork context in QuantEcon/mystmd#68 and the #88 survey
+      (24 wrongly-numbered starred headings in the Deep Learning
+      book); downstream adoption tracked at
+      QuantEcon/claude-latex-to-myst#160, which needs a qe-v10 tag
+      cut over this feature first.
+
   - id: ci-deflake
     title: Deflake DOI resolver and Jupyter execution tests
     description: |

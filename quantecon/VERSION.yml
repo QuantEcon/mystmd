@@ -133,3 +133,10 @@ merged_features:
     local_pr: 81
     merge_sha: 756a4d5d
     tag: qe-v9
+
+  - id: 15
+    name: heading-attributes
+    description: Pandoc-style heading attribute blocks — {#id .class .unnumbered} maps to label/class/enumerated with the block stripped from heading text; .unnumbered renders no number and does not advance the counter (\section* semantics)
+    local_pr: 89
+    merge_sha: a40f0cb0
+    tag: null
