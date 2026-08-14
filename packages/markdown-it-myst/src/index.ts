@@ -4,8 +4,16 @@ import { directivePlugin } from './directives.js';
 import { citationsPlugin } from './citations.js';
 import { blockPlugin } from './block.js';
 import { colonFencePlugin } from './colonFence.js';
+import { headingAttributesPlugin } from './headingAttributes.js';
 
-export { rolePlugin, directivePlugin, citationsPlugin, blockPlugin, colonFencePlugin };
+export {
+  rolePlugin,
+  directivePlugin,
+  citationsPlugin,
+  blockPlugin,
+  colonFencePlugin,
+  headingAttributesPlugin,
+};
 
 /**
  * @deprecated

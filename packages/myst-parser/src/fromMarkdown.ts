@@ -56,6 +56,7 @@ export type AllOptions = {
     deflist?: boolean;
     tasklist?: boolean;
     fancyLists?: boolean | FancyListsOptions;
+    headingAttributes?: boolean;
     tables?: boolean;
     blocks?: boolean;
     strikethrough?: boolean;

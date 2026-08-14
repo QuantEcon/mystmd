@@ -86,9 +86,13 @@ const defaultMdast: Record<string, TokenHandlerSpec> = {
   heading: {
     type: 'heading',
     getAttrs(token) {
+      // label/class/enumerated may come from a heading attribute block,
+      // e.g. `## Title {#id .class .unnumbered}`
       return {
         depth: Number(token.tag[1]),
         enumerated: token.meta?.enumerated,
+        ...(token.meta?.class ? { class: token.meta.class } : {}),
+        ...(token.meta?.label ? normalizeLabel(token.meta.label) : {}),
       };
     },
   },

@@ -19,6 +19,7 @@ import {
   tasklistPlugin,
   citationsPlugin,
   fancyListsPlugin,
+  headingAttributesPlugin,
 } from './plugins.js';
 import { applyDirectives } from './directives.js';
 import { applyRoles } from './roles.js';
@@ -42,6 +43,7 @@ export const defaultOptions: Omit<AllOptions, 'vfile'> = {
     deflist: true,
     tasklist: true,
     fancyLists: true,
+    headingAttributes: true,
     tables: true,
     blocks: true,
     strikethrough: false,
@@ -97,6 +99,7 @@ export function createTokenizer(opts?: Options) {
       typeof extensions.fancyLists === 'object' ? extensions.fancyLists : undefined,
     );
   }
+  if (extensions.headingAttributes) tokenizer.use(headingAttributesPlugin);
   return tokenizer;
 }
 

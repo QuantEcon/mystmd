@@ -19,6 +19,17 @@ An alternative syntax, {ref}`setex-headings`, is also supported for level 1 and 
 
 To reference a heading in your text, you can use the `(target)=` syntax, see [{name}](#targeting-headers) for more.
 
+### Heading attributes
+
+A heading may end with a pandoc-style attribute block, which is stripped from the heading text:
+
+```markdown
+## Further Reading {.unnumbered}
+## Introduction {#sec-intro}
+```
+
+The recognized attributes are an identifier (`#id`, equivalent to placing a `(id)=` target before the heading), classes (`.class`), and numbering control: `.unnumbered` (or the pandoc shorthand `{-}`, or an explicit `enumerated=false`) excludes the heading from [heading numbering](./cross-references.md) without advancing the counter — the behavior of `\section*` in $\LaTeX$. A brace block containing anything else (for example `## The set {1, 2, 3}`) is left as literal text.
+
 ## Inline Text Formatting
 
 Standard inline formatting including bold, italic, code, as well as escaped symbols and line breaks:
