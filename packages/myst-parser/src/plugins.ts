@@ -11,6 +11,7 @@ export {
   citationsPlugin,
   blockPlugin,
   colonFencePlugin,
+  headingAttributesPlugin,
   mystPlugin,
 } from 'markdown-it-myst';
 export type { MathExtensionOptions } from './math.js';
