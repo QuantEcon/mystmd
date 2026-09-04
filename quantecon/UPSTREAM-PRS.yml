@@ -339,7 +339,7 @@ upstream_candidates:
   # ---------------------------------------------------------------------
 
   - id: strict-directive-fileerror
-    title: Directive-stage fileError is not counted by `myst build --strict`
+    title: Directive-stage fileError is not counted by the site build's `--strict` check
     type: bug-fix
     description: |
       A `fileError` raised while a directive runs is logged but never
@@ -395,12 +395,15 @@ upstream_candidates:
       plugin family, the datavis primitives included.
 
   - id: myst-to-tex-grid-card
-    title: myst-to-tex silently drops grid/card subtrees from LaTeX export
+    title: myst-to-tex drops grid/card subtrees from LaTeX export and still exits 0
     type: bug-fix
     description: |
-      `myst-to-tex` has no handler for `grid`, `card` or their children.
-      A LaTeX export drops the whole subtree with no diagnostic and
-      exits 0, so the content is simply absent from the `.tex`.
+      `myst-to-tex` has no handler for `grid`, `card` or their children,
+      so `renderChildren` drops the whole subtree from a LaTeX export.
+      It does emit a `fileError` per unhandled node
+      (`Unhandled LaTeX conversion for node of "..."`, ruleId `texRenders`,
+      packages/myst-to-tex/src/index.ts:587) — but the build still exits 0,
+      so the content is absent from the `.tex` and nothing fails.
     status: planned
     commits: []
     depends_on: []
@@ -419,6 +422,11 @@ upstream_candidates:
       portable because they are core node types. The compliance card kit is
       classed as `div` structures instead.
 
-      Worth pairing the handlers with a second change — warn on any node type
-      reaching the renderer without a handler — so this whole class of silent
-      drop becomes visible rather than needing to be found by diffing output.
+      The missing piece is not a diagnostic — `renderChildren` already raises
+      one for every unhandled node type. It is that the diagnostic does not
+      change the outcome: the export completes and exits 0 with the content
+      gone. So this shares a root cause with `strict-directive-fileerror`
+      above — a `fileError` that is emitted and then not acted on — and the
+      second change worth pairing with the handlers is making a `texRenders`
+      error fail the export rather than adding a warning mechanism that
+      already exists.
