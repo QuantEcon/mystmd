@@ -15,6 +15,17 @@
 # VERSION.yml is "what's in our main"; this file is "how we plan to ship
 # it upstream."
 #
+# `type` distinguishes the two kinds of candidate:
+#   feature  — something we built that upstream may want.
+#   bug-fix  — a defect in upstream's own code that bites us. These enter the
+#              register *before* a fix exists: we open a fork issue to track the
+#              defect, fix and test it here, and only then does the entry gain
+#              commits and become a real upstream contribution. Filing the bug
+#              upstream is not the first move — arriving with a tested patch is
+#              a better contribution than a report, and the fork needs the fix
+#              regardless of upstream's timeline. `upstream.issue` records the
+#              upstream report if and when one is opened.
+#
 # Status lifecycle:
 #   planned  — candidate identified, commits may not all exist on main yet
 #   pending  — all commits landed on main; upstream PR not yet opened
@@ -26,6 +37,7 @@ upstream_candidates:
 
   - id: myst-to-ipynb
     title: CommonMark ipynb export + image attachment embedding
+    type: feature
     description: |
       Adds ipynb export with CommonMark output and inline image
       attachment embedding. Independent of book-mode work.
@@ -58,6 +70,7 @@ upstream_candidates:
 
   - id: book-mode-with-section-scope
     title: Book-style numbering (with LaTeX-style section scope and counter sharing)
+    type: feature
     description: |
       Bundles the original book-mode work (#22) with the section-scope
       extension (#28), the heading-chain follow-up (#33), and the
@@ -108,6 +121,7 @@ upstream_candidates:
 
   - id: book-parts
     title: Book parts dividers
+    type: feature
     description: |
       `section: parts` ParentEntry: emits a Roman-numbered divider folder
       ("Part I — Theory") and wraps chapter groups. Chapter counter
@@ -131,6 +145,7 @@ upstream_candidates:
 
   - id: fancy-lists
     title: Pandoc-style fancy ordered lists
+    type: feature
     description: |
       Parses Pandoc fancy_lists ordered-list markers — `a.`, `B)`,
       `iv.`, `(i)` — with inferred style/start; `list` nodes carry
@@ -157,6 +172,7 @@ upstream_candidates:
 
   - id: cite-code-span
     title: Citation scanner respects inline code-span boundaries
+    type: feature
     description: |
       The citation rule's bracket branch regex-scans raw bracket text,
       so a backticked `@`-token (e.g. [wrap it in `@tf.function`])
@@ -188,6 +204,7 @@ upstream_candidates:
 
   - id: proof-unnumbered
     title: prf:proof defaults to enumerated false (amsthm convention)
+    type: feature
     description: |
       The bare proof / prf:proof directive defaults `enumerated: false`,
       matching LaTeX amsthm \begin{proof}; theorem-like kinds keep
@@ -212,6 +229,7 @@ upstream_candidates:
 
   - id: per-row-equation-numbering
     title: Per-row equation numbering for align/gather/alignat (amsmath semantics)
+    type: feature
     description: |
       Each `\\` row of a non-starred align/gather/alignat advances the
       equation counter and takes its own number, rendered as per-row
@@ -255,6 +273,7 @@ upstream_candidates:
 
   - id: heading-attributes
     title: Pandoc-style heading attribute blocks ({#id .class .unnumbered})
+    type: feature
     description: |
       Wires the inline-attribute tokenizer (upstream's own #1822, used
       by roles and directives) to ATX/setext headings via a markdown-it
@@ -292,6 +311,7 @@ upstream_candidates:
 
   - id: ci-deflake
     title: Deflake DOI resolver and Jupyter execution tests
+    type: feature
     description: |
       DOI resolver tests run against recorded doi.org content-negotiation
       fixtures via a fetch-overridden Session (TEST_LIVE_DOI=1 re-enables
@@ -312,3 +332,101 @@ upstream_candidates:
       (their #2823 already patched live-DOI data drift once), and the
       touched files were byte-identical to upstream/main before this
       commit, so the cherry-pick is clean. Self-contained.
+
+  # ---------------------------------------------------------------------
+  # Bug fixes in upstream's own code. Filed as fork issues first; each is
+  # fixed and tested here before it becomes an upstream contribution.
+  # ---------------------------------------------------------------------
+
+  - id: strict-directive-fileerror
+    title: Directive-stage fileError is not counted by the site build's `--strict` check
+    type: bug-fix
+    description: |
+      A `fileError` raised while a directive runs is logged but never
+      reaches the strict check, so a document with a broken directive
+      builds clean and exits 0. `loadFile` clears a file's stored
+      messages each time it loads the file and then serves the cached
+      mdast without re-running the directive, so the message is gone
+      before `process/site.ts`'s strict block harvests it via
+      `selectFileWarnings`.
+    status: planned
+    commits: []
+    depends_on: []
+    upstream:
+      issue: null       # not reported upstream; no upstream issue exists as of 2026-09-04
+      pr: null
+      branch: null
+      merged_sha: null
+    notes: |
+      Fork issue QuantEcon/mystmd#95. Upstream-authored code: both
+      `packages/myst-cli/src/process/file.ts` and the 34-line strict block in
+      `packages/myst-cli/src/process/site.ts` are byte-identical to
+      jupyter-book/mystmd@main (verified 2026-09-04), so this is an upstream
+      defect rather than a fork regression.
+
+      Consumer impact beyond the fork: QuantEcon/compliance-lecture-style#28
+      plans a `myst build --html --strict` deploy gate that does not do what
+      its plan assumes until this is fixed. The datavis plugin family works
+      around it by deferring diagnostics through a report step
+      (`src/lib/report.mjs`) rather than relying on `fileError`.
+
+  - id: plugin-file-dependencies
+    title: Plugins cannot declare a data file as a page dependency
+    type: bug-fix
+    description: |
+      A plugin that reads an external file (a CSV, say) has no way to
+      register that file as a dependency of the page it feeds, so
+      `myst start` serves stale output after the data changes until the
+      source page is itself touched.
+    status: planned
+    commits: []
+    depends_on: []
+    upstream:
+      issue: null
+      pr: null
+      branch: null
+      merged_sha: null
+    notes: |
+      Fork issue QuantEcon/mystmd#96. `packages/myst-cli/src/build/site/watch.ts`
+      is byte-identical to jupyter-book/mystmd@main (verified 2026-09-04).
+
+      Scope of the damage is the authoring loop only: a fresh `myst build` is
+      always current, so deployed output is correct. Affects any data-driven
+      plugin family, the datavis primitives included.
+
+  - id: myst-to-tex-grid-card
+    title: myst-to-tex drops grid/card subtrees from LaTeX export and still exits 0
+    type: bug-fix
+    description: |
+      `myst-to-tex` has no handler for `grid`, `card` or their children,
+      so `renderChildren` drops the whole subtree from a LaTeX export.
+      It does emit a `fileError` per unhandled node
+      (`Unhandled LaTeX conversion for node of "..."`, ruleId `texRenders`,
+      packages/myst-to-tex/src/index.ts:587) — but the build still exits 0,
+      so the content is absent from the `.tex` and nothing fails.
+    status: planned
+    commits: []
+    depends_on: []
+    upstream:
+      issue: null
+      pr: null
+      branch: null
+      merged_sha: null
+    notes: |
+      Fork issue QuantEcon/mystmd#97. `packages/myst-to-tex/src/` carries
+      container, legends, math, preamble, proof and tables handlers and no
+      grid or card handler at all.
+
+      Falsified a design premise downstream: decision D3 in
+      QuantEcon/quantecon-plugins.mystmd#2 assumed core `grid`/`card` were
+      portable because they are core node types. The compliance card kit is
+      classed as `div` structures instead.
+
+      The missing piece is not a diagnostic — `renderChildren` already raises
+      one for every unhandled node type. It is that the diagnostic does not
+      change the outcome: the export completes and exits 0 with the content
+      gone. So this shares a root cause with `strict-directive-fileerror`
+      above — a `fileError` that is emitted and then not acted on — and the
+      second change worth pairing with the handlers is making a `texRenders`
+      error fail the export rather than adding a warning mechanism that
+      already exists.
