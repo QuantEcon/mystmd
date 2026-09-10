@@ -61,6 +61,7 @@ upstream_candidates:
         title: "ipynb attachments: preserve image titles, resolve files/ output URLs"
     depends_on: []
     upstream:
+      issue: null      # the upstream report, if and when one is opened
       pr: null
       branch: null      # set when the upstream/<topic> branch is pushed
       merged_sha: null
@@ -111,6 +112,7 @@ upstream_candidates:
         title: "Code numbering: honour scope in book mode and template in captions"
     depends_on: []
     upstream:
+      issue: null
       pr: null
       branch: null
       merged_sha: null
@@ -144,6 +146,7 @@ upstream_candidates:
     depends_on:
       - book-mode-with-section-scope
     upstream:
+      issue: null
       pr: null
       branch: null
       merged_sha: null
@@ -171,6 +174,7 @@ upstream_candidates:
         title: "Fancy ordered lists: alphabetic, roman, and parenthesized markers"
     depends_on: []
     upstream:
+      issue: null
       pr: null
       branch: null
       merged_sha: null
@@ -196,6 +200,7 @@ upstream_candidates:
         title: "Citation scanner respects inline code-span boundaries"
     depends_on: []
     upstream:
+      issue: null
       pr: null
       branch: null
       merged_sha: null
@@ -228,6 +233,7 @@ upstream_candidates:
         title: "prf:proof defaults to enumerated: false (amsthm convention)"
     depends_on: []
     upstream:
+      issue: null
       pr: null
       branch: null
       merged_sha: null
@@ -257,6 +263,7 @@ upstream_candidates:
         title: "Number align/gather/alignat rows per-row (amsmath semantics)"
     depends_on: []
     upstream:
+      issue: null
       pr: null
       branch: null
       merged_sha: null
@@ -303,6 +310,7 @@ upstream_candidates:
         title: "Heading attribute blocks: {#id .class .unnumbered} on ATX/setext headings"
     depends_on: []
     upstream:
+      issue: null
       pr: null
       branch: null
       merged_sha: null
@@ -334,6 +342,7 @@ upstream_candidates:
         title: "Deflake CI: record DOI fixtures, retry Jupyter execution e2e tests"
     depends_on: []
     upstream:
+      issue: null
       pr: null
       branch: null
       merged_sha: null
