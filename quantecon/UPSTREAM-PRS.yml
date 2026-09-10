@@ -370,6 +370,18 @@ upstream_candidates:
       around it by deferring diagnostics through a report step
       (`src/lib/report.mjs`) rather than relying on `fileError`.
 
+      Further evidence, 2026-09-10: the same root cause bites with no plugin
+      involved at all. A page carrying an unknown directive logs
+      `unknown directive: <name>` — a `fileError` with ruleId
+      `directiveKnown`, raised in packages/myst-parser/src/directives.ts —
+      and `myst build --html --strict` still exits 0. In the same project a
+      document-stage transform raising a fatal message exits 1 with the
+      strict summary printed, which rules out the flag simply being unwired.
+      That widens the reproduction beyond plugin authors to anyone who
+      mistypes a directive name, and it should make the upstream case easier
+      to argue. Reported alongside the plugin-load defect in
+      QuantEcon/mystmd#101.
+
   - id: plugin-file-dependencies
     title: Plugins cannot declare a data file as a page dependency
     type: bug-fix
@@ -430,3 +442,55 @@ upstream_candidates:
       second change worth pairing with the handlers is making a `texRenders`
       error fail the export rather than adding a warning mechanism that
       already exists.
+
+  - id: strict-plugin-load-errors
+    title: Plugin-load failures are never counted by the site build's `--strict` check
+    type: bug-fix
+    description: |
+      A `project.plugins` entry that cannot be loaded — a release-asset URL
+      that 404s, a stale version pin, an unreadable file — is logged as an
+      error and then ignored by `--strict`, so the build exits 0 with none
+      of that plugin's directives registered. `plugins.ts` reports these
+      through `addWarningForFile(session, path, ...)` where `path` is the
+      *plugin's* own path or URL, but `process/site.ts`'s strict block only
+      harvests warnings for files in the project's page list
+      (`selectFileWarnings(state, page.file)`). A plugin path is never a
+      page, so no plugin-load failure can reach the check by construction.
+      The same applies to the neighbouring `Error reading plugin:` and
+      `Non-zero exit code after querying executable` branches.
+    status: planned
+    commits: []
+    depends_on: []
+    upstream:
+      issue: null       # not reported upstream; no upstream issue exists as of 2026-09-10
+      pr: null
+      branch: null
+      merged_sha: null
+    notes: |
+      Fork issue QuantEcon/mystmd#101.
+      `packages/myst-cli/src/plugins.ts` is byte-identical to
+      jupyter-book/mystmd@55d3c9a (verified 2026-09-10), and while this
+      fork's `packages/myst-cli/src/process/site.ts` carries book-section
+      metadata changes, the strict block inside it is byte-identical too.
+      So this is an upstream defect rather than a fork regression.
+
+      Distinct from `strict-directive-fileerror` above, and wants a separate
+      change. That one is a message that is registered against the right file
+      and then cleared; this one is registered against a file the check never
+      looks at. QuantEcon/mystmd#101 reports both, because a failed plugin
+      load and the `unknown directive` errors that follow it are the same
+      event from a reader's point of view.
+
+      Consumer impact: QuantEcon/workspace-themes#12 makes release-asset URLs
+      the estate-wide plugin distribution model, and four repositories are
+      about to pin them. Until this is fixed, a mistyped or stale version pin
+      publishes a green site with every plugin-provided component silently
+      absent, so a consumer needs a positive "the plugin loaded" assertion
+      rather than the exit code. Measured end to end while releasing
+      QuantEcon/quantecon-plugins.mystmd v0.0.1.
+
+      A secondary wart worth fixing in the same change: the message
+      `Unknown plugin "...", it must be an mjs file` misdescribes a 404 or an
+      unreadable file, because one
+      `fs.statSync(...)?.isFile() || !path.endsWith('.mjs')` test produces it
+      for both a missing file and a wrong extension.
