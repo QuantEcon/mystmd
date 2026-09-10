@@ -27,11 +27,12 @@ Doing it in this order means anyone who `cat`s `VERSION.yml` at tag `qe-v<N+1>` 
 
 ### Maintaining `UPSTREAM-PRS.yml`
 
-Update this whenever a feature lands on `main` or its upstream plan changes:
+Update this whenever a feature **or an upstream bug fix** lands on `main`, or its upstream plan changes:
 
 - New feature with no obvious bundle → add as a standalone candidate (`status: pending`, `commits: [<sha>]`).
 - Feature extends an existing candidate → append its sha to that candidate's `commits` list (e.g. a follow-up Copilot-fix PR that lands on `main` after the original feature).
 - Feature deserves its own upstream story but depends on another → new candidate with `depends_on: [<other-candidate-id>]`.
+- Fix for a defect in upstream's own code lands → add as a candidate with `type: bug-fix`, naming in `notes` the fork issue it settles. **The defect on its own does not get an entry** — it stays a fork issue until a fix exists, because this file plans how landed commits reach upstream and a defect with no commits has nothing to plan.
 
 Status transitions: `planned` → `pending` (all commits landed) → `open` (upstream PR exists) → `merged` (upstream merged it). On `merged`, also run the post-merge sync workflow below.
 

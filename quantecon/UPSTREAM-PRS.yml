@@ -17,17 +17,27 @@
 #
 # `type` distinguishes the two kinds of candidate:
 #   feature  — something we built that upstream may want.
-#   bug-fix  — a defect in upstream's own code that bites us. These enter the
-#              register *before* a fix exists: we open a fork issue to track the
-#              defect, fix and test it here, and only then does the entry gain
-#              commits and become a real upstream contribution. Filing the bug
-#              upstream is not the first move — arriving with a tested patch is
-#              a better contribution than a report, and the fork needs the fix
-#              regardless of upstream's timeline. `upstream.issue` records the
-#              upstream report if and when one is opened.
+#   bug-fix  — a fix we wrote for a defect in upstream's own code.
+#
+#              The defect itself is NOT an entry here. It is a fork issue, and
+#              it stays one until a fix exists. This file answers "how do our
+#              landed commits reach upstream"; a defect with no commits has
+#              nothing to plan, and a fixless entry only duplicates the issue
+#              — which is how the two drift apart. The entry is created when
+#              the fix lands on `main`, and `notes` names the issue it settles.
+#
+#              Filing the bug upstream is still not the first move — arriving
+#              with a tested patch is a better contribution than a report, and
+#              the fork needs the fix regardless of upstream's timeline. What
+#              changed is only where the defect is recorded while it waits.
+#              `upstream.issue` records the upstream report if one is opened.
+#
+#              Open fork issues carrying diagnosed upstream defects, none of
+#              them fixed yet, as of 2026-09-10: #95, #96, #97, #101.
 #
 # Status lifecycle:
-#   planned  — candidate identified, commits may not all exist on main yet
+#   planned  — the fork PR is open but not yet merged, so not every commit
+#              is on `main` yet
 #   pending  — all commits landed on main; upstream PR not yet opened
 #   open     — upstream PR open, under review
 #   merged   — upstream merged it (sync our main, then delete this entry's
@@ -333,164 +343,3 @@ upstream_candidates:
       touched files were byte-identical to upstream/main before this
       commit, so the cherry-pick is clean. Self-contained.
 
-  # ---------------------------------------------------------------------
-  # Bug fixes in upstream's own code. Filed as fork issues first; each is
-  # fixed and tested here before it becomes an upstream contribution.
-  # ---------------------------------------------------------------------
-
-  - id: strict-directive-fileerror
-    title: Directive-stage fileError is not counted by the site build's `--strict` check
-    type: bug-fix
-    description: |
-      A `fileError` raised while a directive runs is logged but never
-      reaches the strict check, so a document with a broken directive
-      builds clean and exits 0. `loadFile` clears a file's stored
-      messages each time it loads the file and then serves the cached
-      mdast without re-running the directive, so the message is gone
-      before `process/site.ts`'s strict block harvests it via
-      `selectFileWarnings`.
-    status: planned
-    commits: []
-    depends_on: []
-    upstream:
-      issue: null       # not reported upstream; no upstream issue exists as of 2026-09-04
-      pr: null
-      branch: null
-      merged_sha: null
-    notes: |
-      Fork issue QuantEcon/mystmd#95. Upstream-authored code: both
-      `packages/myst-cli/src/process/file.ts` and the 34-line strict block in
-      `packages/myst-cli/src/process/site.ts` are byte-identical to
-      jupyter-book/mystmd@main (verified 2026-09-04), so this is an upstream
-      defect rather than a fork regression.
-
-      Consumer impact beyond the fork: QuantEcon/compliance-lecture-style#28
-      plans a `myst build --html --strict` deploy gate that does not do what
-      its plan assumes until this is fixed. The datavis plugin family works
-      around it by deferring diagnostics through a report step
-      (`src/lib/report.mjs`) rather than relying on `fileError`.
-
-      Further evidence, 2026-09-10: the same root cause bites with no plugin
-      involved at all. A page carrying an unknown directive logs
-      `unknown directive: <name>` — a `fileError` with ruleId
-      `directiveKnown`, raised in packages/myst-parser/src/directives.ts —
-      and `myst build --html --strict` still exits 0. In the same project a
-      document-stage transform raising a fatal message exits 1 with the
-      strict summary printed, which rules out the flag simply being unwired.
-      That widens the reproduction beyond plugin authors to anyone who
-      mistypes a directive name, and it should make the upstream case easier
-      to argue. Reported alongside the plugin-load defect in
-      QuantEcon/mystmd#101.
-
-  - id: plugin-file-dependencies
-    title: Plugins cannot declare a data file as a page dependency
-    type: bug-fix
-    description: |
-      A plugin that reads an external file (a CSV, say) has no way to
-      register that file as a dependency of the page it feeds, so
-      `myst start` serves stale output after the data changes until the
-      source page is itself touched.
-    status: planned
-    commits: []
-    depends_on: []
-    upstream:
-      issue: null
-      pr: null
-      branch: null
-      merged_sha: null
-    notes: |
-      Fork issue QuantEcon/mystmd#96. `packages/myst-cli/src/build/site/watch.ts`
-      is byte-identical to jupyter-book/mystmd@main (verified 2026-09-04).
-
-      Scope of the damage is the authoring loop only: a fresh `myst build` is
-      always current, so deployed output is correct. Affects any data-driven
-      plugin family, the datavis primitives included.
-
-  - id: myst-to-tex-grid-card
-    title: myst-to-tex drops grid/card subtrees from LaTeX export and still exits 0
-    type: bug-fix
-    description: |
-      `myst-to-tex` has no handler for `grid`, `card` or their children,
-      so `renderChildren` drops the whole subtree from a LaTeX export.
-      It does emit a `fileError` per unhandled node
-      (`Unhandled LaTeX conversion for node of "..."`, ruleId `texRenders`,
-      packages/myst-to-tex/src/index.ts:587) — but the build still exits 0,
-      so the content is absent from the `.tex` and nothing fails.
-    status: planned
-    commits: []
-    depends_on: []
-    upstream:
-      issue: null
-      pr: null
-      branch: null
-      merged_sha: null
-    notes: |
-      Fork issue QuantEcon/mystmd#97. `packages/myst-to-tex/src/` carries
-      container, legends, math, preamble, proof and tables handlers and no
-      grid or card handler at all.
-
-      Falsified a design premise downstream: decision D3 in
-      QuantEcon/quantecon-plugins.mystmd#2 assumed core `grid`/`card` were
-      portable because they are core node types. The compliance card kit is
-      classed as `div` structures instead.
-
-      The missing piece is not a diagnostic — `renderChildren` already raises
-      one for every unhandled node type. It is that the diagnostic does not
-      change the outcome: the export completes and exits 0 with the content
-      gone. So this shares a root cause with `strict-directive-fileerror`
-      above — a `fileError` that is emitted and then not acted on — and the
-      second change worth pairing with the handlers is making a `texRenders`
-      error fail the export rather than adding a warning mechanism that
-      already exists.
-
-  - id: strict-plugin-load-errors
-    title: Plugin-load failures are never counted by the site build's `--strict` check
-    type: bug-fix
-    description: |
-      A `project.plugins` entry that cannot be loaded — a release-asset URL
-      that 404s, a stale version pin, an unreadable file — is logged as an
-      error and then ignored by `--strict`, so the build exits 0 with none
-      of that plugin's directives registered. `plugins.ts` reports these
-      through `addWarningForFile(session, path, ...)` where `path` is the
-      *plugin's* own path or URL, but `process/site.ts`'s strict block only
-      harvests warnings for files in the project's page list
-      (`selectFileWarnings(state, page.file)`). A plugin path is never a
-      page, so no plugin-load failure can reach the check by construction.
-      The same applies to the neighbouring `Error reading plugin:` and
-      `Non-zero exit code after querying executable` branches.
-    status: planned
-    commits: []
-    depends_on: []
-    upstream:
-      issue: null       # not reported upstream; no upstream issue exists as of 2026-09-10
-      pr: null
-      branch: null
-      merged_sha: null
-    notes: |
-      Fork issue QuantEcon/mystmd#101.
-      `packages/myst-cli/src/plugins.ts` is byte-identical to
-      jupyter-book/mystmd@55d3c9a (verified 2026-09-10), and while this
-      fork's `packages/myst-cli/src/process/site.ts` carries book-section
-      metadata changes, the strict block inside it is byte-identical too.
-      So this is an upstream defect rather than a fork regression.
-
-      Distinct from `strict-directive-fileerror` above, and wants a separate
-      change. That one is a message that is registered against the right file
-      and then cleared; this one is registered against a file the check never
-      looks at. QuantEcon/mystmd#101 reports both, because a failed plugin
-      load and the `unknown directive` errors that follow it are the same
-      event from a reader's point of view.
-
-      Consumer impact: QuantEcon/workspace-themes#12 makes release-asset URLs
-      the estate-wide plugin distribution model, and four repositories are
-      about to pin them. Until this is fixed, a mistyped or stale version pin
-      publishes a green site with every plugin-provided component silently
-      absent, so a consumer needs a positive "the plugin loaded" assertion
-      rather than the exit code. Measured end to end while releasing
-      QuantEcon/quantecon-plugins.mystmd v0.0.1.
-
-      A secondary wart worth fixing in the same change: the message
-      `Unknown plugin "...", it must be an mjs file` misdescribes a 404 or an
-      unreadable file, because one
-      `fs.statSync(...)?.isFile() || !path.endsWith('.mjs')` test produces it
-      for both a missing file and a wrong extension.
