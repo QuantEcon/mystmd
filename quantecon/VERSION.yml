@@ -41,8 +41,12 @@
 #   3. Tag the resulting `main` commit:
 #         git tag qe-v<N+1> <sha> -m "qe-v<N+1>: <summary>"
 #         git push origin qe-v<N+1>
+#   4. Before moving any book's pin to the new tag, run the release test
+#      (QuantEcon/test-quantecon-mystmd):
+#         gh workflow run release-test.yml \
+#           --repo QuantEcon/test-quantecon-mystmd -f candidate=qe-v<N+1>
 #
-# Doing it in this order means anyone who `cat`s VERSION.yml at tag
+# Doing steps 1–3 in this order means anyone who `cat`s VERSION.yml at tag
 # `qe-v<N+1>` sees a self-consistent file (qe_version matches the tag).
 
 qe_version: qe-v11
