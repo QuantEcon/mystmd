@@ -24,8 +24,9 @@ Tags can be cut per-PR (one tag per feature, easy traceability) or batched at a 
 1. Open a doc PR updating `VERSION.yml`: bump `qe_version` to `qe-v<N+1>`, refresh `upstream_base` / `upstream_commit`, and set `tag: qe-v<N+1>` on each previously-untagged entry in `merged_features` that is included in this tag. For the upstream fields, after `git fetch upstream --tags`, run `git describe --tags --match 'mystmd@*' "$(git merge-base origin/main upstream/main)"`. Output like `mystmd@1.10.1-43-gd09d3e59` means 43 upstream commits past 1.10.1, so `upstream_base: 1.10.1` and `upstream_commit: d09d3e59`.
 2. Squash-merge the doc PR.
 3. Tag the resulting `main` commit: `git tag qe-v<N+1> <sha> -m "qe-v<N+1>: <summary>"` then `git push origin qe-v<N+1>`.
+4. Before moving any book's pin to the new tag, run the release test in [QuantEcon/test-quantecon-mystmd](https://github.com/QuantEcon/test-quantecon-mystmd) (private): `gh workflow run release-test.yml --repo QuantEcon/test-quantecon-mystmd -f candidate=qe-v<N+1>`. It builds each consumer book with the tag it deploys today and with the new tag, then reports whether anything readers see would change: build warnings, content, rendered pages, numbering and cross-references. The report is on the run's summary page.
 
-Doing it in this order means anyone who `cat`s `VERSION.yml` at tag `qe-v<N+1>` sees a self-consistent file (qe_version field matches the tag).
+Doing steps 1–3 in this order means anyone who `cat`s `VERSION.yml` at tag `qe-v<N+1>` sees a self-consistent file (qe_version field matches the tag).
 
 ### Maintaining `UPSTREAM-PRS.yml`
 
