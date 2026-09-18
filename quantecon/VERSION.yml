@@ -46,7 +46,7 @@
 #         gh workflow run release-test.yml \
 #           --repo QuantEcon/test-quantecon-mystmd -f candidate=qe-v<N+1>
 #
-# Doing steps 1-3 in this order means anyone who `cat`s VERSION.yml at tag
+# Doing steps 1–3 in this order means anyone who `cat`s VERSION.yml at tag
 # `qe-v<N+1>` sees a self-consistent file (qe_version matches the tag).
 
 qe_version: qe-v11
