@@ -17,9 +17,11 @@ Two tracked YAML files in `quantecon/` record orthogonal facts. Keep them in syn
 
 Every time a feature PR lands on `main`, append a row to `merged_features` with its squash `merge_sha`. The `tag` field stays null until a `qe-v<N>` tag is cut over that feature.
 
+`upstream_base` is the latest upstream mystmd release that `main` contains, and `upstream_commit` is the exact `upstream/main` commit that `main` was last synced to. The fork syncs to upstream's `main`, not to its releases, so `upstream_commit` is usually ahead of `upstream_base`. For example, qe-v10 and qe-v11 are both on 1.10.1, but they contain different upstream code, and only `upstream_commit` shows the difference. Both fields are refreshed when a tag is cut, not in sync PRs, which merge as-is.
+
 Tags can be cut per-PR (one tag per feature, easy traceability) or batched at a checkpoint (one tag covering several merged features ready to deploy to book-dp1 / book-dp2 for testing) — pick whichever fits the cadence. To cut a tag, do the metadata update *first* so the tagged commit's tree is self-consistent:
 
-1. Open a doc PR updating `VERSION.yml`: bump `qe_version` to `qe-v<N+1>` and set `tag: qe-v<N+1>` on each previously-untagged entry in `merged_features` that is included in this tag.
+1. Open a doc PR updating `VERSION.yml`: bump `qe_version` to `qe-v<N+1>`, refresh `upstream_base` / `upstream_commit`, and set `tag: qe-v<N+1>` on each previously-untagged entry in `merged_features` that is included in this tag. For the upstream fields, after `git fetch upstream --tags`, run `git describe --tags --match 'mystmd@*' "$(git merge-base origin/main upstream/main)"`. Output like `mystmd@1.10.1-43-gd09d3e59` means 43 upstream commits past 1.10.1, so `upstream_base: 1.10.1` and `upstream_commit: d09d3e59`.
 2. Squash-merge the doc PR.
 3. Tag the resulting `main` commit: `git tag qe-v<N+1> <sha> -m "qe-v<N+1>: <summary>"` then `git push origin qe-v<N+1>`.
 
