@@ -49,7 +49,7 @@
 # Doing steps 1–3 in this order means anyone who `cat`s VERSION.yml at tag
 # `qe-v<N+1>` sees a self-consistent file (qe_version matches the tag).
 
-qe_version: qe-v11
+qe_version: qe-v12
 upstream_base: 1.10.1
 upstream_commit: d09d3e59
 
@@ -158,3 +158,10 @@ merged_features:
     local_pr: 89
     merge_sha: a40f0cb0
     tag: qe-v10
+
+  - id: 16
+    name: inline-math-number-simplification
+    description: Numbers written as inline maths stay inlineMath and are typeset by KaTeX (replaceNumber false), so a standalone number is set in the same face as the same value inside an equation and a negative number carries a true minus sign (U+2212)
+    local_pr: 128
+    merge_sha: e92e08f3
+    tag: qe-v12

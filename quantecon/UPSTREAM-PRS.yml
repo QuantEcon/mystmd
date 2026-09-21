@@ -352,3 +352,58 @@ upstream_candidates:
       touched files were byte-identical to upstream/main before this
       commit, so the cherry-pick is clean. Self-contained.
 
+
+  - id: inline-math-number-simplification
+    title: Inline maths simplification rewrites numbers to text (prose face, hyphen for minus)
+    type: bug-fix
+    description: |
+      `packages/myst-cli/src/process/mdast.ts` wired
+      `inlineMathSimplificationPlugin` with `{ replaceSymbol: false }`, which
+      leaves its two number rules on: `replaceNumber` turns an inline maths
+      node whose whole value is a number into a `text` node carrying the
+      literal source, and `replaceNumberedSubSuperScripts` turns `$10^{-4}$`
+      into a `span` of text plus superscript. A standalone `$2.5$` was
+      therefore set in the prose face while the same value inside `$x = 2.5$`
+      was set by KaTeX, and `$-1$` emitted U+002D hyphen-minus where KaTeX
+      emits U+2212. Both rules are gated on the single `replaceNumber`
+      option, so `{ replaceSymbol: false, replaceNumber: false }` sends every
+      number back through KaTeX and leaves the typing shortcuts
+      (`$\pm$`, `$\degree$`, `37$^\circ$C`) alone.
+    status: pending
+    commits:
+      - sha: e92e08f3
+        local_pr: 128
+        title: "Inline maths simplification: keep numbers as maths (replaceNumber: false)"
+    depends_on: []
+    upstream:
+      issue: null      # the number case is unreported upstream as of 2026-09-21
+      pr: null
+      branch: null
+      merged_sha: null
+    notes: |
+      Settles fork issue QuantEcon/mystmd#127, which carries the measurement:
+      about 1,205 affected inline expressions across the eight Python lecture
+      repositories, 76 of them with a minus sign.
+
+      Cleanest cherry-pick in this file. The changed line and
+      packages/myst-transforms/src/mathSimplifications.ts are byte-identical
+      to upstream/main — the `replaceNumber` option and its gates arrived in
+      upstream commit 8871ca8a — and the fork's other mdast.ts divergences
+      are all well away from it, so the squash replays without conflict.
+
+      The upstream pitch is precedent, not novelty: jupyter-book/mystmd#1604
+      and its duplicate jupyter-book/mystmd#1681 are the same complaint for
+      symbols, the maintainer agreed the transform "is too aggressive", and
+      jupyter-book/mystmd#2115 stopped replacing symbols by default — the
+      `replaceSymbol: false` this change sits beside. Numbers are the
+      remaining case, and the rationale kept for the transform ("people reach
+      for latex math when they mean to write text, e.g. `$^2$` `$\pm$`
+      `$\degree$C`") describes typing shortcuts, not "strictly between `$-1$`
+      and `$1$`".
+
+      Likeliest objection, in the maintainer's words when self-merging #2115:
+      "Symbols are no longer replaced, numbers still are." Lead the answer
+      with the U+002D-for-U+2212 defect, which is wrong under any reading of
+      that rationale, and note that the same wiring already switches off
+      `$^2$` and `$_2$` — the very examples the transform was kept for — so
+      the surviving number default was not deliberately calibrated.
