@@ -337,7 +337,7 @@ export async function transformMdast(
       parser: (content: string) => parseMyst(session, content, file),
       firstDepth: (titleDepth ?? 1) + (frontmatter.content_includes_title ? 0 : 1),
     })
-    .use(inlineMathSimplificationPlugin, { replaceSymbol: false })
+    .use(inlineMathSimplificationPlugin, { replaceSymbol: false, replaceNumber: false })
     .use(mathPlugin, { macros: frontmatter.math });
   // Load custom transform plugins
   session.plugins?.transforms.forEach((t) => {
