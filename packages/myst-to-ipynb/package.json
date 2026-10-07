@@ -42,7 +42,7 @@
     "mdast-util-to-markdown": "^1.5.0",
     "myst-common": "^1.7.6",
     "myst-frontmatter": "^1.7.6",
-    "myst-spec": "^0.0.5",
+    "myst-spec": "^0.0.6",
     "myst-spec-ext": "^1.10.0",
     "myst-to-md": "^1.0.15",
     "unified": "^10.1.2",
