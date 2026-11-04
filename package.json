@@ -11,7 +11,7 @@
     "docs": "npm-run-all -l build --parallel dev docs:run",
     "docs:run": "cd docs && bun ../packages/mystmd/dist/myst.cjs start",
     "clean": "turbo run clean --parallel && find . -name '.turbo' -type d -prune -exec rimraf '{}' +",
-    "link": "turbo run link",
+    "link": "npm link -w packages/mystmd",
     "lint": "turbo run lint",
     "lint:format": "turbo run lint:format",
     "lint:circular": "madge -c packages/*/src/*",
@@ -44,7 +44,7 @@
     "rimraf": "^6.0.1",
     "turbo": "^2.5.8",
     "typescript": "^5.9.3",
-    "vitest": "^3.2.4"
+    "vitest": "^3.2.6"
   },
   "engines": {
     "node": ">=20.0.0"

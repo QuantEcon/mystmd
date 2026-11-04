@@ -4,6 +4,8 @@ import path from 'node:path';
 import yaml from 'js-yaml';
 import { exec } from 'myst-cli-utils';
 
+const APP_PATH = path.join(path.dirname(import.meta.dirname), 'dist', 'myst.cjs');
+
 type TestFile = {
   cases: TestCase[];
 };
@@ -14,7 +16,7 @@ type TestCase = {
   timeout?: number;
   /** vitest retries for known-environmental cases (e.g. Jupyter kernel timing) */
   retry?: number;
-  command: string;
+  args: string;
   expectFailure?: boolean;
   outputs: {
     path: string;
@@ -48,7 +50,7 @@ describe.concurrent('End-to-end cli export tests', { timeout: TIMEOUT }, () => {
   // cases like Jupyter kernel timing; each attempt gets a fresh timeout)
   cases
     .filter((c) => !only || c.title === only)
-    .forEach(({ title, cwd, env, command, expectFailure, outputs, timeout, retry }) => {
+    .forEach(({ title, cwd, env, args, expectFailure, outputs, timeout, retry }) => {
       test(title, { retry: retry ?? 0 }, async () => {
         // Clean expected outputs if they already exist
         await Promise.all(
@@ -59,7 +61,11 @@ describe.concurrent('End-to-end cli export tests', { timeout: TIMEOUT }, () => {
           }),
         );
         // Run CLI command and assert non-zero exit when expectFailure is set
-        const run = exec(command, { cwd: resolve(cwd), env: { ...process.env, ...env }, timeout });
+        const run = exec(`${APP_PATH} ${args}`, {
+          cwd: resolve(cwd),
+          env: { ...process.env, ...env },
+          timeout,
+        });
         if (expectFailure) {
           await expect(run).rejects.toThrow();
         } else {

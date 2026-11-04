@@ -54,6 +54,8 @@ import { opendir } from 'node:fs/promises';
 
 const WEB_IMAGE_EXTENSIONS = [
   ImageExtensions.mp4,
+  ImageExtensions.webm,
+  ImageExtensions.avif,
   ImageExtensions.webp,
   ImageExtensions.svg,
   ImageExtensions.gif,
@@ -182,6 +184,8 @@ export async function writePublicJson(session: ISession) {
 
 export async function writeMystSearchJson(session: ISession, pages: LocalProjectPage[]) {
   const records = [...pages]
+    // Use `searchable` if set, otherwise leave out hidden pages
+    .filter((page) => page.searchable ?? !page.hidden)
     // Ensure deterministic ordering
     .sort((left, right) => {
       if (left.file < right.file) {

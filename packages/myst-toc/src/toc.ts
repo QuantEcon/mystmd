@@ -24,8 +24,8 @@ import {
 } from 'simple-validators';
 
 const BOOK_SECTION_CHOICES = ['frontmatter', 'parts', 'chapters', 'appendices', 'backmatter'];
-const COMMON_ENTRY_KEYS = ['title', 'hidden', 'section'];
-// const COMMON_ENTRY_KEYS = ['title', 'hidden', 'section', 'numbering', 'id', 'class'];
+const COMMON_ENTRY_KEYS = ['title', 'hidden', 'searchable', 'section'];
+// Not yet supported: 'numbering', 'id', 'class'
 
 function validateCommonEntry(entry: Record<string, any>, opts: ValidationOptions): CommonEntry {
   const output: CommonEntry = {};
@@ -35,6 +35,10 @@ function validateCommonEntry(entry: Record<string, any>, opts: ValidationOptions
 
   if (defined(entry.hidden)) {
     output.hidden = validateBoolean(entry.hidden, incrementOptions('hidden', opts));
+  }
+
+  if (defined(entry.searchable)) {
+    output.searchable = validateBoolean(entry.searchable, incrementOptions('searchable', opts));
   }
 
   if (defined(entry.section)) {
