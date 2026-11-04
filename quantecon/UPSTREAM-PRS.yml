@@ -131,6 +131,16 @@ upstream_candidates:
       caption-template half is generic and could be split out at
       cherry-pick time if upstream wants it sooner.
 
+      Cherry-pick caveat (re-checked 2026-11-04, upstream 8055648a): #22
+      (032957c2) now also conflicts in myst-toc src/toc.ts and
+      src/types.ts and myst-cli src/project/types.ts, where upstream's
+      `searchable` TOC entry key (jupyter-book/mystmd#2976) sits on the
+      lines #22 extends with `section`. Keep both, as main does since the
+      QuantEcon/mystmd#144 sync: upstream's `searchable` lines first, the
+      `section` key and its validation after them. That is on top of the
+      conflicts #22 already had in myst-cli src/process/mdast.ts and
+      myst-transforms src/enumerate.spec.ts.
+
   - id: book-parts
     title: Book parts dividers
     type: feature
@@ -286,7 +296,12 @@ upstream_candidates:
       book mode, but expect context conflicts cherry-picking onto
       upstream/main — plan for a small rework against upstream's
       enumerate.ts rather than a clean replay, or bundle after
-      book-mode-with-section-scope.
+      book-mode-with-section-scope. The katex bump also conflicts in
+      packages/myst-to-jats/package.json, whose neighbouring ranges move
+      with every upstream release, and since upstream's 1.12.0 release in
+      bun.lock as well (re-checked 2026-11-04, upstream 8055648a). Take
+      upstream's ranges plus `katex ^0.16.21` (upstream is still on
+      ^0.15.2) and regenerate the lockfile.
 
   - id: heading-attributes
     title: Pandoc-style heading attribute blocks ({#id .class .unnumbered})
@@ -348,9 +363,18 @@ upstream_candidates:
       merged_sha: null
     notes: |
       Strong upstream candidate: the flaky tests are upstream's own
-      (their #2823 already patched live-DOI data drift once), and the
-      touched files were byte-identical to upstream/main before this
-      commit, so the cherry-pick is clean. Self-contained.
+      (their #2823 already patched live-DOI data drift once).
+      Self-contained, but no longer a clean cherry-pick (re-checked
+      2026-11-04, upstream 8055648a): doi.spec.ts conflicts with
+      upstream's later DOI-coercion change (jupyter-book/mystmd#2960),
+      and endToEnd.spec.ts and exports.yml conflict with upstream's
+      rewrite of the end-to-end runner (jupyter-book/mystmd#3106), which
+      replaced `command:` with `args:` and runs dist/myst.cjs directly.
+      Main already carries this change in that new form, and on all four
+      touched files (doi.spec.ts, fixtures/doi.json, endToEnd.spec.ts,
+      exports.yml) main differs from upstream/main by this commit alone.
+      So the upstream branch can take those files from main instead of
+      replaying the squash, provided upstream has not changed them again.
 
 
   - id: inline-math-number-simplification
