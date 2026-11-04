@@ -49,9 +49,9 @@
 # Doing steps 1–3 in this order means anyone who `cat`s VERSION.yml at tag
 # `qe-v<N+1>` sees a self-consistent file (qe_version matches the tag).
 
-qe_version: qe-v13
-upstream_base: 1.11.0
-upstream_commit: 59fb1f4d
+qe_version: qe-v14
+upstream_base: 1.12.0
+upstream_commit: 8055648a
 
 merged_features:
   - id: 1
