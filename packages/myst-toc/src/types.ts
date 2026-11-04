@@ -17,6 +17,7 @@ export type BookSection = 'frontmatter' | 'parts' | 'chapters' | 'appendices' | 
 export type CommonEntry = {
   title?: string;
   hidden?: boolean;
+  searchable?: boolean;
   /**
    * Book-style section tag. When set on a ParentEntry, every descendant
    * page is treated as belonging to that named section for numbering

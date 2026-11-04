@@ -159,7 +159,7 @@ const handlers: Record<string, Handler> = {
     }
     state.write('#quote(block: true)[');
     state.renderChildren(node);
-    state.write(']');
+    state.write(']\n\n');
   },
   definitionList(node, state) {
     let dedent = false;
