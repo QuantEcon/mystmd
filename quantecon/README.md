@@ -192,9 +192,9 @@ Then continue with the normal PR review and squash-merge. When eventually upstre
 This is a standard monorepo — clone, build, install globally. There is no published npm package.
 
 ```yaml
-- uses: actions/setup-node@v4
+- uses: actions/setup-node@v6
   with:
-    node-version: '20'
+    node-version: '24'
 
 - uses: oven-sh/setup-bun@v2
 
