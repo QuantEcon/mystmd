@@ -30,6 +30,8 @@ Doing steps 1–3 in this order means anyone who `cat`s `VERSION.yml` at tag `qe
 
 ### Maintaining `UPSTREAM-PRS.yml`
 
+This file holds **only implemented work**: squash commits on `main` that we plan to upstream. Anything not yet implemented, whether a planned feature or a diagnosed defect, is a fork issue until its commit lands, and an issue about upstream's own code carries the [`upstream`](https://github.com/QuantEcon/mystmd/labels/upstream) label. Fork-only changes, such as `cli-show-qe-version`, get a `VERSION.yml` row but no entry here. A fix goes upstream only after it lands on `main` and has an entry here.
+
 Update this whenever a feature **or an upstream bug fix** lands on `main`, or its upstream plan changes:
 
 - New feature with no obvious bundle → add as a standalone candidate (`status: pending`, `commits: [<sha>]`).
@@ -37,7 +39,7 @@ Update this whenever a feature **or an upstream bug fix** lands on `main`, or it
 - Feature deserves its own upstream story but depends on another → new candidate with `depends_on: [<other-candidate-id>]`.
 - Fix for a defect in upstream's own code lands → add as a candidate with `type: bug-fix`, naming in `notes` the fork issue it settles. **The defect on its own does not get an entry** — it stays a fork issue until a fix exists, because this file plans how landed commits reach upstream and a defect with no commits has nothing to plan.
 
-Status transitions: `planned` → `pending` (all commits landed) → `open` (upstream PR exists) → `merged` (upstream merged it). On `merged`, also run the post-merge sync workflow below.
+Status transitions: `pending` (all commits landed) → `open` (upstream PR exists) → `merged` (upstream merged it). On `merged`, also run the post-merge sync workflow below.
 
 ## How it works — the key idea
 

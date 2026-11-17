@@ -8,8 +8,9 @@
 # Upstream status is tracked separately in `UPSTREAM-PRS.yml`. That file
 # plans how these squash commits get bundled (or split) into upstream
 # PRs, and records the upstream PR / merge status. Cross-reference is
-# by commit SHA: each `merge_sha` here appears in some upstream
-# candidate's `commits` list there.
+# by commit SHA: each `merge_sha` here that we plan to upstream appears
+# in some upstream candidate's `commits` list there. Fork-only entries,
+# such as cli-show-qe-version, appear in none.
 #
 # Per-PR landing appends the feature to `merged_features` with its squash
 # `merge_sha` and `tag: null`. The `tag:` field is filled in later when a
