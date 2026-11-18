@@ -366,7 +366,10 @@ export function findLinks(text: string): InlineLink[] {
       for (let k = token.role.start; k < token.role.end; k++) chars[k] = ' ';
     }
   }
-  const masked = chars.join('');
+  // Mask maths too, where `[0, 1](x)` is not a link
+  const masked = chars
+    .join('')
+    .replace(/\$\$[\s\S]*?\$\$|\$[^$]+?\$/g, (math) => ' '.repeat(math.length));
   const pattern = /\]\(([^()\s<>]+)\)/g;
   let match: RegExpExecArray | null;
   while ((match = pattern.exec(masked))) {

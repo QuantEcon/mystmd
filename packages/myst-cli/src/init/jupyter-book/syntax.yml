@@ -464,3 +464,238 @@ cases:
       baz
       : {term}`foo`
       :::
+  # label-links
+  - title: A link to a bare label becomes a link to the target
+    context:
+      files: [page.md]
+      labels: [a-section-target, eq:demand]
+    source: |
+      See [the section](a-section-target) and [the demand curve](eq:demand).
+    result: |
+      See [the section](#a-section-target) and [the demand curve](#eq:demand).
+  - title: Links that already name a target, a file, a path or a URL are left alone
+    context:
+      files: [page.md, intro.md, data/table.csv]
+      labels: [a-section-target]
+    source: |
+      [a](#a-section-target), [b](./intro.md), [c](data/table.csv), [d](https://quantecon.org),
+      [e](mailto:contact@quantecon.org), [f](doi:10.1000/182), [g](missing.pdf) and
+      ![an image](graph.png). Maths is not a link: $[0, 1](x)$, and nor is code: `[x](y)`.
+  - title: A bare link to a document without its extension is skipped
+    context:
+      files: [page.md, intro.md]
+      labels: [a-section-target]
+    source: |
+      See [the introduction](intro).
+    skips:
+      - line: 1
+        rule: label-links
+  - title: A bare link that is neither a target nor a file fails
+    context:
+      files: [page.md]
+      labels: [a-section-target]
+    source: |
+      Text.
+
+      See [the section](no-such-target).
+    failures:
+      - line: 3
+        rule: label-links
+        message: no-such-target
+  # only
+  - title: '{only} html becomes its body, {only} latex is deleted'
+    source: |
+      Before.
+
+      ```{only} html
+      The HTML text, with {cite}`key`.
+      ```
+
+      ```{only} latex
+      The LaTeX text.
+      ```
+
+      After.
+    result: |
+      Before.
+
+      The HTML text, with {cite:p}`key`.
+
+      After.
+  - title: '{only} html inside another directive keeps the indentation of the content'
+    source: |
+      :::{note}
+      Text
+      ```{only} html
+      <img src="graph.png" width="300">
+      ```
+      :::
+    result: |
+      :::{note}
+      Text
+
+      <img src="graph.png" width="300">
+
+      :::
+  - title: Content without {only} is left alone
+    source: |
+      The HTML text.
+  - title: '{only} with another expression fails'
+    source: |
+      ```{only} html or epub
+      Text.
+      ```
+
+      ```{only} not latex
+      Text.
+      ```
+    failures:
+      - line: 1
+        rule: only
+        message: html or epub
+      - line: 5
+        rule: only
+  # image-scale
+  - title: A scale on a figure or an image becomes a width
+    source: |
+      ```{figure} graph.png
+      :scale: 40%
+
+      Scaled to 40 per cent.
+      ```
+
+      ```{image} graph.png
+      :align: center
+      :scale: 60
+      ```
+    result: |
+      ```{figure} graph.png
+      :width: 40%
+
+      Scaled to 40 per cent.
+      ```
+
+      ```{image} graph.png
+      :align: center
+      :width: 60%
+      ```
+  - title: A figure with a width is left alone
+    source: |
+      ```{figure} graph.png
+      :width: 40%
+      ```
+  - title: A scale beside a width is left untouched
+    source: |
+      ```{image} graph.png
+      :scale: 50
+      :width: 300px
+      ```
+    skips:
+      - line: 2
+        rule: image-scale
+  # youtube
+  - title: A bare youtube video becomes an iframe
+    source: |
+      ```{youtube} rZS2LGiurKY
+      ```
+    result: |
+      ```{iframe} https://www.youtube.com/embed/rZS2LGiurKY
+      ```
+  - title: An iframe is left alone
+    source: |
+      ```{iframe} https://www.youtube.com/embed/rZS2LGiurKY
+      ```
+  - title: A youtube video with options fails
+    source: |
+      ```{youtube} rZS2LGiurKY
+      :width: 100%
+      ```
+    failures:
+      - line: 1
+        rule: youtube
+  # proof-kind
+  - title: A capitalised proof kind is lower-cased
+    source: |
+      ```{prf:Theorem} Perron-Frobenius Theorem
+      :label: perron-frobenius
+
+      Text.
+      ```
+
+      :::{PRF:Lemma}
+      Text.
+      :::
+    result: |
+      ```{prf:theorem} Perron-Frobenius Theorem
+      :label: perron-frobenius
+
+      Text.
+      ```
+
+      :::{prf:lemma}
+      Text.
+      :::
+  - title: A lower-case proof kind is left alone
+    source: |
+      ```{prf:theorem}
+      Text.
+      ```
+  - title: An unknown capitalised proof kind is left untouched
+    source: |
+      ```{prf:Notation}
+      Text.
+      ```
+    skips:
+      - line: 1
+        rule: proof-kind
+  # any-role
+  - title: '{any} becomes a link to the label'
+    context:
+      labels: [a-section-target]
+    source: |
+      We have met {any}`the section above <a-section-target>` and {any}`a-section-target`.
+    result: |
+      We have met [the section above](#a-section-target) and [](#a-section-target).
+  - title: A link to a label is left alone
+    context:
+      labels: [a-section-target]
+    source: |
+      We have met [the section above](#a-section-target).
+  - title: '{any} to something that is not a label is left untouched'
+    context:
+      labels: [a-section-target]
+    source: |
+      See {any}`numpy.array`.
+    skips:
+      - line: 1
+        rule: any-role
+  # bibliography-argument
+  - title: The bibliography argument is dropped
+    context:
+      path: zreferences.md
+      bibliography: [_static/quant-econ.bib]
+    source: |
+      ```{bibliography} _static/quant-econ.bib
+      ```
+    result: |
+      ```{bibliography}
+      ```
+  - title: A bibliography without an argument is left alone
+    source: |
+      ```{bibliography}
+      :filter: docname in docnames
+      ```
+  - title: A bibliography file missing from myst.yml is reported, and the argument still dropped
+    context:
+      path: part/refs.md
+      bibliography: [references.bib]
+    source: |
+      ```{bibliography} ../_static/quant-econ.bib
+      ```
+    result: |
+      ```{bibliography}
+      ```
+    notices:
+      - line: 1
+        rule: bibliography-argument
+        message: _static/quant-econ.bib
