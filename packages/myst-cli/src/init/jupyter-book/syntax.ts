@@ -6,9 +6,15 @@ import { toText } from 'myst-common';
 import chalk from 'chalk';
 import type { ISession } from '../../session/types.js';
 import { makeExecutable } from 'myst-cli-utils';
-import { parse, join, relative } from 'node:path';
+import { parse, join, sep } from 'node:path';
 import type { INotebookContent } from '@jupyterlab/nbformat';
-import { createTempFolder } from '../../utils/createTempFolder.js';
+import { scanDocument } from './blocks.js';
+import type { RuleAPI, UpgradeContext, UpgradeReport, UpgradeRule } from './rule.js';
+import { createUpgradeReport } from './rule.js';
+import { UPGRADE_RULES, collectLabels } from './rules/index.js';
+
+export type { UpgradeChange, UpgradeContext, UpgradeIssue, UpgradeReport } from './rule.js';
+export { createUpgradeReport } from './rule.js';
 
 // Preserve newlines through group construct
 const SPLIT_PATTERN = /\r\n|\r|\n/;
@@ -21,142 +27,293 @@ type LegacyGlossaryItem = {
   termLines: DocumentLine[];
   definitionLines: DocumentLine[];
 };
-type CallbackType = () => Promise<void>;
+type ChangeCallback = (line: number, before: string, after: string) => void;
+
+const IGNORED_PATHS = ['**/_build/**', '**/node_modules/**', '**/.git/**'];
 
 /**
- * In-place upgrade Sphinx-style glossaries into MyST definition-list glossaries
- * in all MyST documents
+ * Every file in the project, relative to the working directory, with `/` separators
  *
- * @param session - session with logging
+ * Git-tracked files are preferred, to ignore build outputs; otherwise the
+ * directory is globbed.
  */
-export async function upgradeProjectSyntax(session: ISession) {
-  let documentPaths: string[];
-  session.log.debug(chalk.dim(`Upgrading legacy-formatted files in a temporary location`));
-  // Try and find all Git-tracked files, to ignore _build (hopefully)
+async function listProjectFiles(): Promise<string[]> {
+  let files: string[];
   try {
-    const allFiles = (await makeExecutable('git ls-files', null)()).split(SPLIT_PATTERN);
-    documentPaths = allFiles.filter((path) => {
-      const { ext } = parse(path);
-      return ext == '.md' || ext == '.ipynb';
-    });
+    files = (await makeExecutable('git ls-files', null)())
+      .split(SPLIT_PATTERN)
+      .filter((path) => !!path);
   } catch (error) {
     // Fall back on globbing
-    documentPaths = await glob('**/*.{md,ipynb}');
+    files = await glob('**/*', { nodir: true, ignore: IGNORED_PATHS });
   }
-  const tmpPath = createTempFolder(session);
-  // Update all documents
-  const maybeUpgradedPaths = await Promise.all(
-    documentPaths.map((path) => upgradeDocument(session, path, tmpPath, process.cwd())),
-  );
+  return files.map((path) => path.split(sep).join('/')).sort();
+}
 
-  // Now upgrade all documents
-  session.log.debug(chalk.dim(`Copying upgraded files into project`));
-  await Promise.all(
-    maybeUpgradedPaths
-      .filter((item: CallbackType | undefined): item is CallbackType => item !== undefined)
-      .map((fn) => fn()),
-  );
+export type SyntaxUpgradeOptions = {
+  /** The `project.bibliography` entries the upgraded project will have, if known */
+  bibliography?: string[];
+};
+
+export type SyntaxUpgradePlan = {
+  report: UpgradeReport;
+  /** The documents to rewrite, with their new content */
+  pending: { path: string; content: string }[];
+};
+
+type DocumentSource =
+  | { kind: 'markdown'; path: string; data: string }
+  | { kind: 'notebook'; path: string; notebook: INotebookContent };
+
+async function readDocument(path: string): Promise<DocumentSource | undefined> {
+  const { ext } = parse(path);
+  const data = (await fs.readFile(path)).toString();
+  if (ext === '.md') return { kind: 'markdown', path, data };
+  if (ext === '.ipynb') return { kind: 'notebook', path, notebook: JSON.parse(data) };
+  return undefined;
 }
 
 /**
- * In-place upgrade Sphinx-style glossaries into MyST definition-list glossaries
- * in a single document
+ * Notebook markdown cell sources, as lines without their newlines
+ */
+function cellLines(cell: INotebookContent['cells'][number]): string[] {
+  const source = Array.isArray(cell.source) ? cell.source.join('') : (cell.source as string);
+  return source.split(SPLIT_PATTERN);
+}
+
+/**
+ * Work out every syntax upgrade in the project, without writing anything
  *
  * @param session - session with logging
- * @param path - path to document
+ * @param opts - what is known of the upgraded project's configuration
  */
-async function upgradeDocument(
+export async function planProjectSyntaxUpgrade(
   session: ISession,
-  path: string,
-  tmpPath: string,
-  basePath: string,
-): Promise<CallbackType | undefined> {
-  const relativePath = relative(basePath, path);
+  opts: SyntaxUpgradeOptions = {},
+): Promise<SyntaxUpgradePlan> {
+  const files = await listProjectFiles();
+  const documentPaths = files.filter((path) => {
+    const { ext } = parse(path);
+    return ext == '.md' || ext == '.ipynb';
+  });
+  const documents = (await Promise.all(documentPaths.map(readDocument))).filter(
+    (doc): doc is DocumentSource => !!doc,
+  );
 
-  // Temporary location for upgrade path
-  const upgradeFilePath = join(tmpPath, relativePath);
+  // Every label in the project, for the rules that resolve links
+  const labels = new Set<string>();
+  documents.forEach((doc) => {
+    const sources =
+      doc.kind === 'markdown'
+        ? [doc.data.split(SPLIT_PATTERN)]
+        : doc.notebook.cells.filter((cell) => cell.cell_type === 'markdown').map(cellLines);
+    sources.forEach((lines) => {
+      collectLabels(lines).forEach((label) => {
+        labels.add(label);
+      });
+    });
+  });
+  const sortedLabels = [...labels].sort();
 
-  // Ensure destination directory exists
-  const { dir: temporaryFileDir } = parse(upgradeFilePath);
-  await fs.mkdir(temporaryFileDir, { recursive: true });
-
-  const { base, ext, dir: originalDir } = parse(path);
-  // Callback for implementing the "atomic" replacement
-  const performUpgrade = async () => {
-    const backupFilePath = join(originalDir, `.${base}.bak`);
-    await fs.rename(path, backupFilePath);
-    await fs.rename(upgradeFilePath, path);
-  };
-
-  switch (ext) {
-    case '.md':
-      {
-        // Upgrade entire Markdown document in one pass
-        const data = (await fs.readFile(path)).toString();
-        const maybeNewLines = await upgradeContent(data.split(SPLIT_PATTERN));
+  const report = createUpgradeReport();
+  const pending: SyntaxUpgradePlan['pending'] = [];
+  for (const doc of documents) {
+    const context: UpgradeContext = {
+      path: doc.path,
+      files,
+      labels: sortedLabels,
+      bibliography: opts.bibliography,
+    };
+    if (doc.kind === 'markdown') {
+      // Upgrade entire Markdown document in one pass
+      const eol = doc.data.includes('\r\n') ? '\r\n' : '\n';
+      const maybeNewLines = await upgradeContent(doc.data.split(SPLIT_PATTERN), {
+        context,
+        report,
+      });
+      if (maybeNewLines !== undefined) {
+        pending.push({ path: doc.path, content: maybeNewLines.join(eol) });
+      }
+    } else {
+      // Upgrade each markdown cell of the notebook; code cells are not reached
+      let didUpgrade = false;
+      for (const [index, cell] of doc.notebook.cells.entries()) {
+        if (cell.cell_type !== 'markdown') continue;
+        const maybeNewLines = await upgradeContent(cellLines(cell), {
+          context,
+          report,
+          cell: index,
+        });
         if (maybeNewLines !== undefined) {
-          // Write modified result
-          await fs.writeFile(upgradeFilePath, maybeNewLines.join('\n'));
-          session.log.info(chalk.dim(`Upgraded ${chalk.blue(path)}`));
-          return performUpgrade;
+          cell.source = maybeNewLines.map((line, i) =>
+            i < maybeNewLines.length - 1 ? `${line}\n` : line,
+          );
+          didUpgrade = true;
         }
       }
-      break;
-    case '.ipynb':
-      {
-        // Upgrade each cell of the notebook
-        const data = (await fs.readFile(path)).toString();
-        const notebook = JSON.parse(data) as INotebookContent;
-        const cellDidUpgrade = await Promise.all(
-          notebook.cells
-            .filter((cell) => cell.cell_type === 'markdown')
-            .map(async (cell) => {
-              // Try and upgrade the cell
-              const maybeNewLines = await upgradeContent(
-                (cell.source as string[])
-                  // Strip newlines
-                  .map((line) => line.replace('\n', '')),
-              );
-              // Did we compute new state?
-              if (maybeNewLines !== undefined) {
-                // Write to cell and indicate modification
-                cell.source = maybeNewLines.map((line) => `${line}\n`);
-                return true;
-              } else {
-                return false;
-              }
-            }),
-        );
+      if (didUpgrade) {
+        pending.push({ path: doc.path, content: JSON.stringify(doc.notebook) });
+      }
+    }
+  }
+  return { report, pending };
+}
 
-        // Do we need to update the notebook?
-        if (cellDidUpgrade.some((x) => x)) {
-          // Write modified result
-          const newData = JSON.stringify(notebook);
-          // Write modified result
-          await fs.writeFile(upgradeFilePath, newData);
-          session.log.info(chalk.dim(`Upgraded ${chalk.blue(path)}`));
-          return performUpgrade;
-        }
-      }
-      return undefined;
+/**
+ * Write the documents of an upgrade plan
+ *
+ * @param session - session with logging
+ * @param plan - the plan to write
+ * @param opts.backup - keep each original beside it, as `.<name>.bak`
+ */
+export async function writeProjectSyntaxUpgrade(
+  session: ISession,
+  plan: SyntaxUpgradePlan,
+  opts: { backup?: boolean } = {},
+) {
+  const backup = opts.backup ?? true;
+  for (const { path, content } of plan.pending) {
+    if (backup) {
+      const { base, dir } = parse(path);
+      await fs.copyFile(path, join(dir, `.${base}.bak`));
+    }
+    await fs.writeFile(path, content);
+    session.log.info(chalk.dim(`Upgraded ${chalk.blue(path)}`));
   }
 }
-export async function upgradeContent(documentLines: string[]): Promise<string[] | undefined> {
+
+/**
+ * Format the failures of a report, one per line, as `file:line: [rule] message`
+ */
+export function formatUpgradeIssues(issues: UpgradeReport['failures']): string {
+  return issues
+    .map(({ file, cell, line, rule, message }) => {
+      const where = cell === undefined ? `${file ?? ''}:${line}` : `${file}:cell ${cell}:${line}`;
+      return `${where}: [${rule}] ${message}`;
+    })
+    .join('\n');
+}
+
+/**
+ * In-place upgrade legacy Jupyter Book syntax in all MyST documents
+ *
+ * Nothing is written when any rule fails: the failures are thrown together.
+ *
+ * @param session - session with logging
+ */
+export async function upgradeProjectSyntax(session: ISession, opts: SyntaxUpgradeOptions = {}) {
+  session.log.debug(chalk.dim(`Upgrading legacy-formatted files`));
+  const plan = await planProjectSyntaxUpgrade(session, opts);
+  if (plan.report.failures.length) {
+    throw new Error(
+      `Some syntax could not be upgraded, so no file was changed:\n${formatUpgradeIssues(
+        plan.report.failures,
+      )}`,
+    );
+  }
+  await writeProjectSyntaxUpgrade(session, plan);
+}
+
+/**
+ * The legacy transforms, which rewrite whole documents: they run after the rules
+ */
+const LEGACY_RULES: UpgradeRule[] = [
+  {
+    name: 'glossary',
+    run(lines, api) {
+      const result = upgradeGlossary([...lines], (line, before, after) =>
+        api.change(line, before, after),
+      );
+      if (result) api.replace(0, lines.length, result);
+    },
+  },
+  {
+    name: 'admonition-case',
+    run(lines, api) {
+      const result = upgradeNotes([...lines], (line, before, after) =>
+        api.change(line, before, after),
+      );
+      if (result) api.replace(0, lines.length, result);
+    },
+  },
+];
+
+type Edit = { start: number; end: number; replacement: string[] };
+
+function applyEdits(lines: string[], origin: number[], edits: Edit[], rule: string) {
+  const sorted = [...edits].sort((a, b) => a.start - b.start || a.end - b.end);
+  for (let i = 1; i < sorted.length; i++) {
+    if (sorted[i].start < sorted[i - 1].end) {
+      throw new Error(`Upgrade rule "${rule}" made overlapping edits`);
+    }
+  }
+  const nextLines = [...lines];
+  const nextOrigin = [...origin];
+  for (const { start, end, replacement } of sorted.reverse()) {
+    const anchor = origin[start] ?? origin[origin.length - 1] ?? 0;
+    nextLines.splice(start, end - start, ...replacement);
+    nextOrigin.splice(start, end - start, ...replacement.map(() => anchor));
+  }
+  return { lines: nextLines, origin: nextOrigin };
+}
+
+/**
+ * Upgrade the legacy syntax of one document
+ *
+ * @param documentLines - the lines of the document
+ * @param opts.context - what is known about the project around the document
+ * @param opts.report - collects each change, failure and skip
+ * @param opts.cell - the notebook cell the lines come from, for reports
+ * @param opts.rules - the rules to run, by default every rule
+ * @returns the new lines, or `undefined` when nothing changed
+ */
+export async function upgradeContent(
+  documentLines: string[],
+  opts: {
+    context?: UpgradeContext;
+    report?: UpgradeReport;
+    cell?: number;
+    rules?: UpgradeRule[];
+  } = {},
+): Promise<string[] | undefined> {
+  const context = opts.context ?? {};
+  const report = opts.report ?? createUpgradeReport();
+  const rules = opts.rules ?? [...UPGRADE_RULES, ...LEGACY_RULES];
+  let lines = [...documentLines];
+  let origin = lines.map((_, index) => index);
   let didUpgrade = false;
 
-  for (const transform of [upgradeGlossary, upgradeNotes]) {
-    const nextLines = await transform(documentLines);
-    didUpgrade = didUpgrade || nextLines !== undefined;
-    documentLines = nextLines ?? documentLines;
+  for (const rule of rules) {
+    const edits: Edit[] = [];
+    const locate = (line: number) => ({
+      file: context.path,
+      cell: opts.cell,
+      line: (origin[line] ?? origin[origin.length - 1] ?? 0) + 1,
+      rule: rule.name,
+    });
+    const api: RuleAPI = {
+      context,
+      doc: scanDocument(lines),
+      replace: (start, end, replacement) => edits.push({ start, end, replacement }),
+      change: (line, before, after) => report.changes.push({ ...locate(line), before, after }),
+      fail: (line, message) => report.failures.push({ ...locate(line), message }),
+      skip: (line, message) => report.skips.push({ ...locate(line), message }),
+      notice: (line, message) => report.notices.push({ ...locate(line), message }),
+    };
+    rule.run(lines, api);
+    if (!edits.length) continue;
+    const next = applyEdits(lines, origin, edits, rule.name);
+    if (next.lines.join('\n') !== lines.join('\n')) didUpgrade = true;
+    ({ lines, origin } = next);
   }
 
-  return didUpgrade ? documentLines : undefined;
+  return didUpgrade ? lines : undefined;
 }
 
 const admonitionPattern =
   /^(attention|caution|danger|error|important|hint|note|seealso|tip|warning)$/;
 
-async function upgradeNotes(documentLines: string[]): Promise<string[] | undefined> {
+function upgradeNotes(documentLines: string[], onChange?: ChangeCallback): string[] | undefined {
   const data = documentLines.join('\n');
   const mdast = mystParse(data);
 
@@ -180,6 +337,7 @@ async function upgradeNotes(documentLines: string[]): Promise<string[] | undefin
       // Replace it with :::{foo} or ```{foo}
       (_, prefix, name) => `${prefix}{${name.toLowerCase()}}`,
     );
+    onChange?.(start - 1, documentLines[start - 1], newLine);
     documentLines[start - 1] = newLine;
   });
 
@@ -191,15 +349,19 @@ async function upgradeNotes(documentLines: string[]): Promise<string[] | undefin
   }
 }
 
-async function upgradeGlossary(documentLines: string[]): Promise<string[] | undefined> {
+function upgradeGlossary(documentLines: string[], onChange?: ChangeCallback): string[] | undefined {
   const data = documentLines.join('\n');
   const mdast = mystParse(data);
   const glossaryNodes = selectAll('mystDirective[name=glossary]', mdast);
 
   // Track the edit point
   let editOffset = 0;
+  let didUpgrade = false;
   for (const node of glossaryNodes) {
     const nodeLines = ((node as any).value as string).split(SPLIT_PATTERN);
+
+    // A glossary that is already a MyST definition list is left alone
+    if (nodeLines.some((line) => /^:\s/.test(line))) continue;
 
     // TODO: assert span items
 
@@ -292,14 +454,20 @@ async function upgradeGlossary(documentLines: string[]): Promise<string[] | unde
     }
     const nodeSpan = { start: node.position?.start?.line, stop: node.position?.end?.line };
     const spanLength = nodeSpan.stop! - nodeSpan.start! - 1;
+    onChange?.(
+      nodeSpan.start! - 1,
+      documentLines.slice(nodeSpan.start! + editOffset, nodeSpan.stop! - 1 + editOffset).join('\n'),
+      newLines.join('\n'),
+    );
     documentLines.splice(nodeSpan.start! + editOffset, spanLength, ...newLines);
 
     // Offset our insert cursor
     editOffset += newLines.length - spanLength;
+    didUpgrade = true;
   }
 
   // Update the file
-  if (glossaryNodes.length) {
+  if (didUpgrade) {
     return documentLines;
   } else {
     return undefined;
