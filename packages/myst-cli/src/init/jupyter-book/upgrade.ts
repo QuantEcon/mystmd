@@ -71,6 +71,7 @@ export async function planJupyterBookUpgrade(session: ISession): Promise<Jupyter
   // Upgrade legacy syntax
   const syntax = await planProjectSyntaxUpgrade(session, {
     bibliography: bibliographyList(config.project?.bibliography),
+    intersphinx: mappingNames(configData?.sphinx?.config?.intersphinx_mapping),
   });
 
   return { config, syntax };
@@ -119,6 +120,14 @@ export async function upgradeJupyterBook(session: ISession, configFile: string) 
     throw syntaxFailureError(plan.syntax.report);
   }
   await writeJupyterBookUpgrade(session, configFile, plan, { backup: true });
+}
+
+/**
+ * The names of an intersphinx mapping, or of `project.references`
+ */
+function mappingNames(value: unknown): string[] | undefined {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return undefined;
+  return Object.keys(value);
 }
 
 function bibliographyList(value: unknown): string[] | undefined {
@@ -211,11 +220,17 @@ export async function upgrade(session: ISession, opts: UpgradeOptions = {}) {
     write = () => writeJupyterBookUpgrade(session, configFile, plan, { backup });
   } else {
     let bibliography: string[] | undefined;
+    let intersphinx: string[] | undefined;
     if (hasConfig) {
       const config = yaml.load(await fs.readFile(configFile, { encoding: 'utf-8' })) as any;
       bibliography = bibliographyList(config?.project?.bibliography) ?? [];
+      intersphinx = mappingNames(config?.project?.references);
+    } else if (await fsExists('_config.yml')) {
+      // Without myst.yml, the intersphinx mapping is still in the Jupyter Book config
+      const config = yaml.load(await fs.readFile('_config.yml', { encoding: 'utf-8' })) as any;
+      intersphinx = mappingNames(config?.sphinx?.config?.intersphinx_mapping);
     }
-    const plan = await planProjectSyntaxUpgrade(session, { bibliography });
+    const plan = await planProjectSyntaxUpgrade(session, { bibliography, intersphinx });
     report = plan.report;
     write = () => writeProjectSyntaxUpgrade(session, plan, { backup });
   }
