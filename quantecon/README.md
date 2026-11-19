@@ -31,7 +31,7 @@ Doing steps 1–3 in this order means anyone who `cat`s `VERSION.yml` at tag `qe
 
 ### Maintaining `UPSTREAM-PRS.yml`
 
-This file holds **only implemented work**: squash commits on `main` that we plan to upstream. Anything not yet implemented, whether a planned feature or a diagnosed defect, is a fork issue until its commit lands, and an issue about upstream's own code carries the [`upstream`](https://github.com/QuantEcon/mystmd/labels/upstream) label. Fork-only changes, such as `cli-show-qe-version`, get a `VERSION.yml` row but no entry here. A fix goes upstream only after it lands on `main` and has an entry here.
+This file holds **only implemented work**: squash commits on `main` that we plan to upstream. Anything not yet implemented, whether a planned feature or a diagnosed defect, is a fork issue until its commit lands, and an issue about a defect in upstream's own code carries the [`upstream`](https://github.com/QuantEcon/mystmd/labels/upstream) label. Fork-only changes, such as `cli-show-qe-version`, get a `VERSION.yml` row but no entry here. A fix goes upstream only after it lands on `main` and has an entry here.
 
 Update this whenever a feature **or an upstream bug fix** lands on `main`, or its upstream plan changes:
 
@@ -141,6 +141,7 @@ The `main` ruleset allows both squash and merge commits, and GitHub can't set th
 - **Fork footprint:** the set of files where the fork differs from upstream should be the same before and after, apart from intended follow-ups, and every SHA in `UPSTREAM-PRS.yml` should still be an ancestor of the branch.
 - **Theme:** if the sync changes the site manifest or anything else a theme reads, build a small project with the books' pinned theme (QuantEcon/myst-theme `qe-vN`) before merging.
 - **PR description:** why now, what it brings in (a table of the upstream commits), how it touches fork features, the conflict resolutions, and the verification. #144 and #156 are examples.
+- **Copilot:** its review of a sync PR covers upstream's code, so don't act on it or reply. Only a comment on the fork's own lines (the conflict resolutions or a follow-up commit) needs a look.
 
 After the sync merges, the next tag follows the steps under [Maintaining `VERSION.yml`](#maintaining-versionyml).
 
