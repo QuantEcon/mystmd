@@ -101,28 +101,29 @@ function mutateEmbedNode(
 }
 
 /**
- * Show the outputs an embed copies, even when they are removed on their own page
+ * Show the outputs an embed copies, even when their own page removes or folds them
  *
  * An embed shows what it embeds: a cell whose output is removed (the
- * `remove-output` tag) keeps it off its own page, and the embed shows it.
- * Only `outputs` nodes are changed; removed code (`remove-input`) and removed
- * cells (`remove-cell`) keep their visibility. A removed output was never
- * minified on its own page, so it is minified here, to be written to the
- * build with the other outputs of the embedding page.
+ * `remove-output` tag) or folded (`hide-output`) on its own page is shown,
+ * open, where it is embedded. Only `outputs` nodes are changed; removed code
+ * (`remove-input`) and removed cells (`remove-cell`) keep their visibility. A
+ * removed output was never minified on its own page, so it is minified here,
+ * to be written to the build with the other outputs of the embedding page; a
+ * folded one already was.
  */
-async function showRemovedOutputs(
+async function showEmbeddedOutputs(
   session: ISession,
   target: GenericNode,
   opts?: { minifyMaxCharacters?: number },
 ) {
-  const removed = (selectAll('outputs', target) as GenericNode[]).filter(
-    (outputs) => outputs.visibility === 'remove',
-  );
-  if (!removed.length) return;
-  removed.forEach((outputs) => {
-    outputs.visibility = 'show';
+  const outputsNodes = selectAll('outputs', target) as GenericNode[];
+  const removed = outputsNodes.filter((outputs) => outputs.visibility === 'remove');
+  outputsNodes.forEach((outputs) => {
+    if (outputs.visibility === 'remove' || outputs.visibility === 'hide') {
+      outputs.visibility = 'show';
+    }
   });
-  await minifyOutputsNodes(session, removed, opts);
+  if (removed.length) await minifyOutputsNodes(session, removed, opts);
 }
 
 function targetsToTarget(targets: GenericNode[]): GenericNode {
@@ -257,7 +258,7 @@ export async function embedTransform(
       // The embed of a single node, such as a cell, shows its outputs; a page or
       // a section, which may hold many cells, is embedded as it is
       if (!isFileTarget && targetNodes.length === 1 && !node['remove-output']) {
-        await showRemovedOutputs(session, target, opts);
+        await showEmbeddedOutputs(session, target, opts);
       }
       if (!(state as MultiPageReferenceResolver).states) {
         // Single page case - we do not need to update urls/dependencies

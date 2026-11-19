@@ -107,12 +107,13 @@ describe('embedTransform', () => {
     expect(outputsOf(page)[0].visibility).toBe('show');
   });
 
-  it('leaves a hidden output hidden', async () => {
-    const { page } = await embed([cell('my-cell', { outputs: 'hide' })], {
+  it('unfolds a hidden output, leaving it hidden on its own page', async () => {
+    const { page, notebook } = await embed([cell('my-cell', { outputs: 'hide' })], {
       type: 'embed',
       source: { label: 'my-cell' },
     });
-    expect(outputsOf(page)[0].visibility).toBe('hide');
+    expect(outputsOf(page)[0].visibility).toBe('show');
+    expect(outputsOf(notebook)[0].visibility).toBe('hide');
   });
 
   it('drops the output when the embed itself removes it', async () => {
@@ -130,10 +131,11 @@ describe('embedTransform', () => {
       [
         { type: 'heading', depth: 2, identifier: 'my-section', children: [] },
         cell('my-cell', { outputs: 'remove' }),
+        cell('other-cell', { outputs: 'hide' }),
       ],
       { type: 'embed', source: { label: 'my-section' } },
     );
-    expect(outputsOf(page)[0].visibility).toBe('remove');
+    expect(outputsOf(page).map((outputs) => outputs.visibility)).toEqual(['remove', 'hide']);
     expect(Object.keys(cache)).toEqual([]);
   });
 });
