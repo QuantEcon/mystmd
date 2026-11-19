@@ -27,6 +27,7 @@ import { castSession } from '../session/cache.js';
 import type { MystData } from './crossReferences.js';
 import { fetchMystLinkData, fetchMystXRefData, nodesFromMystXRefData } from './crossReferences.js';
 import { fileFromSourceFolder, getSourceFolder } from './links.js';
+import { minifyOutputsNodes } from './outputs.js';
 
 function mutateEmbedNode(
   node: Embed,
@@ -99,6 +100,31 @@ function mutateEmbedNode(
   }
 }
 
+/**
+ * Show the outputs an embed copies, even when they are removed on their own page
+ *
+ * An embed shows what it embeds: a cell whose output is removed (the
+ * `remove-output` tag) keeps it off its own page, and the embed shows it.
+ * Only `outputs` nodes are changed; removed code (`remove-input`) and removed
+ * cells (`remove-cell`) keep their visibility. A removed output was never
+ * minified on its own page, so it is minified here, to be written to the
+ * build with the other outputs of the embedding page.
+ */
+async function showRemovedOutputs(
+  session: ISession,
+  target: GenericNode,
+  opts?: { minifyMaxCharacters?: number },
+) {
+  const removed = (selectAll('outputs', target) as GenericNode[]).filter(
+    (outputs) => outputs.visibility === 'remove',
+  );
+  if (!removed.length) return;
+  removed.forEach((outputs) => {
+    outputs.visibility = 'show';
+  });
+  await minifyOutputsNodes(session, removed, opts);
+}
+
 function targetsToTarget(targets: GenericNode[]): GenericNode {
   if (targets.length === 1) return copyNode(targets[0]);
   return { type: 'block', children: copyNode(targets) };
@@ -113,6 +139,7 @@ export async function embedTransform(
   file: string,
   dependencies: Dependency[],
   state: IReferenceStateResolver,
+  opts?: { minifyMaxCharacters?: number },
 ) {
   const references = Object.values(castSession(session).$externalReferences);
   const mystTransformer = new MystTransformer(references);
@@ -216,7 +243,8 @@ export async function embedTransform(
       const pageMdast = cache.$getMdast(stateProvider.filePath)?.post?.mdast;
       if (!pageMdast) return;
       let targetNodes: GenericNode[];
-      if (stateProvider.getFileTarget(identifier)) {
+      const isFileTarget = !!stateProvider.getFileTarget(identifier);
+      if (isFileTarget) {
         targetNodes = pageMdast.children;
       } else {
         targetNodes = selectMdastNodes(pageMdast, identifier).nodes;
@@ -226,6 +254,11 @@ export async function embedTransform(
         return;
       }
       const target = targetsToTarget(targetNodes);
+      // The embed of a single node, such as a cell, shows its outputs; a page or
+      // a section, which may hold many cells, is embedded as it is
+      if (!isFileTarget && targetNodes.length === 1 && !node['remove-output']) {
+        await showRemovedOutputs(session, target, opts);
+      }
       if (!(state as MultiPageReferenceResolver).states) {
         // Single page case - we do not need to update urls/dependencies
         mutateEmbedNode(node, target);

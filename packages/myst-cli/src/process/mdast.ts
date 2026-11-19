@@ -433,12 +433,15 @@ export async function postProcessMdast(
     pageReferenceStates,
     extraLinkTransformers,
     site,
+    minifyMaxCharacters,
   }: {
     file: string;
     checkLinks?: boolean;
     pageReferenceStates: ReferenceState[];
     extraLinkTransformers?: LinkTransformer[];
     site?: boolean;
+    /** As for transformMdast, for the outputs an embed brings onto the page */
+    minifyMaxCharacters?: number;
   },
 ) {
   const toc = tic();
@@ -494,7 +497,7 @@ export async function postProcessMdast(
   await transformLinkedRORs(session, vfile, mdast, file);
   resolveReferencesTransform(mdast, vfile, { state, transformers });
   await transformMystXRefs(session, vfile, mdast, frontmatter);
-  await embedTransform(session, mdast, file, dependencies, state);
+  await embedTransform(session, mdast, file, dependencies, state, { minifyMaxCharacters });
   // Re-render row-numbered math (align/gather) now that enumeration has
   // assigned per-row enumerators; the numbers render as per-row \tag{...}s
   renderRowNumberedMathTransform(mdast, vfile, { macros: frontmatter.math });

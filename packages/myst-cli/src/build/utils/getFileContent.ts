@@ -89,6 +89,7 @@ export async function getFileContent(
         file,
         extraLinkTransformers,
         pageReferenceStates,
+        minifyMaxCharacters: 0,
       });
     }),
   );

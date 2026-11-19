@@ -1,7 +1,7 @@
 {
   "version": 3,
   "kind": "Article",
-  "sha256": "f55f0890d64d1ed20bdaa8e6af9c0a50fb3bb729e4a11c0e9c89dc4f5fca2ccb",
+  "sha256": "4b5f01006db351a7f21fe7668928c38376122db21ea6fda85b34b481fbe0745d",
   "slug": "index",
   "location": "/index.md",
   "dependencies": [
@@ -349,6 +349,98 @@
               }
             ],
             "key": "hr2VDiLTDh"
+          },
+          {
+            "type": "heading",
+            "depth": 2,
+            "position": {
+              "start": { "line": 27, "column": 1 },
+              "end": { "line": 27, "column": 1 }
+            },
+            "children": [
+              {
+                "type": "text",
+                "value": "Figure directive - local, removed output",
+                "position": {
+                  "start": { "line": 27, "column": 1 },
+                  "end": { "line": 27, "column": 1 }
+                },
+                "key": "jpjI5mA8BW"
+              }
+            ],
+            "identifier": "figure-directive-local-removed-output",
+            "label": "Figure directive - local, removed output",
+            "html_id": "figure-directive-local-removed-output",
+            "implicit": true,
+            "key": "om5apgJnXF"
+          },
+          {
+            "type": "container",
+            "kind": "figure",
+            "children": [
+              {
+                "type": "outputs",
+                "children": [
+                  {
+                    "type": "output",
+                    "jupyter_data": {
+                      "output_type": "execute_result",
+                      "execution_count": 3,
+                      "metadata": {},
+                      "data": {
+                        "image/png": {
+                          "content_type": "image/png",
+                          "hash": "28041de73980550d4f40507276473b2b",
+                          "path": "/28041de73980550d4f40507276473b2b.png"
+                        },
+                        "text/plain": {
+                          "content": "<Figure size 640x480 with 1 Axes>",
+                          "content_type": "text/plain"
+                        }
+                      }
+                    },
+                    "children": [],
+                    "key": "C4U4UAC9SJ"
+                  }
+                ],
+                "visibility": "show",
+                "key": "pS5JJm1stc"
+              },
+              {
+                "type": "caption",
+                "children": [
+                  {
+                    "type": "paragraph",
+                    "position": {
+                      "start": { "line": 31, "column": 1 },
+                      "end": { "line": 31, "column": 1 }
+                    },
+                    "children": [
+                      {
+                        "type": "text",
+                        "value": "The output is removed from the notebook, and shown here",
+                        "position": {
+                          "start": { "line": 31, "column": 1 },
+                          "end": { "line": 31, "column": 1 }
+                        },
+                        "key": "D0n2F0SF6j"
+                      }
+                    ],
+                    "key": "qAXov10mTq"
+                  }
+                ],
+                "key": "JkMZPHK4kG"
+              }
+            ],
+            "enumerator": "3",
+            "source": {
+              "url": "/plot",
+              "label": "removed-plot",
+              "kind": "Notebook",
+              "slug": "plot",
+              "location": "/plot.ipynb"
+            },
+            "key": "IBmKSrR8A5"
           }
         ],
         "key": "YCERc1a73b"
