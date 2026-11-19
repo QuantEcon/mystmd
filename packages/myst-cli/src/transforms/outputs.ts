@@ -35,11 +35,28 @@ export async function transformOutputsToCache(
   opts?: { minifyMaxCharacters?: number },
 ) {
   const outputsNodes = selectAll('outputs', mdast) as GenericNode[];
+  await minifyOutputsNodes(
+    session,
+    // Ignore outputs that are hidden
+    outputsNodes.filter((outputs) => outputs.visibility !== 'remove'),
+    opts,
+  );
+}
+
+/**
+ * Minify the content of the given outputs nodes, and cache it on the session
+ *
+ * Large content is replaced by a hash, so that it is written with the other
+ * outputs of the page.
+ */
+export async function minifyOutputsNodes(
+  session: ISession,
+  outputsNodes: GenericNode[],
+  opts?: { minifyMaxCharacters?: number },
+) {
   const cache = castSession(session);
   await Promise.all(
     outputsNodes
-      // Ignore outputs that are hidden
-      .filter((outputs) => outputs.visibility !== 'remove')
       // Pull out children
       .map((outputs) => outputs.children as Output[])
       .flat()

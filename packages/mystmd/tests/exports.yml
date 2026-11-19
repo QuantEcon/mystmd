@@ -241,6 +241,8 @@ cases:
     outputs:
       - path: notebook-fig-embed/_build/site/content/index.json
         content: notebook-fig-embed/outputs/index.json
+      # The output removed from the notebook is written for the figure that embeds it
+      - path: notebook-fig-embed/_build/site/public/28041de73980550d4f40507276473b2b.png
   - title: Extend config test
     cwd: extend-config/proj-a
     args: build

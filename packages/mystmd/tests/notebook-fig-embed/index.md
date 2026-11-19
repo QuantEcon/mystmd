@@ -23,3 +23,10 @@ My Caption
 
 ```{embed} xref:guide#img:altair-horsepower
 ```
+
+## Figure directive - local, removed output
+
+```{figure} #removed-plot
+
+The output is removed from the notebook, and shown here
+```
