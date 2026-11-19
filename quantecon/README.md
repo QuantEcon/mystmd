@@ -25,12 +25,13 @@ Tags can be cut per-PR (one tag per feature, easy traceability) or batched at a 
 2. Squash-merge the doc PR.
 3. Tag the resulting `main` commit: `git tag qe-v<N+1> <sha> -m "qe-v<N+1>: <summary>"` then `git push origin qe-v<N+1>`.
 4. Before moving any book's pin to the new tag, run the release test in [QuantEcon/test-quantecon-mystmd](https://github.com/QuantEcon/test-quantecon-mystmd) (private): `gh workflow run release-test.yml --repo QuantEcon/test-quantecon-mystmd -f candidate=qe-v<N+1>`. It builds each consumer book with the tag it deploys today and with the new tag, then reports whether anything readers see would change: build warnings, content, rendered pages, numbering and cross-references. The report is on the run's summary page.
+5. Once the report shows no unexpected change, move each book's pin to the new tag with a pull request in that book's repository.
 
 Doing steps 1–3 in this order means anyone who `cat`s `VERSION.yml` at tag `qe-v<N+1>` sees a self-consistent file (qe_version field matches the tag).
 
 ### Maintaining `UPSTREAM-PRS.yml`
 
-This file holds **only implemented work**: squash commits on `main` that we plan to upstream. Anything not yet implemented, whether a planned feature or a diagnosed defect, is a fork issue until its commit lands, and an issue about upstream's own code carries the [`upstream`](https://github.com/QuantEcon/mystmd/labels/upstream) label. Fork-only changes, such as `cli-show-qe-version`, get a `VERSION.yml` row but no entry here. A fix goes upstream only after it lands on `main` and has an entry here.
+This file holds **only implemented work**: squash commits on `main` that we plan to upstream. Anything not yet implemented, whether a planned feature or a diagnosed defect, is a fork issue until its commit lands, and an issue about a defect in upstream's own code carries the [`upstream`](https://github.com/QuantEcon/mystmd/labels/upstream) label. Fork-only changes, such as `cli-show-qe-version`, get a `VERSION.yml` row but no entry here. A fix goes upstream only after it lands on `main` and has an entry here.
 
 Update this whenever a feature **or an upstream bug fix** lands on `main`, or its upstream plan changes:
 
@@ -111,18 +112,40 @@ Review locally, address feedback, then **squash-merge** through the GitHub UI. D
 
 ### Sync `main` with upstream
 
-`main` carries squash commits that aren't in `upstream/main`, so syncing is a **merge**, not a fast-forward:
+`main` carries squash commits that aren't in `upstream/main`, so syncing is a **merge**, not a fast-forward. `main` is protected: a change needs a PR whose branch is up to date with `main` and passes its required checks: lint, the docs build, and the test jobs on Node 22 and 24 (Node 26 also runs, but isn't required). So the merge goes through a PR:
 
 ```bash
 git fetch upstream
-git checkout main
-git merge upstream/main      # produces a merge commit
-git push origin main
+git fetch origin
+git checkout -b sync/upstream-YYYY-MM-DD origin/main
+git merge upstream/main      # produces a merge commit; resolve conflicts here
+git push origin sync/upstream-YYYY-MM-DD
 ```
+
+Open the PR against `main`, and start its description with this callout:
+
+```markdown
+> [!IMPORTANT]
+> **Merge with "Create a merge commit", never "Squash and merge".** A real merge commit keeps the ancestry so the next `git merge upstream/main` stays clean.
+```
+
+The `main` ruleset allows both squash and merge commits, and GitHub can't set the method for one PR, so the callout is what protects the ancestry. A squash-merged sync would leave `main` without upstream's history, so the next sync would merge those upstream commits again as if they were new, with conflicts it shouldn't have.
 
 > **Do not use the GitHub "Sync fork" button.** It expects a fast-forward and will offer to *discard* the diverging commits — which would delete the features you've merged in. Always sync from the command line.
 
-> **If `main` is branch-protected and the sync has to go through a PR**, choose **"Create a merge commit"** when merging — *never* "Squash and merge". A real merge commit preserves the ancestry so `git merge upstream/main` works cleanly next time.
+#### Sync checklist
+
+- **Conflicts:** resolve them in the merge commit and list each resolution in its message. Keep fork-side follow-ups, such as moving a fork-only package to new upstream tooling, in separate commits after the merge.
+- **Lockfile:** write any `bun.lock` change with the bun version in the root `package.json`'s `packageManager` (1.3.10 today), since newer bun versions rewrite entries that upstream's lockfile keeps. Then check that `bun install --frozen-lockfile` with the latest bun, which CI uses, changes nothing.
+- **Checks:** `bun run build`, `lint`, `lint:format`, `lint:circular` and `test`, with a Python that has `.github/requirements/requirements-execute.txt` installed so the execution tests run. CI's lint job also runs `bunx changeset version`; it rewrites files, so dry-run it in a throwaway worktree.
+- **Fork footprint:** the set of files where the fork differs from upstream should be the same before and after, apart from intended follow-ups, and every SHA in `UPSTREAM-PRS.yml` should still be an ancestor of the branch.
+- **Theme:** if the sync changes the site manifest or anything else a theme reads, build a small project with the books' pinned theme (QuantEcon/myst-theme `qe-vN`) before merging.
+- **PR description:** why now, what it brings in (a table of the upstream commits), how it touches fork features, the conflict resolutions, and the verification. #144 and #156 are examples.
+- **Copilot:** its review of a sync PR covers upstream's code, so don't act on it or reply. Only a comment on the fork's own lines (the conflict resolutions or a follow-up commit) needs a look.
+
+CI also runs on `main` every week (Sundays 19:00 UTC) and can be started by hand from the CI workflow's page. GitHub pauses a scheduled workflow after 60 days without activity in the repository; if the weekly run stops, re-enable it from the Actions tab.
+
+After the sync merges, the next tag follows the steps under [Maintaining `VERSION.yml`](#maintaining-versionyml).
 
 ### Keep a feature branch current with `main`
 
