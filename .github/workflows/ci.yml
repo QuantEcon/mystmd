@@ -5,6 +5,11 @@ on:
     branches: [main, ci-*]
   pull_request:
     branches: [main]
+  # QuantEcon fork: test `main` weekly, since a test can break with no code
+  # change (a new upstream site template, say), and allow a run by hand
+  schedule:
+    - cron: '0 19 * * 0' # Sundays 19:00 UTC, Mondays 06:00 AEDT
+  workflow_dispatch:
 
 jobs:
   lint:
