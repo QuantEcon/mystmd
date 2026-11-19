@@ -298,7 +298,8 @@ export async function upgradeContent(
       context,
       doc: scanDocument(lines),
       replace: (start, end, replacement) => edits.push({ start, end, replacement }),
-      change: (line, before, after) => report.changes.push({ ...locate(line), before, after }),
+      change: (line, before, after, note) =>
+        report.changes.push({ ...locate(line), before, after, ...(note ? { note } : {}) }),
       fail: (line, message) => report.failures.push({ ...locate(line), message }),
       skip: (line, message) => report.skips.push({ ...locate(line), message }),
       notice: (line, message) => report.notices.push({ ...locate(line), message }),

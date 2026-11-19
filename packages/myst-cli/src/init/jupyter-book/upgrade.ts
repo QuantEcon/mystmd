@@ -175,12 +175,13 @@ export function upgradeReportJSON(
     },
     files: Object.entries(files).map(([path, changes]) => ({
       path,
-      changes: changes.map(({ rule, cell, line, before, after }) => ({
+      changes: changes.map(({ rule, cell, line, before, after, note }) => ({
         rule,
         cell,
         line,
         before,
         after,
+        note,
       })),
     })),
     failures: report.failures,
@@ -250,6 +251,12 @@ export async function upgrade(session: ISession, opts: UpgradeOptions = {}) {
   );
   if (report.skips.length) {
     session.log.info(chalk.dim(formatUpgradeIssues(report.skips)));
+  }
+  const notes = report.changes
+    .filter((change) => change.note)
+    .map((change) => ({ ...change, message: change.note! }));
+  if (notes.length) {
+    session.log.warn(formatUpgradeIssues(notes));
   }
   if (report.notices.length) {
     session.log.warn(formatUpgradeIssues(report.notices));

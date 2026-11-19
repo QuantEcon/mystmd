@@ -33,6 +33,8 @@ type Location = {
 export type UpgradeChange = Location & {
   before: string;
   after: string;
+  /** Something the author should check about this rewrite */
+  note?: string;
 };
 
 export type UpgradeIssue = Location & {
@@ -65,8 +67,8 @@ export type RuleAPI = {
    * rule was given. The edits of one rule must not overlap.
    */
   replace(start: number, end: number, replacement: string[]): void;
-  /** Record a rewrite at a 0-based line */
-  change(line: number, before: string, after: string): void;
+  /** Record a rewrite at a 0-based line, with a note for the author if any */
+  change(line: number, before: string, after: string, note?: string): void;
   /** Record a construct that cannot be converted, at a 0-based line */
   fail(line: number, message: string): void;
   /** Record a construct that is left untouched on purpose, at a 0-based line */

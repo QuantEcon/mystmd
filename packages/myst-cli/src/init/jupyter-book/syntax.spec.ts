@@ -28,6 +28,8 @@ type TestCase = {
   skips?: ExpectedIssue[];
   /** Each notice, with its line in the source; none when not given */
   notices?: ExpectedIssue[];
+  /** Each change that carries a note, with its line in the source; none when not given */
+  notes?: ExpectedIssue[];
 };
 
 const file = 'syntax.yml';
@@ -46,7 +48,7 @@ function expectIssues(actual: { line: number; rule: string; message: string }[],
 describe('upgradeSyntax', () => {
   test.each(cases.map((c): [string, TestCase] => [c.title, c]))(
     '%s',
-    async (_, { context, source, result, failures, skips, notices }) => {
+    async (_, { context, source, result, failures, skips, notices, notes }) => {
       const pageContext = { path: 'page.md', ...context };
       const sourceLines = source.split(/\r\n|\r|\n/);
       const resultLines = result?.split(/\r\n|\r|\n/);
@@ -59,6 +61,12 @@ describe('upgradeSyntax', () => {
       expectIssues(report.failures, failures as any);
       expectIssues(report.skips, skips as any);
       expectIssues(report.notices, notices as any);
+      expectIssues(
+        report.changes
+          .filter((change) => change.note)
+          .map((change) => ({ ...change, message: change.note! })),
+        notes as any,
+      );
       if (resultLines) {
         // Every rule is idempotent: the upgraded document upgrades to itself
         const again = createUpgradeReport();
