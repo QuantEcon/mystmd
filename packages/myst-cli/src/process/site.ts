@@ -32,6 +32,7 @@ import { DEFAULT_INDEX_FILENAMES } from '../project/fromTOC.js';
 import type { LocalProject, LocalProjectFolder, LocalProjectPage } from '../project/types.js';
 import type { BookSection } from 'myst-toc';
 import { castSession } from '../session/cache.js';
+import type { Immutable } from 'immer';
 import type { ISession } from '../session/types.js';
 import { selectors } from '../store/index.js';
 import { watch } from '../store/reducers.js';
@@ -254,7 +255,7 @@ export async function writeMystSearchJson(session: ISession, pages: LocalProject
 export async function writeObjectsInv(
   session: ISession,
   states: ReferenceState[],
-  siteConfig: SiteConfig,
+  siteConfig: Immutable<SiteConfig>,
 ) {
   const inv = new Inventory({
     project: siteConfig?.title,
@@ -594,7 +595,7 @@ export async function processProject(
   session: ISession,
   siteProject: Partial<SiteProject>,
   opts?: ProcessProjectOptions,
-): Promise<LocalProject> {
+): Promise<Immutable<LocalProject>> {
   const toc = tic();
   const { log } = session;
   const {
