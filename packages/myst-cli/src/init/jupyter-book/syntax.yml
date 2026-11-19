@@ -783,11 +783,63 @@ cases:
   - title: '{any} to something that is not a label is left untouched'
     context:
       labels: [a-section-target]
+      intersphinx: [numpy]
     source: |
       See {any}`numpy.array`.
     skips:
       - line: 1
         rule: any-role
+        message: intersphinx
+  - title: '{any} with the prefix of an inventory in the intersphinx mapping is skipped'
+    context:
+      labels: [a-section-target]
+      intersphinx: [intro, numpy]
+    source: |
+      See {any}`the introduction <intro:about_py>`.
+    skips:
+      - line: 1
+        rule: any-role
+        message: intro:about_py
+  - title: '{any} to a document of the project is skipped'
+    context:
+      path: part/page.md
+      files: [part/page.md, part/other.md]
+      labels: [a-section-target]
+    source: |
+      See {any}`the other page <other>`.
+    skips:
+      - line: 1
+        rule: any-role
+        message: is a document of the project
+  - title: '{any} to an unknown label fails'
+    context:
+      labels: [a-section-target]
+      intersphinx: [numpy]
+    source: |
+      See {any}`a-missing-target`.
+    failures:
+      - line: 1
+        rule: any-role
+        message: a-missing-target
+  - title: '{any} to a dotted target fails when the project has no intersphinx mapping'
+    context:
+      labels: [a-section-target]
+    source: |
+      See {any}`numpy.array`.
+    failures:
+      - line: 1
+        rule: any-role
+        message: numpy.array
+  - title: '{any} with a prefix that is not in the intersphinx mapping fails'
+    context:
+      labels: [a-section-target]
+      intersphinx: [numpy]
+    source: |
+      See {any}`pyprog:about_py`.
+    failures:
+      - line: 1
+        rule: any-role
+        message: '"pyprog" is not in its intersphinx mapping'
   # bibliography-argument
   - title: The bibliography argument is dropped
     context:

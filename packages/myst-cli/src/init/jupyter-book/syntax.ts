@@ -53,6 +53,8 @@ async function listProjectFiles(): Promise<string[]> {
 export type SyntaxUpgradeOptions = {
   /** The `project.bibliography` entries the upgraded project will have, if known */
   bibliography?: string[];
+  /** The inventory names of the project's intersphinx mapping, if known */
+  intersphinx?: string[];
 };
 
 export type SyntaxUpgradePlan = {
@@ -123,6 +125,7 @@ export async function planProjectSyntaxUpgrade(
       files,
       labels: sortedLabels,
       bibliography: opts.bibliography,
+      intersphinx: opts.intersphinx,
     };
     if (doc.kind === 'markdown') {
       // Upgrade entire Markdown document in one pass
