@@ -143,6 +143,8 @@ The `main` ruleset allows both squash and merge commits, and GitHub can't set th
 - **PR description:** why now, what it brings in (a table of the upstream commits), how it touches fork features, the conflict resolutions, and the verification. #144 and #156 are examples.
 - **Copilot:** its review of a sync PR covers upstream's code, so don't act on it or reply. Only a comment on the fork's own lines (the conflict resolutions or a follow-up commit) needs a look.
 
+CI also runs on `main` every week (Sundays 19:00 UTC) and can be started by hand from the CI workflow's page. GitHub pauses a scheduled workflow after 60 days without activity in the repository; if the weekly run stops, re-enable it from the Actions tab.
+
 After the sync merges, the next tag follows the steps under [Maintaining `VERSION.yml`](#maintaining-versionyml).
 
 ### Keep a feature branch current with `main`
