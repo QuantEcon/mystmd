@@ -242,11 +242,14 @@ cases:
     source: |
       (intro)=
       # Introduction
-  - title: A raw block that is not the header is left untouched
+  - title: A raw block that is not the header is left to the raw-html rule
     source: |
       ```{raw} latex
       \newpage
       ```
+    failures:
+      - line: 1
+        rule: raw-html
   - title: A notebook header shown inside a code block is left untouched
     source: |
       ````markdown
@@ -875,3 +878,498 @@ cases:
       - line: 1
         rule: bibliography-argument
         message: _static/quant-econ.bib
+  # raw-html
+  - title: An iframe in a raw html block becomes the iframe directive
+    source: |
+      :::{raw} html
+      <iframe src="https://ourworldindata.org/grapher/life-expectancy" loading="lazy" style="width: 100%; height: 600px;"></iframe>
+      :::
+    result: |
+      :::{iframe} https://ourworldindata.org/grapher/life-expectancy
+      :width: 100%
+      :::
+  - title: A table in a raw html block becomes HTML in the Markdown, with blank lines around it
+    source: |
+      Before the table.
+      ```{raw} html
+      <table>
+        <tr><td colspan="2">a</td></tr>
+      </table>
+      ```
+      ## After the table
+    result: |
+      Before the table.
+
+      <table>
+        <tr><td colspan="2">a</td></tr>
+      </table>
+
+      ## After the table
+  - title: An iframe directive and an HTML table are left alone
+    source: |
+      :::{iframe} https://ourworldindata.org/grapher/life-expectancy
+      :width: 100%
+      :::
+
+      <table>
+        <tr><td>a</td></tr>
+      </table>
+  - title: Any other raw block fails, and one quoted in a code block is left untouched
+    source: |
+      ```{raw} html
+      <div class="widget"></div>
+      ```
+
+      ```{raw} html
+      <iframe src="https://example.org"></iframe>
+      <p>More.</p>
+      ```
+
+      ````markdown
+      ```{raw} html
+      <div></div>
+      ```
+      ````
+    failures:
+      - line: 1
+        rule: raw-html
+      - line: 5
+        rule: raw-html
+  # mystnb-figure
+  - title: A mystnb figure caption and name become the cell's caption and label
+    source: |
+      ```{code-cell} ipython3
+      ---
+      mystnb:
+        figure:
+          caption: A Gaussian random walk
+          name: fig-random-walk
+      tags: [hide-input]
+      ---
+      plt.show()
+      ```
+    result: |
+      ```{code-cell} ipython3
+      ---
+      label: fig-random-walk
+      caption: A Gaussian random walk
+      tags: [hide-input]
+      ---
+      plt.show()
+      ```
+  - title: A caption that needs quoting stays valid YAML
+    source: |
+      ```{code-cell} ipython3
+      ---
+      mystnb:
+        figure:
+          caption: 'Wealth: the top 1%'
+      ---
+      plt.show()
+      ```
+    result: |
+      ```{code-cell} ipython3
+      ---
+      caption: 'Wealth: the top 1%'
+      ---
+      plt.show()
+      ```
+  - title: A code cell with a label and a caption is left alone
+    source: |
+      ```{code-cell} ipython3
+      ---
+      label: fig-random-walk
+      caption: A Gaussian random walk
+      ---
+      plt.show()
+      ```
+  - title: A mystnb width or alt fails until the code cell has those options
+    source: |
+      ```{code-cell} ipython3
+      ---
+      mystnb:
+        figure:
+          caption: A Gaussian random walk
+          name: fig-random-walk
+          width: 500px
+      ---
+      plt.show()
+      ```
+
+      ```{code-cell} ipython3
+      ---
+      mystnb:
+        image:
+          alt: Two sine waves
+          width: 400px
+      ---
+      plt.show()
+      ```
+    failures:
+      - line: 3
+        rule: mystnb-figure
+        message: '#114'
+      - line: 14
+        rule: mystnb-figure
+        message: image.alt, image.width
+  - title: An unknown mystnb key fails
+    source: |
+      ```{code-cell} ipython3
+      ---
+      mystnb:
+        number_source_lines: true
+      ---
+      x = 1
+      ```
+    failures:
+      - line: 3
+        rule: mystnb-figure
+        message: number_source_lines
+  - title: mystnb in the page frontmatter is not a cell's figure, and is left untouched
+    source: |
+      ---
+      mystnb:
+        execution_allow_errors: true
+      ---
+      # Title
+  # glue-figure
+  - title: A glued figure embeds the output of the labelled cell, whose output is removed
+    source: |
+      ```{code-cell} ipython3
+      :tags: [hide-cell]
+      from myst_nb import glue
+      fig, ax = plt.subplots()
+      glue("flow_fig", fig, display=False)
+      ```
+
+      ```{glue:figure} flow_fig
+      :name: "flow_fig"
+      :figwidth: 600px
+
+      A glued figure.
+      ```
+    result: |
+      ```{code-cell} ipython3
+      :label: glue-flow_fig
+      :tags: [hide-cell, remove-output]
+      fig, ax = plt.subplots()
+      ```
+
+      ```{figure} #glue-flow_fig
+      :name: "flow_fig"
+      :figwidth: 600px
+
+      A glued figure.
+      ```
+  - title: A glued figure from a cell that has a label uses it, and keeps an import still needed
+    source: |
+      ```{code-cell} ipython3
+      ---
+      label: wealth-cell
+      ---
+      from myst_nb import glue
+      glue('wealth', fig, display=False)
+      ```
+
+      ```{code-cell} ipython3
+      glue('mean', 3.2)
+      ```
+
+      ```{glue:figure} wealth
+      Wealth.
+      ```
+    result: |
+      ```{code-cell} ipython3
+      ---
+      tags: [remove-output]
+      label: wealth-cell
+      ---
+      from myst_nb import glue
+      ```
+
+      ```{code-cell} ipython3
+      glue('mean', 3.2)
+      ```
+
+      ```{figure} #wealth-cell
+      Wealth.
+      ```
+  - title: A glued figure fails when its cell has another glue call that displays
+    source: |
+      ```{code-cell} ipython3
+      ---
+      label: wealth-cell
+      ---
+      from myst_nb import glue
+      glue('wealth', fig, display=False)
+      glue('mean', 3.2)
+      glue('median', 3.0, display=True)
+      glue('hidden', 1.0, display=False)
+      ```
+
+      ```{glue:figure} wealth
+      Wealth.
+      ```
+    failures:
+      - line: 7
+        rule: glue-figure
+        message: displays its output
+      - line: 8
+        rule: glue-figure
+        message: displays its output
+  - title: A glued figure with display=True, or no display, keeps the cell's output
+    source: |
+      ```{code-cell} ipython3
+      glue("shown", fig, display=True)
+      ```
+
+      ```{code-cell} ipython3
+      glue("plain", fig)
+      ```
+
+      ```{glue:figure} shown
+      ```
+
+      ```{glue:figure} plain
+      ```
+    result: |
+      ```{code-cell} ipython3
+      :label: glue-shown
+      ```
+
+      ```{code-cell} ipython3
+      :label: glue-plain
+      ```
+
+      ```{figure} #glue-shown
+      ```
+
+      ```{figure} #glue-plain
+      ```
+  - title: A glued figure with display=False tags a cell that has no tags, in its option form
+    source: |
+      ```{code-cell} ipython3
+      glue("a", fig, display=False)
+      ```
+
+      ```{code-cell} ipython3
+      :label: cell-b
+      glue("b", fig, display=False)
+      ```
+
+      ```{code-cell} ipython3
+      ---
+      label: cell-c
+      ---
+      glue("c", fig, display=False)
+      ```
+
+      ```{glue:figure} a
+      ```
+
+      ```{glue:figure} b
+      ```
+
+      ```{glue:figure} c
+      ```
+    result: |
+      ```{code-cell} ipython3
+      :label: glue-a
+      :tags: [remove-output]
+      ```
+
+      ```{code-cell} ipython3
+      :tags: [remove-output]
+      :label: cell-b
+      ```
+
+      ```{code-cell} ipython3
+      ---
+      tags: [remove-output]
+      label: cell-c
+      ---
+      ```
+
+      ```{figure} #glue-a
+      ```
+
+      ```{figure} #cell-b
+      ```
+
+      ```{figure} #cell-c
+      ```
+  - title: A glued figure with display=False adds remove-output to the tags, once
+    source: |
+      ```{code-cell} ipython3
+      :tags: hide-input
+      glue("a", fig, display=False)
+      ```
+
+      ```{code-cell} ipython3
+      ---
+      tags: [hide-input]
+      ---
+      glue("b", fig, display=False)
+      ```
+
+      ```{code-cell} ipython3
+      ---
+      tags:
+        - hide-input
+        - "scroll-output"
+      ---
+      glue("c", fig, display=False)
+      ```
+
+      ```{code-cell} ipython3
+      :tags: [hide-input, remove-output]
+      glue("d", fig, display=False)
+      ```
+
+      ```{glue:figure} a
+      ```
+
+      ```{glue:figure} b
+      ```
+
+      ```{glue:figure} c
+      ```
+
+      ```{glue:figure} d
+      ```
+    result: |
+      ```{code-cell} ipython3
+      :label: glue-a
+      :tags: hide-input, remove-output
+      ```
+
+      ```{code-cell} ipython3
+      ---
+      label: glue-b
+      tags: [hide-input, remove-output]
+      ---
+      ```
+
+      ```{code-cell} ipython3
+      ---
+      label: glue-c
+      tags:
+        - hide-input
+        - "scroll-output"
+        - remove-output
+      ---
+      ```
+
+      ```{code-cell} ipython3
+      :label: glue-d
+      :tags: [hide-input, remove-output]
+      ```
+
+      ```{figure} #glue-a
+      ```
+
+      ```{figure} #glue-b
+      ```
+
+      ```{figure} #glue-c
+      ```
+
+      ```{figure} #glue-d
+      ```
+  - title: A glued figure with display=False from a cell that may show other output carries a note
+    source: |
+      ```{code-cell} ipython3
+      :tags: [hide-cell]
+      print(fig.dpi)
+      glue("a", fig, display=False)
+      ```
+
+      ```{code-cell} ipython3
+      glue("b", fig, display=False)
+      fig.dpi
+      ```
+
+      ```{glue:figure} a
+      ```
+
+      ```{glue:figure} b
+      ```
+    result: |
+      ```{code-cell} ipython3
+      :label: glue-a
+      :tags: [hide-cell, remove-output]
+      print(fig.dpi)
+      ```
+
+      ```{code-cell} ipython3
+      :label: glue-b
+      :tags: [remove-output]
+      fig.dpi
+      ```
+
+      ```{figure} #glue-a
+      ```
+
+      ```{figure} #glue-b
+      ```
+    notes:
+      - line: 2
+        rule: glue-figure
+        message: may produce output
+      - line: 7
+        rule: glue-figure
+        message: may produce output
+  - title: A glued figure whose display is not a literal True or False, or is positional, fails
+    source: |
+      ```{code-cell} ipython3
+      glue("a", fig, display=show)
+      ```
+
+      ```{code-cell} ipython3
+      glue("b", fig, False)
+      ```
+
+      ```{glue:figure} a
+      ```
+
+      ```{glue:figure} b
+      ```
+    failures:
+      - line: 2
+        rule: glue-figure
+        message: display=show is not a literal
+      - line: 6
+        rule: glue-figure
+        message: display is given as a positional argument
+  - title: A figure that embeds a cell is left alone
+    source: |
+      ```{code-cell} ipython3
+      :label: glue-flow_fig
+      fig, ax = plt.subplots()
+      ```
+
+      ```{figure} #glue-flow_fig
+      A figure.
+      ```
+  - title: A glued figure whose key is not glued on the page, or is used again, fails
+    source: |
+      ```{code-cell} ipython3
+      glue("used", fig, display=False)
+      ```
+
+      ```{glue:figure} missing
+      Missing.
+      ```
+
+      ```{glue:figure} used
+      Used.
+      ```
+
+      The value {glue}`used` again.
+    failures:
+      - line: 5
+        rule: glue-figure
+        message: no glue
+      - line: 9
+        rule: glue-figure
+        message: more than once
