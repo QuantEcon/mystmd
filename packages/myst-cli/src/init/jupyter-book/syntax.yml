@@ -800,17 +800,22 @@ cases:
       - line: 1
         rule: any-role
         message: intro:about_py
-  - title: '{any} to a document of the project is skipped'
+  - title: '{any} to a document of the project becomes a link to the file'
     context:
       path: part/page.md
-      files: [part/page.md, part/other.md]
+      files: [part/page.md, part/other.md, intro.md, notebook.ipynb]
       labels: [a-section-target]
     source: |
-      See {any}`the other page <other>`.
-    skips:
-      - line: 1
-        rule: any-role
-        message: is a document of the project
+      See {any}`the other page <other>`, {any}`/intro` and {any}`../notebook`.
+    result: |
+      See [the other page](./other.md), [](../intro.md) and [](../notebook.ipynb).
+  - title: '{any} already converted to a file link is left alone'
+    context:
+      path: part/page.md
+      files: [part/page.md, part/other.md, intro.md]
+      labels: [a-section-target]
+    source: |
+      See [the other page](./other.md) and [](../intro.md).
   - title: '{any} to an unknown label fails'
     context:
       labels: [a-section-target]
