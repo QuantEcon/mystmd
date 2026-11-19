@@ -1,5 +1,5 @@
 import type { UpgradeRule } from '../rule.js';
-import { resolveDocument } from './docLinks.js';
+import { relativeUrl, resolveDocument } from './docLinks.js';
 import { escapeLinkText, explicitTitle, rewriteRoles } from './inline.js';
 
 /**
@@ -7,7 +7,7 @@ import { escapeLinkText, explicitTitle, rewriteRoles } from './inline.js';
  *
  * When the project's labels are known, a target is resolved in this order:
  * - a label of the project (matched case-insensitively) is converted;
- * - a document of the project is left untouched and reported as skipped;
+ * - a document of the project becomes a link to the file, as `{doc}` does;
  * - a target with the prefix of an inventory of the project's intersphinx
  *   mapping (`name:rest`) is skipped, as is an unprefixed dotted target
  *   (`numpy.array`) when the project has a mapping at all, since Sphinx
@@ -28,9 +28,12 @@ export const anyRole: UpgradeRule = {
       const { text, target } = explicitTitle(role.content);
       if (labels && !labels.has(target.toLowerCase())) {
         const prefix = /^([^:]+):(.+)$/.exec(target)?.[1];
-        if (resolveDocument(target, api.context)) {
-          api.skip(line, `{any} target "${target}" is a document of the project, left untouched`);
-        } else if (prefix !== undefined && inventories.has(prefix)) {
+        const file = resolveDocument(target, api.context);
+        if (file) {
+          const url = relativeUrl(api.context.path ?? '', file);
+          return `[${text === undefined ? '' : escapeLinkText(text)}](${url})`;
+        }
+        if (prefix !== undefined && inventories.has(prefix)) {
           api.skip(line, `{any} reference to another project (${target}), left untouched`);
         } else if (prefix === undefined && target.includes('.') && inventories.size) {
           api.skip(
