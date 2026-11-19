@@ -20,6 +20,7 @@ import { makeCleanCLI } from './clean.js';
 import { makeInitCLI, addDefaultCommand } from './init.js';
 import { makeStartCLI } from './start.js';
 import { makeTemplatesCLI } from './templates.js';
+import { makeUpgradeCLI } from './upgrade.js';
 import chalk from 'chalk';
 import { readableName, isWhiteLabelled } from 'myst-cli';
 
@@ -36,6 +37,7 @@ program.addCommand(makeBuildCLI(program));
 program.addCommand(makeStartCLI(program));
 program.addCommand(makeCleanCLI(program));
 program.addCommand(makeTemplatesCLI(program));
+program.addCommand(makeUpgradeCLI(program));
 // QuantEcon fork: append the `qe-vN` build identifier when present.
 // Source of truth lives in `quantecon/VERSION.yml` and is baked in at
 // build time via `scripts/copy-qe-version.mjs`; if the file is absent

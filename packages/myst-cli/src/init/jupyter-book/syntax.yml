@@ -143,3 +143,443 @@ cases:
 
       - foo
       :::
+  # doc-links
+  - title: '{doc} with a plain target becomes a link to the file'
+    context:
+      path: page.md
+      files: [page.md, intro.md, math.md]
+    source: |
+      See {doc}`intro` and {doc}`the maths <math>`.
+    result: |
+      See [](./intro.md) and [the maths](./math.md).
+  - title: '{doc} resolves relative to the page, or from the root with a leading slash'
+    context:
+      path: part/one.md
+      files: [part/one.md, part/two.md, intro.md, other/three.ipynb]
+    source: |
+      {doc}`two`, {doc}`/intro`, {doc}`../other/three` and {doc}`text <../intro>`
+    result: |
+      [](./two.md), [](../intro.md), [](../other/three.ipynb) and [text](../intro.md)
+  - title: '{doc} inside a directive body and spanning lines'
+    context:
+      path: page.md
+      files: [page.md, intro.md]
+    source: |
+      :::{note}
+      This is on the {doc}`introduction
+      page <intro>`.
+      :::
+    result: |
+      :::{note}
+      This is on the [introduction
+      page](./intro.md).
+      :::
+  - title: '{doc} already converted to a link is left alone'
+    context:
+      path: page.md
+      files: [page.md, intro.md]
+    source: |
+      See [](./intro.md) and [the intro](./intro.md).
+  - title: '{doc} in code, inline code and comments is left untouched'
+    context:
+      path: page.md
+      files: [page.md, intro.md]
+    source: |
+      Write ``{doc}`intro` `` to link; the `{doc}` role is gone.
+
+      % {doc}`intro`
+
+      ```python
+      "{doc}`intro`"
+      ```
+
+      ```{code-cell} ipython3
+      s = "{doc}`intro`"
+      ```
+  - title: '{doc} to another project through intersphinx is skipped'
+    context:
+      path: page.md
+      files: [page.md]
+    source: |
+      See {doc}`optimal transport <tools:opt_transport>`.
+    skips:
+      - line: 1
+        rule: doc-links
+        message: tools:opt_transport
+  - title: '{doc} to a document that does not exist fails'
+    context:
+      path: page.md
+      files: [page.md, missing.txt]
+    source: |
+      See {doc}`missing`.
+    failures:
+      - line: 1
+        rule: doc-links
+        message: missing
+  # notebook-header
+  - title: Notebook logo header in a raw html block is deleted with the blank line below it
+    source: |
+      (intro)=
+      ```{raw} html
+      <div id="qe-notebook-header" align="right" style="text-align:right;">
+              <a href="https://quantecon.org/" title="quantecon.org">QuantEcon</a>
+      </div>
+      ```
+
+      # Introduction
+    result: |
+      (intro)=
+      # Introduction
+  - title: Notebook logo header in a raw jupyter block is deleted
+    source: |
+      ```{raw} jupyter
+      <div id='qe-notebook-header'>logo</div>
+      ```
+      # Title
+    result: |
+      # Title
+  - title: Document without a notebook logo header is left alone
+    source: |
+      (intro)=
+      # Introduction
+  - title: A raw block that is not the header is left untouched
+    source: |
+      ```{raw} latex
+      \newpage
+      ```
+  - title: A notebook header shown inside a code block is left untouched
+    source: |
+      ````markdown
+      ```{raw} html
+      <div id="qe-notebook-header"></div>
+      ```
+      ````
+  # cite-parenthetical
+  - title: Plain {cite} becomes {cite:p}, in prose, directive bodies and footnotes
+    source: |
+      As shown by {cite}`russell2004`, and {cite}`a,b`.
+
+      :::{note}
+      A note {cite}`north1989`.
+      :::
+
+      [^fn]: A footnote {cite}`kuznets1939`.
+    result: |
+      As shown by {cite:p}`russell2004`, and {cite:p}`a,b`.
+
+      :::{note}
+      A note {cite:p}`north1989`.
+      :::
+
+      [^fn]: A footnote {cite:p}`kuznets1939`.
+  - title: Citations that are already explicit are left alone
+    source: |
+      {cite:p}`a`, {cite:t}`b`, {cite:ps}`c` and {cite:alp}`d`.
+  - title: '{cite} in code fences, nested fences and inline code is left untouched'
+    source: |
+      Citations use `{cite}` and ``{cite}`key` ``.
+
+      ```{note}
+      ~~~python
+      "{cite}`key`"
+      ~~~
+      ```
+
+      ```python
+      {cite}`key`
+      ```
+  # hide-output-false
+  - title: ':hide-output: false as the only option is deleted with its blank line'
+    source: |
+      ```{code-cell} ipython3
+      :hide-output: false
+
+      u(2.0)
+      ```
+    result: |
+      ```{code-cell} ipython3
+      u(2.0)
+      ```
+  - title: ':hide-output: false beside another option keeps the other'
+    source: |
+      ```{code-cell} ipython3
+      :tags: [hide-input]
+      :hide-output: false
+
+      u(2.0)
+      ```
+    result: |
+      ```{code-cell} ipython3
+      :tags: [hide-input]
+
+      u(2.0)
+      ```
+  - title: 'hide-output: false in a YAML option block is deleted'
+    source: |
+      ```{code-cell} ipython3
+      ---
+      tags: [hide-input]
+      hide-output: false
+      ---
+      u(2.0)
+      ```
+    result: |
+      ```{code-cell} ipython3
+      ---
+      tags: [hide-input]
+      ---
+      u(2.0)
+      ```
+  - title: 'hide-output: false as the only key of a YAML option block takes the block with it'
+    source: |
+      ```{code-cell} ipython3
+      ---
+      hide-output: false
+      ---
+      u(2.0)
+      ```
+    result: |
+      ```{code-cell} ipython3
+      u(2.0)
+      ```
+  - title: 'hide-output: False and FALSE are deleted, as option lines and YAML keys'
+    source: |
+      ```{code-cell} ipython3
+      :tags: [hide-input]
+      :hide-output: False
+
+      u(2.0)
+      ```
+
+      ```{code-cell} ipython3
+      :tags: [hide-input]
+      :hide-output: FALSE
+
+      u(3.0)
+      ```
+
+      ```{code-cell} ipython3
+      ---
+      tags: [hide-input]
+      hide-output: False
+      ---
+      u(4.0)
+      ```
+
+      ```{code-cell} ipython3
+      ---
+      tags: [hide-input]
+      hide-output: FALSE
+      ---
+      u(5.0)
+      ```
+    result: |
+      ```{code-cell} ipython3
+      :tags: [hide-input]
+
+      u(2.0)
+      ```
+
+      ```{code-cell} ipython3
+      :tags: [hide-input]
+
+      u(3.0)
+      ```
+
+      ```{code-cell} ipython3
+      ---
+      tags: [hide-input]
+      ---
+      u(4.0)
+      ```
+
+      ```{code-cell} ipython3
+      ---
+      tags: [hide-input]
+      ---
+      u(5.0)
+      ```
+  - title: 'hide-output: false with a trailing comment in a YAML option block is deleted'
+    source: |
+      ```{code-cell} ipython3
+      ---
+      tags: [hide-input]
+      hide-output: false  # shown, as in Jupyter Book
+      ---
+      u(2.0)
+      ```
+    result: |
+      ```{code-cell} ipython3
+      ---
+      tags: [hide-input]
+      ---
+      u(2.0)
+      ```
+  - title: 'A code cell without hide-output is left alone'
+    source: |
+      ```{code-cell} ipython3
+      :tags: [hide-output]
+
+      u(2.0)
+      ```
+  - title: ':hide-output: in prose, code and other directives is left untouched'
+    source: |
+      Write `:hide-output: false` on a cell.
+
+      ```{code-block} python
+      :hide-output: false
+      ```
+
+      ```python
+      :hide-output: false
+      ```
+  - title: ':hide-output: with any other value fails'
+    source: |
+      ```{code-cell} ipython3
+      :hide-output: true
+
+      u(2.0)
+      ```
+    failures:
+      - line: 2
+        rule: hide-output-false
+        message: '"true"'
+  - title: ':hide-output: with a quoted, empty or other false-like value fails'
+    source: |
+      ```{code-cell} ipython3
+      :hide-output: 'false'
+
+      u(2.0)
+      ```
+
+      ```{code-cell} ipython3
+      ---
+      hide-output: "false"
+      ---
+      u(3.0)
+      ```
+
+      ```{code-cell} ipython3
+      :hide-output:
+
+      u(4.0)
+      ```
+
+      ```{code-cell} ipython3
+      :hide-output: no
+
+      u(5.0)
+      ```
+
+      ```{code-cell} ipython3
+      ---
+      hide-output: off  # not false
+      ---
+      u(6.0)
+      ```
+    failures:
+      - line: 2
+        rule: hide-output-false
+        message: "'false'"
+      - line: 9
+        rule: hide-output-false
+      - line: 15
+        rule: hide-output-false
+      - line: 21
+        rule: hide-output-false
+        message: '"no"'
+      - line: 28
+        rule: hide-output-false
+  # no-execute-tag
+  - title: The no-execute tag is removed from the tags
+    source: |
+      ```{code-cell} ipython3
+      :tags: [no-execute, hide-output]
+
+      print("runs")
+      ```
+    result: |
+      ```{code-cell} ipython3
+      :tags: [hide-output]
+
+      print("runs")
+      ```
+  - title: The only no-execute tag takes the option, and the blank line, with it
+    source: |
+      ```{code-cell} ipython3
+      :tags: [no-execute]
+
+      print("runs")
+      ```
+    result: |
+      ```{code-cell} ipython3
+      print("runs")
+      ```
+  - title: The no-execute tag in a YAML option block, as a flow list and as a block list
+    source: |
+      ```{code-cell} ipython3
+      ---
+      tags: [hide-input, "no-execute"]
+      ---
+      a = 1
+      ```
+
+      ```{code-cell} ipython3
+      ---
+      tags:
+        - no-execute
+        - hide-output
+      ---
+      b = 2
+      ```
+
+      ```{code-cell} ipython3
+      ---
+      tags:
+        - no-execute
+      ---
+      c = 3
+      ```
+    result: |
+      ```{code-cell} ipython3
+      ---
+      tags: [hide-input]
+      ---
+      a = 1
+      ```
+
+      ```{code-cell} ipython3
+      ---
+      tags:
+        - hide-output
+      ---
+      b = 2
+      ```
+
+      ```{code-cell} ipython3
+      c = 3
+      ```
+  - title: A code cell without the no-execute tag is left alone
+    source: |
+      ```{code-cell} ipython3
+      :tags: [hide-output, skip-execution]
+
+      print("runs")
+      ```
+  - title: A no-execute class on a code block, and the tag in prose, are left untouched
+    source: |
+      A cell tagged `no-execute`:
+
+      ```{code-block} python3
+      :class: no-execute
+      jv = JVWorker(grid_size=25)
+      ```
+  - title: Glossary already in MyST form is left alone
+    source: |
+      :::{glossary}
+      foo
+      : bar
+
+      baz
+      : {term}`foo`
+      :::
