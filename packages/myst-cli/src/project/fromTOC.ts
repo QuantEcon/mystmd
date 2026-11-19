@@ -99,7 +99,7 @@ export function comparePaths(a: string, b: string): number {
 /**
  * Traverse toc entries and return a list of files
  */
-export function listExplicitFiles(entries: Entry[], path: string): string[] {
+export function listExplicitFiles(entries: readonly Entry[], path: string): string[] {
   const files: string[] = [];
   entries.forEach((entry) => {
     if ((entry as FileEntry).file) {
@@ -124,7 +124,7 @@ export function listExplicitFiles(entries: Entry[], path: string): string[] {
  */
 export function patternsToFileEntries(
   session: ISession,
-  entries: Entry[],
+  entries: readonly Entry[],
   path: string,
   ignore: string[],
   file: string,
@@ -328,7 +328,7 @@ export function getIgnoreFiles(session: ISession, path: string) {
 export function projectFromTOC(
   session: ISession,
   path: string,
-  toc: TOC,
+  toc: Readonly<TOC>,
   level: PageLevels = 1,
   file?: string,
   opts?: SlugOptions,
