@@ -112,7 +112,7 @@ Review locally, address feedback, then **squash-merge** through the GitHub UI. D
 
 ### Sync `main` with upstream
 
-`main` carries squash commits that aren't in `upstream/main`, so syncing is a **merge**, not a fast-forward. `main` is protected: a change needs a PR whose branch is up to date with `main` and passes lint, the docs build and the Node 22 and 24 test jobs. So the merge goes through a PR:
+`main` carries squash commits that aren't in `upstream/main`, so syncing is a **merge**, not a fast-forward. `main` is protected: a change needs a PR whose branch is up to date with `main` and passes its required checks: lint, the docs build, and the test jobs on Node 22 and 24 (Node 26 also runs, but isn't required). So the merge goes through a PR:
 
 ```bash
 git fetch upstream
