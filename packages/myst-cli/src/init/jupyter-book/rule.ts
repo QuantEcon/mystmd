@@ -12,6 +12,12 @@ export type UpgradeContext = {
   labels?: string[];
   /** The `project.bibliography` entries of `myst.yml`, when there is one */
   bibliography?: string[];
+  /**
+   * The inventory names of the project's intersphinx mapping, when known: the
+   * keys of `sphinx.config.intersphinx_mapping` in `_config.yml`, or of
+   * `project.references` in `myst.yml`
+   */
+  intersphinx?: string[];
 };
 
 type Location = {

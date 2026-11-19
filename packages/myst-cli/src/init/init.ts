@@ -13,7 +13,12 @@ import { githubCurvenoteAction, githubPagesAction } from './gh-actions/index.js'
 import { readTheDocsAction } from './readthedocs/index.js';
 import { getGithubUrl } from '../utils/github.js';
 import { checkFolderIsGit, checkIgnore } from '../utils/git.js';
-import { upgradeJupyterBook } from './jupyter-book/upgrade.js';
+import type { JupyterBookUpgradePlan } from './jupyter-book/upgrade.js';
+import {
+  planJupyterBookUpgrade,
+  syntaxFailureError,
+  writeJupyterBookUpgrade,
+} from './jupyter-book/upgrade.js';
 import { fsExists } from '../utils/fsExists.js';
 
 const VERSION_CONFIG = '# See docs at: https://mystmd.org/guide/frontmatter\nversion: 1\n';
@@ -89,14 +94,16 @@ export async function init(session: ISession, opts: InitOptions) {
     session.log.info(WELCOME());
   }
 
-  await writeGitignore(session);
-
   await loadConfig(session, '.');
   const state = session.store.getState();
   const existingRawConfig = selectors.selectLocalRawConfig(state, '.');
   const existingProjectConfig = selectors.selectLocalProjectConfig(state, '.');
   const existingSiteConfig = selectors.selectLocalSiteConfig(state, '.');
   const existingConfigFile = selectors.selectLocalConfigFile(state, '.');
+  // A legacy Jupyter Book is upgraded first: nothing is written until the
+  // upgrade is known to succeed, the .gitignore included
+  const isJupyterBook = !existingRawConfig && (await fsExists('_config.yml'));
+  if (!isJupyterBook) await writeGitignore(session);
   const github = await getGithubUrl();
   if (existingRawConfig) {
     // If config file is already present, update it.
@@ -123,7 +130,7 @@ export async function init(session: ISession, opts: InitOptions) {
   } else {
     // Is this a Jupyter Book?
     let didUpgrade = false;
-    if (await fsExists('_config.yml')) {
+    if (isJupyterBook) {
       const configFile = defaultConfigFile(session, '.');
       const promptUpgrade = await inquirer.prompt([
         {
@@ -150,14 +157,29 @@ export async function init(session: ISession, opts: InitOptions) {
       if (!promptUpgrade.upgrade) {
         return;
       }
-      session.log.info(`💾 Writing new config file: ${chalk.blue(path.resolve(configFile))}`);
+      let plan: JupyterBookUpgradePlan | undefined;
       try {
-        await upgradeJupyterBook(session, configFile);
-        didUpgrade = true;
+        plan = await planJupyterBookUpgrade(session);
       } catch (err) {
         session.log.error(`❌ An error occurred during Jupyter Book upgrade:\n\n${err}\n\n`);
         session.log.warn(`Ignoring Jupyter Book configuration!`);
       }
+      // A rule that cannot convert a construct stops the upgrade: every
+      // failure is reported, nothing is written, and the command fails
+      if (plan?.syntax.report.failures.length) {
+        throw syntaxFailureError(plan.syntax.report);
+      }
+      if (plan) {
+        session.log.info(`💾 Writing new config file: ${chalk.blue(path.resolve(configFile))}`);
+        try {
+          await writeJupyterBookUpgrade(session, configFile, plan, { backup: true });
+          didUpgrade = true;
+        } catch (err) {
+          session.log.error(`❌ An error occurred during Jupyter Book upgrade:\n\n${err}\n\n`);
+          session.log.warn(`Ignoring Jupyter Book configuration!`);
+        }
+      }
+      await writeGitignore(session);
     }
     // Otherwise, write some default configs
     if (!didUpgrade) {
