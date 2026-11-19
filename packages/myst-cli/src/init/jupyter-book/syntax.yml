@@ -206,13 +206,13 @@ cases:
       - line: 1
         rule: doc-links
         message: tools:opt_transport
-  - title: '{doc} to a document that does not exist is skipped'
+  - title: '{doc} to a document that does not exist fails'
     context:
       path: page.md
-      files: [page.md]
+      files: [page.md, missing.txt]
     source: |
       See {doc}`missing`.
-    skips:
+    failures:
       - line: 1
         rule: doc-links
         message: missing
@@ -342,6 +342,79 @@ cases:
       ```{code-cell} ipython3
       u(2.0)
       ```
+  - title: 'hide-output: False and FALSE are deleted, as option lines and YAML keys'
+    source: |
+      ```{code-cell} ipython3
+      :tags: [hide-input]
+      :hide-output: False
+
+      u(2.0)
+      ```
+
+      ```{code-cell} ipython3
+      :tags: [hide-input]
+      :hide-output: FALSE
+
+      u(3.0)
+      ```
+
+      ```{code-cell} ipython3
+      ---
+      tags: [hide-input]
+      hide-output: False
+      ---
+      u(4.0)
+      ```
+
+      ```{code-cell} ipython3
+      ---
+      tags: [hide-input]
+      hide-output: FALSE
+      ---
+      u(5.0)
+      ```
+    result: |
+      ```{code-cell} ipython3
+      :tags: [hide-input]
+
+      u(2.0)
+      ```
+
+      ```{code-cell} ipython3
+      :tags: [hide-input]
+
+      u(3.0)
+      ```
+
+      ```{code-cell} ipython3
+      ---
+      tags: [hide-input]
+      ---
+      u(4.0)
+      ```
+
+      ```{code-cell} ipython3
+      ---
+      tags: [hide-input]
+      ---
+      u(5.0)
+      ```
+  - title: 'hide-output: false with a trailing comment in a YAML option block is deleted'
+    source: |
+      ```{code-cell} ipython3
+      ---
+      tags: [hide-input]
+      hide-output: false  # shown, as in Jupyter Book
+      ---
+      u(2.0)
+      ```
+    result: |
+      ```{code-cell} ipython3
+      ---
+      tags: [hide-input]
+      ---
+      u(2.0)
+      ```
   - title: 'A code cell without hide-output is left alone'
     source: |
       ```{code-cell} ipython3
@@ -371,6 +444,52 @@ cases:
       - line: 2
         rule: hide-output-false
         message: '"true"'
+  - title: ':hide-output: with a quoted, empty or other false-like value fails'
+    source: |
+      ```{code-cell} ipython3
+      :hide-output: 'false'
+
+      u(2.0)
+      ```
+
+      ```{code-cell} ipython3
+      ---
+      hide-output: "false"
+      ---
+      u(3.0)
+      ```
+
+      ```{code-cell} ipython3
+      :hide-output:
+
+      u(4.0)
+      ```
+
+      ```{code-cell} ipython3
+      :hide-output: no
+
+      u(5.0)
+      ```
+
+      ```{code-cell} ipython3
+      ---
+      hide-output: off  # not false
+      ---
+      u(6.0)
+      ```
+    failures:
+      - line: 2
+        rule: hide-output-false
+        message: "'false'"
+      - line: 9
+        rule: hide-output-false
+      - line: 15
+        rule: hide-output-false
+      - line: 21
+        rule: hide-output-false
+        message: '"no"'
+      - line: 28
+        rule: hide-output-false
   # no-execute-tag
   - title: The no-execute tag is removed from the tags
     source: |

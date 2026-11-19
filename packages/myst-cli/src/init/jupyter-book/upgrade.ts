@@ -102,7 +102,10 @@ export async function writeJupyterBookUpgrade(
   );
 }
 
-function syntaxFailureError(report: UpgradeReport) {
+/**
+ * The error thrown when any rule fails: it lists every failure, with file and line
+ */
+export function syntaxFailureError(report: UpgradeReport) {
   return new Error(
     `${report.failures.length} construct(s) could not be upgraded, so no file was changed:\n${formatUpgradeIssues(
       report.failures,

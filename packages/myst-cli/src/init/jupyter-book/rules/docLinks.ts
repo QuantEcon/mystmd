@@ -31,8 +31,11 @@ export function relativeUrl(from: string, to: string): string {
 /**
  * `{doc}`page`` and `{doc}`text <page>`` become Markdown links to the file
  *
- * A target that reaches another project through intersphinx, or names no
- * document in the project, is left untouched and reported as skipped.
+ * A target that reaches another project through intersphinx is left
+ * untouched and reported as skipped. A target that names no document in the
+ * project (a `.md` or `.ipynb` among its files, in the TOC or not) is a
+ * broken reference and fails; this is only checked when the project's files
+ * are known.
  */
 export const docLinks: UpgradeRule = {
   name: 'doc-links',
@@ -46,7 +49,9 @@ export const docLinks: UpgradeRule = {
       }
       const file = resolveDocument(target, api.context);
       if (!file) {
-        api.skip(line, `{doc} target "${target}" is not a document of the project, left untouched`);
+        if (api.context.files) {
+          api.fail(line, `{doc} target "${target}" is not a document of the project`);
+        }
         return undefined;
       }
       const url = relativeUrl(api.context.path ?? '', file);
