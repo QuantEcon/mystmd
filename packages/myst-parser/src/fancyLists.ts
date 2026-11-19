@@ -210,15 +210,15 @@ export function fancyListsPlugin(markdownIt: MarkdownIt, options?: FancyListsOpt
   }
 
   function isCharCodeDigit(charCode: number) {
-    return charCode >= 0x30 /* 0 */ && charCode <= 0x39 /* 9 */;
+    return charCode >= 0x30 /* 0 */ && charCode <= 0x39; /* 9 */
   }
 
   function isCharCodeLowercaseAlpha(charCode: number) {
-    return charCode >= 0x61 /* a */ && charCode <= 0x7a /* z */;
+    return charCode >= 0x61 /* a */ && charCode <= 0x7a; /* z */
   }
 
   function isCharCodeUppercaseAlpha(charCode: number) {
-    return charCode >= 0x41 /* A */ && charCode <= 0x5a /* Z */;
+    return charCode >= 0x41 /* A */ && charCode <= 0x5a; /* Z */
   }
 
   const convertAlphaMarkerToOrdinalNumber = (alphaMarker: string): number => {
